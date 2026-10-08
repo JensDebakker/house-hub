@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { BigCardShell } from '@/components/BigCardShell';
 import type { Supply } from '@/types';
 
 let nextId = 1;
@@ -40,8 +40,7 @@ export default function SuppliesScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false}>
-      <Text style={{ fontSize: 24, fontWeight: '700' }}>Medical Supplies</Text>
+    <BigCardShell title="Medical Supplies" scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Long-press an item to remove it. Yellow = expiring within {WARNING_WINDOW_DAYS} days, red = expired.
       </Text>
@@ -99,6 +98,6 @@ export default function SuppliesScreen() {
           </Pressable>
         )}
       />
-    </ScreenContainer>
+    </BigCardShell>
   );
 }

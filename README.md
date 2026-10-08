@@ -1,7 +1,8 @@
 # House Hub
 
 Household management tool + smart-screen screensaver, built across three Howest subjects.
-Full requirements and design decisions: [docs/IDEAS.md](docs/IDEAS.md).
+Full requirements and design decisions: [docs/IDEAS.md](docs/IDEAS.md). Full schema:
+[docs/ERD.md](docs/ERD.md).
 
 | Folder | Subject | Status |
 |---|---|---|

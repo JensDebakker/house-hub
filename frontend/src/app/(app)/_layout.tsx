@@ -1,21 +1,16 @@
-import { Tabs } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { Stack } from 'expo-router';
 
-export default function AppTabsLayout() {
-  const { user } = useAuth();
-
+export default function AppStackLayout() {
   return (
-    <Tabs>
-      <Tabs.Screen name="index" options={{ title: 'Dashboard' }} />
-      <Tabs.Screen name="tasks" options={{ title: 'Tasks' }} />
-      <Tabs.Screen name="shopping" options={{ title: 'Shopping' }} />
-      <Tabs.Screen name="supplies" options={{ title: 'Supplies' }} />
-      <Tabs.Screen name="calendar" options={{ title: 'Calendar' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
-      <Tabs.Screen
-        name="admin"
-        options={{ title: 'Admin', href: user?.role === 'ADMIN' ? undefined : null }}
-      />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="tasks" />
+      <Stack.Screen name="shopping" />
+      <Stack.Screen name="supplies" />
+      <Stack.Screen name="calendar" />
+      <Stack.Screen name="files" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="admin" />
+    </Stack>
   );
 }

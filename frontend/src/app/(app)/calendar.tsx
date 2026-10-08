@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { BigCardShell } from '@/components/BigCardShell';
 import type { CalendarEvent } from '@/types';
 
 let nextId = 1;
@@ -24,8 +24,7 @@ export default function CalendarScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false}>
-      <Text style={{ fontSize: 24, fontWeight: '700' }}>Household Calendar</Text>
+    <BigCardShell title="Household Calendar" scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Simple upcoming-events list for now — a full calendar grid view can replace this later.
       </Text>
@@ -72,6 +71,6 @@ export default function CalendarScreen() {
           </Pressable>
         )}
       />
-    </ScreenContainer>
+    </BigCardShell>
   );
 }

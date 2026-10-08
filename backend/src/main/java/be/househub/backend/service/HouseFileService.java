@@ -49,7 +49,8 @@ public class HouseFileService {
                     "This household has reached its storage limit of " + household.getStorageLimitBytes() + " bytes");
         }
 
-        String storageKey = household.getId() + "/" + UUID.randomUUID() + "-" + sanitizeFilename(file.getOriginalFilename());
+        String safeFilename = sanitizeFilename(file.getOriginalFilename());
+        String storageKey = household.getId() + "/" + UUID.randomUUID() + "-" + safeFilename;
         try {
             fileStorageService.store(storageKey, file.getInputStream(), file.getSize(), file.getContentType());
         } catch (IOException ex) {
@@ -59,7 +60,7 @@ public class HouseFileService {
         HouseFile houseFile = new HouseFile();
         houseFile.setHousehold(household);
         houseFile.setUploadedBy(uploader);
-        houseFile.setFilename(file.getOriginalFilename());
+        houseFile.setFilename(safeFilename);
         houseFile.setContentType(file.getContentType());
         houseFile.setSizeBytes(file.getSize());
         houseFile.setStorageKey(storageKey);

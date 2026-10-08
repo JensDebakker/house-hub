@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { BigCardShell } from '@/components/BigCardShell';
 import type { ShoppingListItem } from '@/types';
 
 let nextId = 1;
@@ -24,9 +24,7 @@ export default function ShoppingScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false}>
-      <Text style={{ fontSize: 24, fontWeight: '700' }}>Shopping List</Text>
-
+    <BigCardShell title="Shopping List" scroll={false}>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
           placeholder="Add an item…"
@@ -67,6 +65,6 @@ export default function ShoppingScreen() {
           </Pressable>
         )}
       />
-    </ScreenContainer>
+    </BigCardShell>
   );
 }

@@ -42,6 +42,8 @@ export default function RegisterScreen() {
         placeholder="Email"
         autoCapitalize="none"
         keyboardType="email-address"
+        textContentType="username"
+        autoComplete="email"
         value={email}
         onChangeText={setEmail}
         style={inputStyle}
@@ -49,6 +51,8 @@ export default function RegisterScreen() {
       <TextInput
         placeholder="Password"
         secureTextEntry
+        textContentType="newPassword"
+        autoComplete="new-password"
         value={password}
         onChangeText={setPassword}
         style={inputStyle}

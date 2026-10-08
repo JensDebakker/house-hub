@@ -22,6 +22,47 @@ cd backend && ./mvnw spring-boot:run
 cd frontend && npm install && npm run web   # or android / ios
 ```
 
+## Git discipline
+
+**Never run `git commit` or `git push` unless the user explicitly asks for it in that
+conversation turn.** This applies to every agent/session working in this repo, not just
+the one being addressed directly — leave changes staged/unstaged in the working tree and
+let the user (or a follow-up explicit request) decide when to commit. Don't commit "to be
+safe" after finishing a task, and don't auto-commit as a side effect of a workflow step.
+
+**Never `git add -A` / `git add .` on this repo, even when asked to commit.** Multiple
+Claude sessions routinely share this one working directory (see below) — a broad add can
+silently sweep up another session's in-progress, unreviewed edits into your commit. Stage
+named paths you specifically authored/reviewed, and run `git status` first to see what
+else is sitting in the tree before touching any of it.
+
+## Working alongside other Claude sessions on this repo
+
+This repo gets worked on by more than one Claude Code session at the same time — separate
+conversations/windows, not just subagents inside one session — sharing the *same checkout
+on disk*. That has already caused a real incident: two sessions independently built the
+same feature (same class names, same design) because neither checked for the other, one
+session's commit swept up the other's uncommitted work, and a shared file was left broken
+mid-edit when both wrote to it concurrently. Concretely:
+
+- **Check for a sibling session before starting non-trivial work.** Run `ListAgents` early
+  — if another session on this repo shows up, say so to your user before diving in, and
+  coordinate scope (e.g. "I'll take the backend, you take the frontend wiring") rather than
+  both building the same thing independently.
+- **An unexpected on-disk change is not automatically "someone's deliberate edit you should
+  build on"** — the general assumption that a file changed since you read it reflects
+  intentional work still applies, but on *this* repo specifically, first consider whether
+  it means a sibling session is *actively, concurrently* writing the same file right now.
+  If a file you're mid-edit on keeps changing under you, or comes back with inconsistent
+  state (missing imports, half-applied rewrites), stop editing that file, message the other
+  session (`SendMessage`) instead of racing it, and let the user decide who finishes it.
+- **If you discover a sibling already built (or is building) the same thing you were
+  asked to build** — same entities/classes/endpoints, same screens — stop and say so to
+  your user instead of silently proceeding in parallel. Duplicated, uncoordinated
+  implementations of the same feature are worse than asking first.
+- Otherwise, split by layer as below so two sessions have no reason to touch the same
+  files in the first place.
+
 ## Multi-agent work on this repo
 
 This repo is routinely worked on by multiple agents in parallel (background `Agent`

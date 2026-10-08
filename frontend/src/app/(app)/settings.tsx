@@ -1,14 +1,13 @@
 import { Link } from 'expo-router';
 import { Pressable, Text } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
 
   return (
-    <ScreenContainer>
-      <Text style={{ fontSize: 24, fontWeight: '700' }}>Settings</Text>
+    <BigCardShell title="Settings">
       <Text>Signed in as {user?.email}</Text>
       <Text style={{ color: '#666' }}>Role: {user?.role}</Text>
 
@@ -24,6 +23,6 @@ export default function SettingsScreen() {
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>Log out</Text>
       </Pressable>
-    </ScreenContainer>
+    </BigCardShell>
   );
 }
