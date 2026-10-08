@@ -12,4 +12,6 @@ public interface ShoppingListRepository extends JpaRepository<ShoppingList, UUID
     List<ShoppingList> findByHouseholdId(UUID householdId);
 
     Optional<ShoppingList> findByIdAndHouseholdId(UUID id, UUID householdId);
+
+    long countByHouseholdId(UUID householdId);
 }

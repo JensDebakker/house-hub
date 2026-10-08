@@ -12,4 +12,6 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, UU
     List<CalendarEvent> findByHouseholdId(UUID householdId);
 
     Optional<CalendarEvent> findByIdAndHouseholdId(UUID id, UUID householdId);
+
+    long countByHouseholdId(UUID householdId);
 }

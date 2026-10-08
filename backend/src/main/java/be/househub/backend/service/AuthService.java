@@ -9,7 +9,10 @@ import be.househub.backend.dto.auth.RegisterResponse;
 import be.househub.backend.dto.auth.ResetPasswordRequest;
 import be.househub.backend.dto.auth.TokenResponse;
 import be.househub.backend.dto.auth.UserResponse;
+import be.househub.backend.dto.household.HouseholdMembershipResponse;
 import be.househub.backend.entity.Household;
+import be.househub.backend.entity.HouseholdMembership;
+import be.househub.backend.entity.HouseholdRole;
 import be.househub.backend.entity.Role;
 import be.househub.backend.entity.User;
 import be.househub.backend.entity.VerificationToken;
@@ -18,6 +21,7 @@ import be.househub.backend.exception.DuplicateEmailException;
 import be.househub.backend.exception.EmailNotVerifiedException;
 import be.househub.backend.exception.InvalidTokenException;
 import be.househub.backend.exception.InvalidVerificationTokenException;
+import be.househub.backend.repository.HouseholdMembershipRepository;
 import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.UserRepository;
 import be.househub.backend.repository.VerificationTokenRepository;
@@ -48,6 +52,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final HouseholdRepository householdRepository;
+    private final HouseholdMembershipRepository membershipRepository;
     private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -66,15 +71,21 @@ public class AuthService {
 
         Household household = new Household();
         household.setName(request.displayName() + "'s household");
+        household.setInviteCode(generateInviteCode());
         household = householdRepository.save(household);
 
         User user = new User();
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setDisplayName(request.displayName());
-        user.setHousehold(household);
         user.setRole(isConfiguredAdminEmail(email) ? Role.ADMIN : Role.USER);
         final User savedUser = userRepository.save(user);
+
+        HouseholdMembership membership = new HouseholdMembership();
+        membership.setUser(savedUser);
+        membership.setHousehold(household);
+        membership.setRole(HouseholdRole.OWNER);
+        membershipRepository.save(membership);
 
         issueAndSendToken(savedUser, VerificationTokenType.EMAIL_VERIFY, EMAIL_VERIFY_TTL_HOURS,
                 token -> mailService.sendVerificationEmail(savedUser.getEmail(), token));
@@ -183,6 +194,21 @@ public class AuthService {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
+    private static final String INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    private String generateInviteCode() {
+        String code;
+        do {
+            StringBuilder sb = new StringBuilder(8);
+            for (int i = 0; i < 8; i++) {
+                sb.append(INVITE_CODE_ALPHABET.charAt(
+                        java.util.concurrent.ThreadLocalRandom.current().nextInt(INVITE_CODE_ALPHABET.length())));
+            }
+            code = sb.toString();
+        } while (householdRepository.existsByInviteCode(code));
+        return code;
+    }
+
     private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -190,13 +216,15 @@ public class AuthService {
     }
 
     private UserResponse toUserResponse(User user) {
+        List<HouseholdMembershipResponse> households = membershipRepository.findByUserId(user.getId()).stream()
+                .map(m -> new HouseholdMembershipResponse(m.getHousehold().getId(), m.getHousehold().getName(), m.getRole()))
+                .toList();
         return new UserResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getDisplayName(),
-                user.getHousehold().getId(),
                 user.getRole(),
-                user.getHouseholdRole(),
+                households,
                 user.isEmailVerified()
         );
     }

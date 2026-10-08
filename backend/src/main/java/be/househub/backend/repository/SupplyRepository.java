@@ -12,4 +12,6 @@ public interface SupplyRepository extends JpaRepository<Supply, UUID> {
     List<Supply> findByHouseholdId(UUID householdId);
 
     Optional<Supply> findByIdAndHouseholdId(UUID id, UUID householdId);
+
+    long countByHouseholdId(UUID householdId);
 }

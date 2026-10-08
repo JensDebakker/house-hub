@@ -4,11 +4,20 @@ Planned for the DevOps subject. See [../docs/IDEAS.md](../docs/IDEAS.md) for req
 
 Four services, one network:
 - `db` — Postgres, named volume for data
-- `backend` — Spring Boot, built from [../backend/Dockerfile](../backend/Dockerfile)
+- `backend` — Spring Boot, built from [../backend/Dockerfile](../backend/Dockerfile). Also
+  owns the house-files feature: uploaded files/images are written to disk under
+  `/data/house-files`, backed by the `house-files-data` named volume.
 - `frontend` — the Expo web export, built from [../frontend/Dockerfile](../frontend/Dockerfile)
   and served as static files via nginx
 - `proxy` — a small nginx container that does path-based routing: `/api/*` → `backend`,
   everything else → `frontend`. This is the only container that publishes a port to the host.
+
+(House files started out as a MinIO-backed blob store, but MinIO's official Docker Hub image
+is no longer freely pullable — `minio/minio` and `bitnami/minio` both now require a paid plan
+— so this stores files on disk via the `house-files-data` volume instead. The storage layer
+is a small interface (`FileStorageService`) in the backend, so swapping in a real S3/MinIO
+client later, once self-hosting it is viable again, only means adding a new implementation —
+nothing else changes.)
 
 ```
 jensdebakker.com  ──(host nginx, TLS)──>  127.0.0.1:${PROXY_PORT}  ──>  proxy  ──┬─> /api/*  → backend:8080

@@ -1,17 +1,17 @@
 package be.househub.backend.dto.auth;
 
-import be.househub.backend.entity.HouseholdRole;
+import be.househub.backend.dto.household.HouseholdMembershipResponse;
 import be.househub.backend.entity.Role;
 
+import java.util.List;
 import java.util.UUID;
 
 public record UserResponse(
         UUID id,
         String email,
         String displayName,
-        UUID householdId,
         Role role,
-        HouseholdRole householdRole,
+        List<HouseholdMembershipResponse> households,
         boolean emailVerified
 ) {
 }

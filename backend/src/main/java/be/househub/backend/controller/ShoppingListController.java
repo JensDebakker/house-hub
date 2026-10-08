@@ -3,7 +3,9 @@ package be.househub.backend.controller;
 import be.househub.backend.dto.shopping.ShoppingListItemRequest;
 import be.househub.backend.dto.shopping.ShoppingListRequest;
 import be.househub.backend.dto.shopping.ShoppingListResponse;
+import be.househub.backend.entity.Household;
 import be.househub.backend.security.SecurityUtils;
+import be.househub.backend.service.HouseholdAccessService;
 import be.househub.backend.service.ShoppingListService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,47 +24,57 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/shopping-lists")
+@RequestMapping("/households/{householdId}/shopping-lists")
 @RequiredArgsConstructor
 public class ShoppingListController {
 
     private final ShoppingListService shoppingListService;
+    private final HouseholdAccessService householdAccessService;
 
     @GetMapping
-    public List<ShoppingListResponse> findAll() {
-        return shoppingListService.findAll(SecurityUtils.getCurrentUser().getHousehold());
+    public List<ShoppingListResponse> findAll(@PathVariable UUID householdId) {
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        return shoppingListService.findAll(household);
     }
 
     @PostMapping
-    public ResponseEntity<ShoppingListResponse> create(@Valid @RequestBody ShoppingListRequest request) {
-        var created = shoppingListService.create(SecurityUtils.getCurrentUser().getHousehold(), request);
+    public ResponseEntity<ShoppingListResponse> create(@PathVariable UUID householdId, @Valid @RequestBody ShoppingListRequest request) {
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        var created = shoppingListService.create(household, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{listId}")
-    public ShoppingListResponse rename(@PathVariable UUID listId, @Valid @RequestBody ShoppingListRequest request) {
-        return shoppingListService.rename(SecurityUtils.getCurrentUser().getHousehold(), listId, request);
+    public ShoppingListResponse rename(@PathVariable UUID householdId, @PathVariable UUID listId,
+                                        @Valid @RequestBody ShoppingListRequest request) {
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        return shoppingListService.rename(household, listId, request);
     }
 
     @DeleteMapping("/{listId}")
-    public ResponseEntity<Void> delete(@PathVariable UUID listId) {
-        shoppingListService.delete(SecurityUtils.getCurrentUser().getHousehold(), listId);
+    public ResponseEntity<Void> delete(@PathVariable UUID householdId, @PathVariable UUID listId) {
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        shoppingListService.delete(household, listId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{listId}/items")
-    public ShoppingListResponse addItem(@PathVariable UUID listId, @Valid @RequestBody ShoppingListItemRequest request) {
-        return shoppingListService.addItem(SecurityUtils.getCurrentUser().getHousehold(), listId, request);
+    public ShoppingListResponse addItem(@PathVariable UUID householdId, @PathVariable UUID listId,
+                                         @Valid @RequestBody ShoppingListItemRequest request) {
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        return shoppingListService.addItem(household, listId, request);
     }
 
     @PutMapping("/{listId}/items/{itemId}")
-    public ShoppingListResponse updateItem(@PathVariable UUID listId, @PathVariable UUID itemId,
+    public ShoppingListResponse updateItem(@PathVariable UUID householdId, @PathVariable UUID listId, @PathVariable UUID itemId,
                                             @Valid @RequestBody ShoppingListItemRequest request) {
-        return shoppingListService.updateItem(SecurityUtils.getCurrentUser().getHousehold(), listId, itemId, request);
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        return shoppingListService.updateItem(household, listId, itemId, request);
     }
 
     @DeleteMapping("/{listId}/items/{itemId}")
-    public ShoppingListResponse removeItem(@PathVariable UUID listId, @PathVariable UUID itemId) {
-        return shoppingListService.removeItem(SecurityUtils.getCurrentUser().getHousehold(), listId, itemId);
+    public ShoppingListResponse removeItem(@PathVariable UUID householdId, @PathVariable UUID listId, @PathVariable UUID itemId) {
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        return shoppingListService.removeItem(household, listId, itemId);
     }
 }

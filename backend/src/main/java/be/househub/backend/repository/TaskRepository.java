@@ -12,4 +12,8 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     List<Task> findByHouseholdId(UUID householdId);
 
     Optional<Task> findByIdAndHouseholdId(UUID id, UUID householdId);
+
+    List<Task> findByAssignedToId(UUID assignedToId);
+
+    long countByHouseholdId(UUID householdId);
 }

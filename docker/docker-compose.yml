@@ -35,6 +35,9 @@ services:
       MAIL_FROM: ${MAIL_FROM:-House Hub <no-reply@jensdebakker.com>}
       FRONTEND_URL: ${FRONTEND_URL:-https://jensdebakker.com}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-jens.debakker@student.vives.be}
+      FILES_STORAGE_DIR: /data/house-files
+    volumes:
+      - house-files-data:/data/house-files
 
   frontend:
     build:
@@ -58,3 +61,4 @@ services:
 
 volumes:
   db-data:
+  house-files-data:

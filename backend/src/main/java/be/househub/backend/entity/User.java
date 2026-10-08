@@ -4,11 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -39,17 +36,9 @@ public class User {
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "household_id", nullable = false)
-    private Household household;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "household_role", nullable = false)
-    private HouseholdRole householdRole = HouseholdRole.OWNER;
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;

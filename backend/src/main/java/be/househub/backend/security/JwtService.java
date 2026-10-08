@@ -20,7 +20,6 @@ public class JwtService {
 
     private static final String CLAIM_TOKEN_TYPE = "type";
     private static final String CLAIM_USER_ID = "userId";
-    private static final String CLAIM_HOUSEHOLD_ID = "householdId";
     private static final String TOKEN_TYPE_ACCESS = "access";
     private static final String TOKEN_TYPE_REFRESH = "refresh";
 
@@ -51,7 +50,6 @@ public class JwtService {
                 .subject(user.getEmail())
                 .claim(CLAIM_TOKEN_TYPE, tokenType)
                 .claim(CLAIM_USER_ID, user.getId().toString())
-                .claim(CLAIM_HOUSEHOLD_ID, user.getHousehold().getId().toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(ttlSeconds)))
                 .signWith(signingKey)

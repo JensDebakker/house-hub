@@ -3,6 +3,7 @@ target/
 *.log
 .env
 .mvn/wrapper/maven-wrapper.jar
+/data/
 !**/src/main/**/target/
 !**/src/test/**/target/
 

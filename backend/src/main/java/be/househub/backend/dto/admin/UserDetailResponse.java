@@ -1,19 +1,21 @@
 package be.househub.backend.dto.admin;
 
 import be.househub.backend.dto.household.HouseholdMembershipResponse;
+import be.househub.backend.dto.task.TaskResponse;
 import be.househub.backend.entity.Role;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public record AdminUserResponse(
+public record UserDetailResponse(
         UUID id,
         String email,
         String displayName,
         Role role,
-        List<HouseholdMembershipResponse> households,
         boolean emailVerified,
-        Instant createdAt
+        Instant createdAt,
+        List<HouseholdMembershipResponse> households,
+        List<TaskResponse> assignedTasks
 ) {
 }

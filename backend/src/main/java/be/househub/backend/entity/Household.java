@@ -28,6 +28,14 @@ public class Household {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "invite_code", nullable = false, unique = true, length = 8)
+    private String inviteCode;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    @Column(name = "storage_limit_bytes", nullable = false)
+    private long storageLimitBytes = DEFAULT_STORAGE_LIMIT_BYTES;
+
+    public static final long DEFAULT_STORAGE_LIMIT_BYTES = 4L * 1024 * 1024 * 1024;
 }
