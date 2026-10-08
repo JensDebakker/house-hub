@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
+import { getErrorMessage } from '@/lib/api';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -16,10 +17,11 @@ export default function RegisterScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await register(email.trim(), password, displayName.trim());
-      router.replace('/');
-    } catch {
-      setError('Registration failed. Try a different email.');
+      const trimmedEmail = email.trim();
+      await register(trimmedEmail, password, displayName.trim());
+      router.replace({ pathname: '/(auth)/check-email', params: { email: trimmedEmail } });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Registration failed. Try a different email.'));
     } finally {
       setIsSubmitting(false);
     }

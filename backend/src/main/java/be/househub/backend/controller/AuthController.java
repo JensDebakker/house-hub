@@ -1,11 +1,16 @@
 package be.househub.backend.controller;
 
+import be.househub.backend.dto.MessageResponse;
 import be.househub.backend.dto.auth.AuthResponse;
+import be.househub.backend.dto.auth.ForgotPasswordRequest;
 import be.househub.backend.dto.auth.LoginRequest;
 import be.househub.backend.dto.auth.RefreshRequest;
 import be.househub.backend.dto.auth.RegisterRequest;
+import be.househub.backend.dto.auth.RegisterResponse;
+import be.househub.backend.dto.auth.ResetPasswordRequest;
 import be.househub.backend.dto.auth.TokenResponse;
 import be.househub.backend.dto.auth.UserResponse;
+import be.househub.backend.dto.auth.VerifyEmailRequest;
 import be.househub.backend.entity.User;
 import be.househub.backend.security.SecurityUtils;
 import be.househub.backend.service.AuthService;
@@ -27,7 +32,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
@@ -45,5 +50,20 @@ public class AuthController {
     public ResponseEntity<UserResponse> me() {
         User currentUser = SecurityUtils.getCurrentUser();
         return ResponseEntity.ok(authService.currentUser(currentUser));
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<MessageResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return ResponseEntity.ok(authService.verifyEmail(request.token()));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.forgotPassword(request));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        return ResponseEntity.ok(authService.resetPassword(request));
     }
 }

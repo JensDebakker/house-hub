@@ -19,41 +19,35 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "verification_tokens")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class VerificationToken {
 
     @Id
     @GeneratedValue
     private UUID id;
 
     @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
-
-    @Column(name = "display_name", nullable = false)
-    private String displayName;
-
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "household_id", nullable = false)
-    private Household household;
+    private String token;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role = Role.USER;
+    private VerificationTokenType type;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "household_role", nullable = false)
-    private HouseholdRole householdRole = HouseholdRole.OWNER;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(name = "email_verified", nullable = false)
-    private boolean emailVerified = false;
+    @Column(name = "expires_at", nullable = false)
+    private Instant expiresAt;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    @Column(nullable = false)
+    private boolean used = false;
+
+    public boolean isExpired() {
+        return Instant.now().isAfter(expiresAt);
+    }
 }

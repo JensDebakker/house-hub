@@ -1,19 +1,30 @@
 package be.househub.backend.service;
 
+import be.househub.backend.dto.MessageResponse;
 import be.househub.backend.dto.auth.AuthResponse;
+import be.househub.backend.dto.auth.ForgotPasswordRequest;
 import be.househub.backend.dto.auth.LoginRequest;
 import be.househub.backend.dto.auth.RegisterRequest;
+import be.househub.backend.dto.auth.RegisterResponse;
+import be.househub.backend.dto.auth.ResetPasswordRequest;
 import be.househub.backend.dto.auth.TokenResponse;
 import be.househub.backend.dto.auth.UserResponse;
 import be.househub.backend.entity.Household;
+import be.househub.backend.entity.Role;
 import be.househub.backend.entity.User;
+import be.househub.backend.entity.VerificationToken;
+import be.househub.backend.entity.VerificationTokenType;
 import be.househub.backend.exception.DuplicateEmailException;
+import be.househub.backend.exception.EmailNotVerifiedException;
 import be.househub.backend.exception.InvalidTokenException;
+import be.househub.backend.exception.InvalidVerificationTokenException;
 import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.UserRepository;
+import be.househub.backend.repository.VerificationTokenRepository;
 import be.househub.backend.security.JwtService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,20 +32,36 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final long EMAIL_VERIFY_TTL_HOURS = 24;
+    private static final long PASSWORD_RESET_TTL_HOURS = 1;
+
     private final UserRepository userRepository;
     private final HouseholdRepository householdRepository;
+    private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final MailService mailService;
+
+    @Value("#{'${app.admin-emails:}'.split(',')}")
+    private List<String> adminEmails;
 
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new DuplicateEmailException(request.email());
+    public RegisterResponse register(RegisterRequest request) {
+        String email = normalizeEmail(request.email());
+        if (userRepository.existsByEmail(email)) {
+            throw new DuplicateEmailException(email);
         }
 
         Household household = new Household();
@@ -42,25 +69,33 @@ public class AuthService {
         household = householdRepository.save(household);
 
         User user = new User();
-        user.setEmail(request.email());
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setDisplayName(request.displayName());
         user.setHousehold(household);
-        user = userRepository.save(user);
+        user.setRole(isConfiguredAdminEmail(email) ? Role.ADMIN : Role.USER);
+        final User savedUser = userRepository.save(user);
 
-        return buildAuthResponse(user);
+        issueAndSendToken(savedUser, VerificationTokenType.EMAIL_VERIFY, EMAIL_VERIFY_TTL_HOURS,
+                token -> mailService.sendVerificationEmail(savedUser.getEmail(), token));
+
+        return new RegisterResponse("Registered. Check your email to verify your account before logging in.", email);
     }
 
     public AuthResponse login(LoginRequest request) {
+        String email = normalizeEmail(request.email());
         try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, request.password()));
         } catch (org.springframework.security.core.AuthenticationException ex) {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+
+        if (!user.isEmailVerified()) {
+            throw new EmailNotVerifiedException();
+        }
 
         return buildAuthResponse(user);
     }
@@ -81,6 +116,73 @@ public class AuthService {
         return toUserResponse(user);
     }
 
+    @Transactional
+    public MessageResponse verifyEmail(String rawToken) {
+        VerificationToken token = consumeToken(rawToken, VerificationTokenType.EMAIL_VERIFY);
+        User user = token.getUser();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+        return new MessageResponse("Email verified. You can now log in.");
+    }
+
+    @Transactional
+    public MessageResponse forgotPassword(ForgotPasswordRequest request) {
+        String email = normalizeEmail(request.email());
+        userRepository.findByEmail(email).ifPresent(user ->
+                issueAndSendToken(user, VerificationTokenType.PASSWORD_RESET, PASSWORD_RESET_TTL_HOURS,
+                        token -> mailService.sendPasswordResetEmail(user.getEmail(), token)));
+
+        return new MessageResponse("If that email is registered, a password reset link has been sent.");
+    }
+
+    @Transactional
+    public MessageResponse resetPassword(ResetPasswordRequest request) {
+        VerificationToken token = consumeToken(request.token(), VerificationTokenType.PASSWORD_RESET);
+        User user = token.getUser();
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        return new MessageResponse("Password reset successful. You can now log in.");
+    }
+
+    private VerificationToken consumeToken(String rawToken, VerificationTokenType expectedType) {
+        VerificationToken token = verificationTokenRepository.findByToken(rawToken)
+                .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
+
+        if (token.isUsed() || token.getType() != expectedType) {
+            throw new InvalidVerificationTokenException("Invalid or already-used token");
+        }
+        if (token.isExpired()) {
+            throw new InvalidVerificationTokenException("Token has expired");
+        }
+
+        token.setUsed(true);
+        verificationTokenRepository.save(token);
+        return token;
+    }
+
+    private void issueAndSendToken(User user, VerificationTokenType type, long ttlHours, java.util.function.Consumer<String> sendFn) {
+        VerificationToken token = new VerificationToken();
+        token.setToken(UUID.randomUUID().toString());
+        token.setType(type);
+        token.setUser(user);
+        token.setExpiresAt(Instant.now().plus(ttlHours, ChronoUnit.HOURS));
+        verificationTokenRepository.save(token);
+        sendFn.accept(token.getToken());
+    }
+
+    private boolean isConfiguredAdminEmail(String email) {
+        Set<String> configured = adminEmails.stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(this::normalizeEmail)
+                .collect(java.util.stream.Collectors.toSet());
+        return configured.contains(email);
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
     private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -88,6 +190,14 @@ public class AuthService {
     }
 
     private UserResponse toUserResponse(User user) {
-        return new UserResponse(user.getId(), user.getEmail(), user.getDisplayName(), user.getHousehold().getId());
+        return new UserResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getHousehold().getId(),
+                user.getRole(),
+                user.getHouseholdRole(),
+                user.isEmailVerified()
+        );
     }
 }

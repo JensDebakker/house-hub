@@ -65,3 +65,12 @@ api.interceptors.response.use(
     return api.request(originalRequest);
   },
 );
+
+/** Backend error responses are always `{ message: string, ... }` - fall back for anything else (network errors, etc). */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const message = (err.response?.data as { message?: string } | undefined)?.message;
+    if (message) return message;
+  }
+  return fallback;
+}

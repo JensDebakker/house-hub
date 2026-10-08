@@ -1,17 +1,20 @@
-package be.househub.backend.dto.auth;
+package be.househub.backend.dto.admin;
 
 import be.househub.backend.entity.HouseholdRole;
 import be.househub.backend.entity.Role;
 
+import java.time.Instant;
 import java.util.UUID;
 
-public record UserResponse(
+public record AdminUserResponse(
         UUID id,
         String email,
         String displayName,
-        UUID householdId,
         Role role,
+        UUID householdId,
+        String householdName,
         HouseholdRole householdRole,
-        boolean emailVerified
+        boolean emailVerified,
+        Instant createdAt
 ) {
 }

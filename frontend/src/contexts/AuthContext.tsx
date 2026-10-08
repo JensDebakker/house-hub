@@ -12,6 +12,9 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
+  verifyEmail: (token: string) => Promise<string>;
+  forgotPassword: (email: string) => Promise<string>;
+  resetPassword: (token: string, newPassword: string) => Promise<string>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -43,14 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
+  // Registration no longer logs the user in - the account must be email-verified first.
   const register = async (email: string, password: string, displayName: string) => {
-    const { data } = await api.post<LoginResponse>('/auth/register', {
-      email,
-      password,
-      displayName,
-    });
-    await saveTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
-    setUser(data.user);
+    await api.post('/auth/register', { email, password, displayName });
   };
 
   const logout = async () => {
@@ -58,8 +56,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const verifyEmail = async (token: string) => {
+    const { data } = await api.post<{ message: string }>('/auth/verify-email', { token });
+    return data.message;
+  };
+
+  const forgotPassword = async (email: string) => {
+    const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email });
+    return data.message;
+  };
+
+  const resetPassword = async (token: string, newPassword: string) => {
+    const { data } = await api.post<{ message: string }>('/auth/reset-password', { token, newPassword });
+    return data.message;
+  };
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isLoading, isAuthenticated: user !== null, login, register, logout }),
+    () => ({
+      user,
+      isLoading,
+      isAuthenticated: user !== null,
+      login,
+      register,
+      logout,
+      verifyEmail,
+      forgotPassword,
+      resetPassword,
+    }),
     [user, isLoading],
   );
 
