@@ -12,7 +12,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
-  verifyEmail: (token: string) => Promise<string>;
+  verifyEmail: (token: string) => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
 };
@@ -56,9 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  // Verifying is treated as an implicit login - no separate login step needed afterward.
   const verifyEmail = async (token: string) => {
-    const { data } = await api.post<{ message: string }>('/auth/verify-email', { token });
-    return data.message;
+    const { data } = await api.post<LoginResponse>('/auth/verify-email', { token });
+    await saveTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+    setUser(data.user);
   };
 
   const forgotPassword = async (email: string) => {

@@ -117,12 +117,12 @@ public class AuthService {
     }
 
     @Transactional
-    public MessageResponse verifyEmail(String rawToken) {
+    public AuthResponse verifyEmail(String rawToken) {
         VerificationToken token = consumeToken(rawToken, VerificationTokenType.EMAIL_VERIFY);
         User user = token.getUser();
         user.setEmailVerified(true);
         userRepository.save(user);
-        return new MessageResponse("Email verified. You can now log in.");
+        return buildAuthResponse(user);
     }
 
     @Transactional

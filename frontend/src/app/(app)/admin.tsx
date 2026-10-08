@@ -1,5 +1,6 @@
+import { Picker } from '@react-native-picker/picker';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
@@ -7,6 +8,17 @@ import type { AdminUser, Household, HouseholdRole, Role } from '@/types';
 
 const ROLES: Role[] = ['ADMIN', 'USER', 'GUEST'];
 const HOUSEHOLD_ROLES: HouseholdRole[] = ['OWNER', 'MEMBER'];
+
+const COLS = {
+  name: 150,
+  email: 220,
+  verified: 80,
+  role: 110,
+  household: 180,
+  householdRole: 130,
+  save: 80,
+};
+const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
 type Edits = Record<string, { role: Role; householdId: string; householdRole: HouseholdRole }>;
 
@@ -72,124 +84,118 @@ export default function AdminScreen() {
   };
 
   return (
-    <ScreenContainer>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
       <Text style={{ fontSize: 24, fontWeight: '700' }}>Admin</Text>
       <Text style={{ color: '#666' }}>Assign roles, households, and household roles.</Text>
 
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
-      {users.map((u) => {
-        const edit = edits[u.id];
-        if (!edit) return null;
-
-        return (
-          <View key={u.id} style={cardStyle}>
-            <Text style={{ fontWeight: '600' }}>{u.displayName}</Text>
-            <Text style={{ color: '#666' }}>{u.email}</Text>
-            <Text style={{ color: u.emailVerified ? '#2e7d32' : '#c62828', fontSize: 12 }}>
-              {u.emailVerified ? 'Email verified' : 'Email not verified'}
-            </Text>
-
-            <Text style={labelStyle}>Role</Text>
-            <ChipRow
-              options={ROLES}
-              selected={edit.role}
-              onSelect={(role) => setEdit(u.id, { role })}
-            />
-
-            <Text style={labelStyle}>Household</Text>
-            <ChipRow
-              options={households.map((h) => h.id)}
-              labels={households.map((h) => h.name)}
-              selected={edit.householdId}
-              onSelect={(householdId) => setEdit(u.id, { householdId })}
-            />
-
-            <Text style={labelStyle}>Household role</Text>
-            <ChipRow
-              options={HOUSEHOLD_ROLES}
-              selected={edit.householdRole}
-              onSelect={(householdRole) => setEdit(u.id, { householdRole })}
-            />
-
-            <Pressable
-              onPress={() => save(u.id)}
-              disabled={savingId === u.id}
-              style={({ pressed }) => [saveButtonStyle, pressed && { opacity: 0.8 }]}
-            >
-              <Text style={{ color: 'white', fontWeight: '600' }}>
-                {savingId === u.id ? 'Saving…' : 'Save'}
-              </Text>
-            </Pressable>
+      <ScrollView horizontal>
+        <View style={{ width: TABLE_WIDTH, borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+          <View style={[rowStyle, { backgroundColor: '#f5f5f5' }]}>
+            <HeaderCell width={COLS.name}>Name</HeaderCell>
+            <HeaderCell width={COLS.email}>Email</HeaderCell>
+            <HeaderCell width={COLS.verified}>Verified</HeaderCell>
+            <HeaderCell width={COLS.role}>Role</HeaderCell>
+            <HeaderCell width={COLS.household}>Household</HeaderCell>
+            <HeaderCell width={COLS.householdRole}>Household role</HeaderCell>
+            <HeaderCell width={COLS.save} />
           </View>
-        );
-      })}
-    </ScreenContainer>
+
+          {users.map((u, index) => {
+            const edit = edits[u.id];
+            if (!edit) return null;
+
+            return (
+              <View
+                key={u.id}
+                style={[rowStyle, index % 2 === 1 && { backgroundColor: '#fafafa' }]}
+              >
+                <Cell width={COLS.name}>
+                  <Text numberOfLines={1}>{u.displayName}</Text>
+                </Cell>
+                <Cell width={COLS.email}>
+                  <Text numberOfLines={1} style={{ color: '#666' }}>{u.email}</Text>
+                </Cell>
+                <Cell width={COLS.verified}>
+                  <Text style={{ color: u.emailVerified ? '#2e7d32' : '#c62828' }}>
+                    {u.emailVerified ? 'Yes' : 'No'}
+                  </Text>
+                </Cell>
+                <Cell width={COLS.role}>
+                  <Picker
+                    selectedValue={edit.role}
+                    onValueChange={(role: Role) => setEdit(u.id, { role })}
+                    style={{ width: COLS.role }}
+                  >
+                    {ROLES.map((r) => (
+                      <Picker.Item key={r} label={r} value={r} />
+                    ))}
+                  </Picker>
+                </Cell>
+                <Cell width={COLS.household}>
+                  <Picker
+                    selectedValue={edit.householdId}
+                    onValueChange={(householdId: string) => setEdit(u.id, { householdId })}
+                    style={{ width: COLS.household }}
+                  >
+                    {households.map((h) => (
+                      <Picker.Item key={h.id} label={h.name} value={h.id} />
+                    ))}
+                  </Picker>
+                </Cell>
+                <Cell width={COLS.householdRole}>
+                  <Picker
+                    selectedValue={edit.householdRole}
+                    onValueChange={(householdRole: HouseholdRole) => setEdit(u.id, { householdRole })}
+                    style={{ width: COLS.householdRole }}
+                  >
+                    {HOUSEHOLD_ROLES.map((r) => (
+                      <Picker.Item key={r} label={r} value={r} />
+                    ))}
+                  </Picker>
+                </Cell>
+                <Cell width={COLS.save}>
+                  <Pressable
+                    onPress={() => save(u.id)}
+                    disabled={savingId === u.id}
+                    style={({ pressed }) => [saveButtonStyle, pressed && { opacity: 0.8 }]}
+                  >
+                    <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>
+                      {savingId === u.id ? '…' : 'Save'}
+                    </Text>
+                  </Pressable>
+                </Cell>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </ScrollView>
   );
 }
 
-function ChipRow<T extends string>({
-  options,
-  labels,
-  selected,
-  onSelect,
-}: {
-  options: T[];
-  labels?: string[];
-  selected: T;
-  onSelect: (value: T) => void;
-}) {
+function HeaderCell({ width, children }: { width: number; children?: string }) {
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-      {options.map((option, index) => {
-        const isSelected = option === selected;
-        return (
-          <Pressable
-            key={option}
-            onPress={() => onSelect(option)}
-            style={[chipStyle, isSelected && chipSelectedStyle]}
-          >
-            <Text style={{ color: isSelected ? 'white' : '#333', fontSize: 13 }}>
-              {labels?.[index] ?? option}
-            </Text>
-          </Pressable>
-        );
-      })}
+    <View style={{ width, padding: 8 }}>
+      <Text style={{ fontWeight: '700', fontSize: 13 }}>{children}</Text>
     </View>
   );
 }
 
-const cardStyle = {
-  borderWidth: 1,
-  borderColor: '#ddd',
-  borderRadius: 8,
-  padding: 12,
-  gap: 6,
-};
+function Cell({ width, children }: { width: number; children: React.ReactNode }) {
+  return <View style={{ width, padding: 8, justifyContent: 'center' }}>{children}</View>;
+}
 
-const labelStyle = {
-  fontSize: 12,
-  color: '#666',
-  marginTop: 4,
-};
-
-const chipStyle = {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 16,
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-};
-
-const chipSelectedStyle = {
-  backgroundColor: '#2563eb',
-  borderColor: '#2563eb',
+const rowStyle = {
+  flexDirection: 'row' as const,
+  borderBottomWidth: 1,
+  borderBottomColor: '#eee',
 };
 
 const saveButtonStyle = {
   backgroundColor: '#2563eb',
-  borderRadius: 8,
-  padding: 10,
+  borderRadius: 6,
+  paddingVertical: 8,
   alignItems: 'center' as const,
-  marginTop: 4,
 };
