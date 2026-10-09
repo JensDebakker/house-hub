@@ -32,9 +32,16 @@ jobs:
           git commit -am "chore: bump version to v$NEXT [skip ci]"
           git push
 
-      # The VPS's authorized_keys entry forces the real deploy command (git pull +
-      # docker compose up -d --build), which picks up the version bump above since
-      # it was pushed to master before this step runs.
+      # The VPS's authorized_keys entry forces the real deploy command, ignoring whatever
+      # `script:` below actually sends - it picks up the version bump above since that was
+      # pushed to master before this step runs. The intended forced command, kept here so
+      # it's documented in version control, is:
+      #   git pull && docker compose up -d --build && docker compose restart proxy
+      # The trailing `restart proxy` matters: `up -d --build` only recreates a container
+      # when its image/build context changed, so a `docker/nginx/proxy.conf` edit alone
+      # (the `proxy` service runs the stock `nginx:alpine` image, bind-mounting that file)
+      # won't be picked up without it - nginx only reads its config at container startup.
+      # If the VPS's forced command doesn't match the line above, update it there too.
       - name: SSH and redeploy
         uses: appleboy/ssh-action@v1.2.0
         with:

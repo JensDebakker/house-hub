@@ -73,7 +73,11 @@ Angular/Node app. Those can stay stopped for this project — Docker Compose own
 6. `docker compose logs -f` to confirm all four containers are healthy, then verify
    `https://jensdebakker.com/api/v3/api-docs` and `https://jensdebakker.com/` both load.
 
-To redeploy after a code change: `git pull && docker compose up -d --build`.
+To redeploy after a code change: `git pull && docker compose up -d --build && docker compose restart proxy`.
+The explicit `restart proxy` matters: `docker compose up -d --build` only recreates a
+container when its image/build context changed, so a `proxy.conf` edit alone (the `proxy`
+service just runs the stock `nginx:alpine` image, bind-mounting that file) won't be picked
+up without an explicit restart — nginx only reads its config at startup.
 
 ## Native apps (iOS/Android)
 
