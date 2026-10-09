@@ -17,12 +17,12 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "house_files")
+@Table(name = "house_folders")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class HouseFile {
+public class HouseFolder {
 
     @Id
     @GeneratedValue
@@ -33,25 +33,16 @@ public class HouseFile {
     private Household household;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploaded_by")
-    private User uploadedBy;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "folder_id")
-    private HouseFolder folder;
+    @JoinColumn(name = "parent_folder_id")
+    private HouseFolder parentFolder;
 
     @Column(nullable = false)
-    private String filename;
+    private String name;
 
-    @Column(name = "content_type", nullable = false)
-    private String contentType;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
-    @Column(name = "size_bytes", nullable = false)
-    private long sizeBytes;
-
-    @Column(name = "storage_key", nullable = false, unique = true)
-    private String storageKey;
-
-    @Column(name = "uploaded_at", nullable = false, updatable = false)
-    private Instant uploadedAt = Instant.now();
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 }

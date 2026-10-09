@@ -5,6 +5,8 @@ import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 
+const SETTINGS_COLOR = '#64748b';
+
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const [version, setVersion] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export default function SettingsScreen() {
   }, []);
 
   return (
-    <BigCardShell title="Settings">
+    <BigCardShell title="Settings" color={SETTINGS_COLOR}>
       <Text>Signed in as {user?.email}</Text>
       <Text style={{ color: '#666' }}>Role: {user?.role}</Text>
 

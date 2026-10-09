@@ -66,9 +66,17 @@ the frontend side beyond Auth and Admin):
   `POST .../shopping-lists/{listId}/items`, `PUT/DELETE .../shopping-lists/{listId}/items/{itemId}`
 - `GET/POST /households/{householdId}/supplies`, `PUT/DELETE .../supplies/{id}`
 - `GET/POST /households/{householdId}/calendar-events`, `PUT/DELETE .../calendar-events/{id}`
-- `GET/POST /households/{householdId}/files` (multipart upload), `GET/DELETE .../files/{id}` —
-  shared files/images for the household, capped by `Household.storageLimitBytes` (default 4GB,
-  admin-editable)
+- `GET/POST /households/{householdId}/files` (multipart upload, optional `folderId` param to
+  place the upload inside a folder), `GET/DELETE .../files/{id}` — shared files/images for the
+  household, capped by `Household.storageLimitBytes` (default 4GB, admin-editable). `GET`
+  (flat) always returns every file in the household regardless of folder — used by the
+  screensaver slideshow and the admin panel. Deleting a file requires being the household
+  OWNER or the original uploader.
+- `GET /households/{householdId}/folders/contents?parentId={uuid}` (parentId omitted = root) —
+  direct children (folders + files) of a folder, `POST .../folders` — create a folder (optional
+  `parentFolderId`, omitted = root), `DELETE .../folders/{folderId}` — recursively deletes the
+  folder, its files, and its subfolders. Requires being the household OWNER or the folder's
+  creator.
 
 All of the above (except `/auth/**`) require `Authorization: Bearer <accessToken>`.
 Registering a new user creates a new household for them (as the OWNER); additional

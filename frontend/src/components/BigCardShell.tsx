@@ -1,9 +1,19 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
+import { oppositeCorners, pastelize } from '@/lib/color';
 
 const COLLAPSED_MARGIN = 18;
 const CARD_MARGIN = 10;
+
+// A colored card gets a pastel fill with the accent as its border - the same treatment
+// as a SubCard tile - so the module's color carries through from tile to opened card.
+// The default 'white' shell (unused by any module card today) stays a plain white card.
+function cardSurface(color: string) {
+  return color === 'white'
+    ? { backgroundColor: 'white' }
+    : { backgroundColor: pastelize(color), borderWidth: 2, borderColor: color };
+}
 
 /**
  * Screen chrome for the card-based navigation, and also the building block for the
@@ -100,18 +110,18 @@ export function BigCardShell({
     : 0;
 
   const contentMargin = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, COLLAPSED_MARGIN] });
-  const fg = textColor ?? (color === 'white' ? '#111827' : '#ffffff');
+  const fg = textColor ?? (color === 'white' ? '#111827' : color);
   const transform = [{ translateX }, { translateY }, { scaleX }, { scaleY }];
 
   // Once collapsed into a frame around a nested card, the title is no longer the
   // main focus - shrink it and reclaim most of the space it used to take up.
   const header = collapsed ? (
     <View style={{ paddingTop: 10, paddingHorizontal: 16, paddingBottom: 6 }}>
-      <Text style={{ fontSize: 14, fontWeight: '700', color: fg }}>{title}</Text>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: fg, textAlign: 'center' }}>{title}</Text>
     </View>
   ) : (
     <View style={{ paddingTop: 32, paddingHorizontal: 24, paddingBottom: 16 }}>
-      <Text style={{ fontSize: 28, fontWeight: '700', color: fg }}>{title}</Text>
+      <Text style={{ fontSize: 28, fontWeight: '700', color: fg, textAlign: 'center' }}>{title}</Text>
     </View>
   );
 
@@ -121,8 +131,8 @@ export function BigCardShell({
         <Animated.View
           style={{
             flex: 1,
-            backgroundColor: color,
-            borderRadius: 28,
+            ...cardSurface(color),
+            ...oppositeCorners(28),
             overflow: 'hidden',
             opacity: dest ? 1 : 0,
             transform,
@@ -130,7 +140,7 @@ export function BigCardShell({
         >
           <Pressable onPress={onCollapsedPress} style={{ flex: 1 }}>
             {header}
-            <Animated.View style={{ flex: 1, margin: contentMargin, borderRadius: 20, overflow: 'hidden' }}>
+            <Animated.View style={{ flex: 1, margin: contentMargin, ...oppositeCorners(20), overflow: 'hidden' }}>
               {/* Swallows taps anywhere inside the nested card so they don't fall through
                   to the backdrop Pressable above and bounce back out to this level. */}
               <Pressable style={{ flex: 1 }} onPress={() => {}}>
@@ -144,7 +154,15 @@ export function BigCardShell({
   }
 
   const card = (
-    <View style={{ minHeight: scroll ? '100%' : undefined, flex: scroll ? undefined : 1, backgroundColor: color, borderRadius: 28, overflow: 'hidden' }}>
+    <View
+      style={{
+        minHeight: scroll ? '100%' : undefined,
+        flex: scroll ? undefined : 1,
+        ...cardSurface(color),
+        ...oppositeCorners(28),
+        overflow: 'hidden',
+      }}
+    >
       {header}
       <Animated.View style={{ flex: scroll ? undefined : 1, paddingHorizontal: 24, paddingBottom: 24, gap: 12, opacity: contentOpacity }}>
         {children}

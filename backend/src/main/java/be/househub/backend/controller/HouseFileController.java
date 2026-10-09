@@ -40,9 +40,10 @@ public class HouseFileController {
     }
 
     @PostMapping
-    public ResponseEntity<HouseFileResponse> upload(@PathVariable UUID householdId, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<HouseFileResponse> upload(@PathVariable UUID householdId, @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) UUID folderId) {
         Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
-        HouseFileResponse created = houseFileService.upload(household, SecurityUtils.getCurrentUser(), file);
+        HouseFileResponse created = houseFileService.upload(household, SecurityUtils.getCurrentUser(), file, folderId);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
@@ -63,7 +64,7 @@ public class HouseFileController {
     @DeleteMapping("/{fileId}")
     public ResponseEntity<Void> delete(@PathVariable UUID householdId, @PathVariable UUID fileId) {
         Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
-        houseFileService.delete(household, fileId);
+        houseFileService.delete(household, SecurityUtils.getCurrentUser(), fileId);
         return ResponseEntity.noContent().build();
     }
 }
