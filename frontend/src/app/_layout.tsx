@@ -1,5 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
@@ -46,10 +47,13 @@ function RootNavigator() {
 
 export default function RootLayout() {
   useHideWebScrollbars();
+  const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
