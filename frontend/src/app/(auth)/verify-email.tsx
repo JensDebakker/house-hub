@@ -14,9 +14,8 @@ export default function VerifyEmailScreen() {
     if (!token) return;
 
     verifyEmail(token)
-      .then((user) => {
-        const householdId = user.households[0]?.householdId;
-        router.replace(householdId ? `/screensaver/${householdId}` : '/dashboard');
+      .then(() => {
+        router.replace('/dashboard');
       })
       .catch((err) => {
         setVerifyError(getErrorMessage(err, 'This verification link is invalid or has expired.'));
