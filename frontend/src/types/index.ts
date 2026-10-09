@@ -15,6 +15,7 @@ export type User = {
   role: Role;
   households: HouseholdMembership[];
   emailVerified: boolean;
+  hasProfilePicture: boolean;
 };
 
 export type Household = {

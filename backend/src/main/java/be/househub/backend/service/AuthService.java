@@ -2,6 +2,7 @@ package be.househub.backend.service;
 
 import be.househub.backend.dto.MessageResponse;
 import be.househub.backend.dto.auth.AuthResponse;
+import be.househub.backend.dto.auth.ChangePasswordRequest;
 import be.househub.backend.dto.auth.ForgotPasswordRequest;
 import be.househub.backend.dto.auth.LoginRequest;
 import be.househub.backend.dto.auth.RegisterRequest;
@@ -21,11 +22,13 @@ import be.househub.backend.exception.DuplicateEmailException;
 import be.househub.backend.exception.EmailNotVerifiedException;
 import be.househub.backend.exception.InvalidTokenException;
 import be.househub.backend.exception.InvalidVerificationTokenException;
+import be.househub.backend.exception.ResourceNotFoundException;
 import be.househub.backend.repository.HouseholdMembershipRepository;
 import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.UserRepository;
 import be.househub.backend.repository.VerificationTokenRepository;
 import be.househub.backend.security.JwtService;
+import be.househub.backend.service.storage.FileStorageService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +38,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -59,6 +65,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final MailService mailService;
+    private final FileStorageService fileStorageService;
 
     @Value("#{'${app.admin-emails:}'.split(',')}")
     private List<String> adminEmails;
@@ -156,6 +163,57 @@ public class AuthService {
         return new MessageResponse("Password reset successful. You can now log in.");
     }
 
+    @Transactional
+    public MessageResponse changePassword(User user, ChangePasswordRequest request) {
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new BadCredentialsException("Current password is incorrect");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        return new MessageResponse("Password changed successfully.");
+    }
+
+    @Transactional
+    public UserResponse uploadProfilePicture(User user, MultipartFile file) {
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Profile picture must be an image file");
+        }
+
+        String storageKey = "avatars/" + user.getId();
+        try {
+            fileStorageService.store(storageKey, file.getInputStream(), file.getSize(), contentType);
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+
+        user.setProfilePictureKey(storageKey);
+        user.setProfilePictureContentType(contentType);
+        return toUserResponse(userRepository.save(user));
+    }
+
+    public ProfilePicture downloadProfilePicture(User user) {
+        if (user.getProfilePictureKey() == null) {
+            throw new ResourceNotFoundException("ProfilePicture", user.getId());
+        }
+        FileStorageService.StoredFile stored = fileStorageService.load(user.getProfilePictureKey());
+        return new ProfilePicture(stored, user.getProfilePictureContentType());
+    }
+
+    @Transactional
+    public UserResponse removeProfilePicture(User user) {
+        if (user.getProfilePictureKey() != null) {
+            fileStorageService.delete(user.getProfilePictureKey());
+            user.setProfilePictureKey(null);
+            user.setProfilePictureContentType(null);
+            userRepository.save(user);
+        }
+        return toUserResponse(user);
+    }
+
+    public record ProfilePicture(FileStorageService.StoredFile file, String contentType) {
+    }
+
     private VerificationToken consumeToken(String rawToken, VerificationTokenType expectedType) {
         VerificationToken token = verificationTokenRepository.findByToken(rawToken)
                 .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
@@ -211,7 +269,8 @@ public class AuthService {
                 user.getDisplayName(),
                 user.getRole(),
                 households,
-                user.isEmailVerified()
+                user.isEmailVerified(),
+                user.getProfilePictureKey() != null
         );
     }
 }

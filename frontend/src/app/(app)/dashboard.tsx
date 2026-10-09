@@ -26,7 +26,7 @@ export default function DashboardScreen() {
         <SubCard title="House" subtitle="View, leave, or create" href="/house" color="#dc2626" />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard title="Settings" subtitle="Account" href="/settings" color="#64748b" />
+        <SubCard title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
       </View>
       {user?.role === 'ADMIN' ? (
         <View style={TILE_WRAPPER}>
