@@ -43,6 +43,14 @@ export type HouseholdMember = {
   role: HouseholdRole;
 };
 
+export type HouseholdCreateRequest = {
+  name: string;
+};
+
+export type HouseholdJoinRequest = {
+  inviteCode: string;
+};
+
 export type HouseholdDetail = {
   household: Household;
   members: HouseholdMember[];
