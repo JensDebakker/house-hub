@@ -140,4 +140,42 @@ class HouseholdAccessServiceTest {
         assertThatThrownBy(() -> householdAccessService.requireOwner(user, householdId))
                 .isInstanceOf(AccessDeniedException.class);
     }
+
+    @Test
+    void isOwner_admin_returnsTrue() {
+        UUID householdId = UUID.randomUUID();
+
+        assertThat(householdAccessService.isOwner(userWithRole(Role.ADMIN), householdId)).isTrue();
+    }
+
+    @Test
+    void isOwner_ownerMember_returnsTrue() {
+        UUID householdId = UUID.randomUUID();
+        User user = userWithRole(Role.USER);
+        HouseholdMembership membership = new HouseholdMembership();
+        membership.setRole(HouseholdRole.OWNER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), householdId)).thenReturn(Optional.of(membership));
+
+        assertThat(householdAccessService.isOwner(user, householdId)).isTrue();
+    }
+
+    @Test
+    void isOwner_regularMember_returnsFalse() {
+        UUID householdId = UUID.randomUUID();
+        User user = userWithRole(Role.USER);
+        HouseholdMembership membership = new HouseholdMembership();
+        membership.setRole(HouseholdRole.MEMBER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), householdId)).thenReturn(Optional.of(membership));
+
+        assertThat(householdAccessService.isOwner(user, householdId)).isFalse();
+    }
+
+    @Test
+    void isOwner_notAMember_returnsFalse() {
+        UUID householdId = UUID.randomUUID();
+        User user = userWithRole(Role.USER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), householdId)).thenReturn(Optional.empty());
+
+        assertThat(householdAccessService.isOwner(user, householdId)).isFalse();
+    }
 }
