@@ -55,4 +55,14 @@ public class HouseholdAccessService {
 
         return household;
     }
+
+    public boolean isOwner(User currentUser, UUID householdId) {
+        if (currentUser.getRole() == Role.ADMIN) {
+            return true;
+        }
+
+        return membershipRepository.findByUserIdAndHouseholdId(currentUser.getId(), householdId)
+                .map(membership -> membership.getRole() == HouseholdRole.OWNER)
+                .orElse(false);
+    }
 }
