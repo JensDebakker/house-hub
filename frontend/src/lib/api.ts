@@ -1,13 +1,13 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { create, isAxiosError, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { clearTokens, loadTokens, saveTokens } from '@/lib/storage';
 import type { AuthTokens } from '@/types';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080/api';
 
-export const api = axios.create({ baseURL: BASE_URL });
+export const api = create({ baseURL: BASE_URL });
 
 // Plain axios instance (no interceptors) so the refresh call itself can't recurse.
-const refreshClient = axios.create({ baseURL: BASE_URL });
+const refreshClient = create({ baseURL: BASE_URL });
 
 let onAuthFailure: (() => void) | null = null;
 /** Registered once by AuthContext so a failed refresh can trigger logout. */
@@ -68,7 +68,7 @@ api.interceptors.response.use(
 
 /** Backend error responses are always `{ message: string, ... }` - fall back for anything else (network errors, etc). */
 export function getErrorMessage(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err)) {
+  if (isAxiosError(err)) {
     const message = (err.response?.data as { message?: string } | undefined)?.message;
     if (message) return message;
   }

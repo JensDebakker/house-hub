@@ -1,5 +1,5 @@
 import { Link, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, Platform, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { api } from '@/lib/api';
@@ -15,7 +15,7 @@ export default function ScreensaverScreen() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [now, setNow] = useState(new Date());
   const [controlsVisible, setControlsVisible] = useState(true);
-  const cardAnim = useRef(new Animated.Value(1)).current;
+  const [cardAnim] = useState(() => new Animated.Value(1));
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Images uploaded to the house's Files panel double as screensaver slides - loaded as
@@ -70,17 +70,17 @@ export default function ScreensaverScreen() {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [controlsVisible]);
+  }, [controlsVisible, cardAnim]);
 
-  const scheduleHide = () => {
+  const scheduleHide = useCallback(() => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
     idleTimer.current = setTimeout(() => setControlsVisible(false), IDLE_TIMEOUT_MS);
-  };
+  }, []);
 
-  const wake = () => {
+  const wake = useCallback(() => {
     setControlsVisible(true);
     scheduleHide();
-  };
+  }, [scheduleHide]);
 
   // Start the initial idle countdown on mount.
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function ScreensaverScreen() {
     return () => {
       if (idleTimer.current) clearTimeout(idleTimer.current);
     };
-  }, []);
+  }, [scheduleHide]);
 
   // Mouse movement only makes sense on web - touch/click are handled by the
   // Pressable wrapper below on every platform.
@@ -96,7 +96,7 @@ export default function ScreensaverScreen() {
     if (Platform.OS !== 'web') return;
     window.addEventListener('mousemove', wake);
     return () => window.removeEventListener('mousemove', wake);
-  }, []);
+  }, [wake]);
 
   const currentSlideUrl = slideUrls[slideIndex];
 

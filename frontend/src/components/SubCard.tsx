@@ -45,9 +45,9 @@ export function SubCard({
       style={({ pressed }) => [
         {
           backgroundColor: color,
-          borderRadius: 20,
-          padding: 20,
-          aspectRatio: 0.95,
+          borderRadius: 18,
+          padding: 16,
+          aspectRatio: 1.5,
           flex: 1,
           justifyContent: 'flex-end',
           overflow: 'hidden',
@@ -56,9 +56,9 @@ export function SubCard({
         !disabled && pressed && { opacity: 0.85 },
       ]}
     >
-      <Text style={{ fontSize: 22, fontWeight: '700', color: 'white' }}>{title}</Text>
+      <Text style={{ fontSize: 17, fontWeight: '700', color: 'white' }}>{title}</Text>
       {subtitle ? (
-        <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4 }}>{subtitle}</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>{subtitle}</Text>
       ) : null}
 
       {disabled ? (

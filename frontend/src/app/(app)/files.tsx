@@ -56,7 +56,9 @@ export default function FilesScreen() {
   }, [householdId]);
 
   useEffect(() => {
-    load();
+    (async () => {
+      await load();
+    })();
   }, [load]);
 
   if (!householdId) {

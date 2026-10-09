@@ -10,12 +10,10 @@ import { api } from '@/lib/api';
  */
 export function useAuthedImage(url: string | null): string | null {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const active = Boolean(url) && Platform.OS === 'web';
 
   useEffect(() => {
-    if (!url || Platform.OS !== 'web') {
-      setObjectUrl(null);
-      return;
-    }
+    if (!active || !url) return;
 
     let currentUrl: string | null = null;
     let cancelled = false;
@@ -32,7 +30,7 @@ export function useAuthedImage(url: string | null): string | null {
       cancelled = true;
       if (currentUrl) URL.revokeObjectURL(currentUrl);
     };
-  }, [url]);
+  }, [url, active]);
 
-  return objectUrl;
+  return active ? objectUrl : null;
 }

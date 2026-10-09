@@ -8,13 +8,10 @@ import { getErrorMessage } from '@/lib/api';
 export default function VerifyEmailScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const { verifyEmail } = useAuth();
-  const [error, setError] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      setError('No verification token in this link.');
-      return;
-    }
+    if (!token) return;
 
     verifyEmail(token)
       .then((user) => {
@@ -22,9 +19,14 @@ export default function VerifyEmailScreen() {
         router.replace(householdId ? `/screensaver/${householdId}` : '/dashboard');
       })
       .catch((err) => {
-        setError(getErrorMessage(err, 'This verification link is invalid or has expired.'));
+        setVerifyError(getErrorMessage(err, 'This verification link is invalid or has expired.'));
       });
+    // verifyEmail triggers a login (setUser), which would re-fire this effect on a stale token
+    // if included as a dep - this is meant to run once per token, not once per auth state change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const error = token ? verifyError : 'No verification token in this link.';
 
   return (
     <ScreenContainer>

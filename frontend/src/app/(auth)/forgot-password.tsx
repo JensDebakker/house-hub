@@ -30,7 +30,7 @@ export default function ForgotPasswordScreen() {
     <ScreenContainer>
       <Text style={{ fontSize: 28, fontWeight: '700' }}>Forgot password</Text>
       <Text style={{ color: '#666' }}>
-        Enter your account email and we'll send you a link to reset your password.
+        Enter your account email and we&apos;ll send you a link to reset your password.
       </Text>
 
       <TextInput
