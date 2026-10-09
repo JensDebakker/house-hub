@@ -202,6 +202,15 @@ export type AdminCalendarEvent = {
   householdName: string;
 };
 
+export type ChatMessage = {
+  id: string;
+  householdId: string;
+  senderId: string;
+  senderDisplayName: string;
+  text: string;
+  createdAt: string;
+};
+
 export type AdminFile = {
   id: string;
   filename: string;

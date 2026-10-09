@@ -4,7 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { loadTokens } from '@/lib/storage';
 import { getWebSocketUrl } from '@/lib/ws';
 
-/** Reserved for the future household-scoped chat channel - no UI consumes it yet. */
+/** 'chat' is household-scoped - the socket connection itself must be opened with the
+ * current household's id (see `connect` below) for the backend's chat relay to deliver
+ * anything on this channel. */
 export type WebSocketChannelName = 'version' | 'chat';
 
 export type WebSocketEnvelope<TPayload = unknown> = {
@@ -18,6 +20,8 @@ type ChannelHandler = (payload: unknown) => void;
 type WebSocketContextValue = {
   /** Subscribe to messages on a channel; returns an unsubscribe function. */
   subscribe: (channel: WebSocketChannelName, handler: ChannelHandler) => () => void;
+  /** Sends an envelope over the socket; no-ops silently if it isn't currently open. */
+  send: (envelope: WebSocketEnvelope) => void;
 };
 
 const WebSocketContext = createContext<WebSocketContextValue | null>(null);
@@ -26,7 +30,10 @@ const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  // Multi-household switching isn't built yet - every screen in this app follows the
+  // same "household 0 is THE household" pattern, so the socket connection does too.
+  const householdId = user?.households[0]?.householdId;
 
   const socketRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Map<WebSocketChannelName, Set<ChannelHandler>>>(new Map());
@@ -58,7 +65,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       const tokens = await loadTokens();
       if (!tokens?.accessToken || !activeRef.current) return;
 
-      const socket = new WebSocket(getWebSocketUrl(tokens.accessToken));
+      const socket = new WebSocket(getWebSocketUrl(tokens.accessToken, householdId));
       socketRef.current = socket;
 
       socket.onopen = () => {
@@ -90,17 +97,28 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         socket.close();
       };
     })();
-  }, []);
+  }, [householdId]);
 
   useEffect(() => {
     connectRef.current = connect;
   }, [connect]);
 
+  // Re-runs (tearing the socket down and reconnecting) whenever `householdId` changes,
+  // not just when `isAuthenticated` flips - household data can arrive a tick after login,
+  // and the socket must be opened with the right houseId for the backend's chat relay to
+  // deliver anything, so a late-arriving id needs an immediate reconnect rather than
+  // waiting for the next backoff-scheduled retry.
   useEffect(() => {
     if (!isAuthenticated) return;
 
     activeRef.current = true;
     backoffRef.current = INITIAL_BACKOFF_MS;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    socketRef.current?.close();
+    socketRef.current = null;
     connect();
 
     return () => {
@@ -112,7 +130,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       socketRef.current?.close();
       socketRef.current = null;
     };
-  }, [isAuthenticated, connect]);
+  }, [isAuthenticated, householdId, connect]);
 
   // "version" channel: on web (the always-open kiosk display) a changed version
   // means the backend redeployed, so force a reload. Native has no equivalent
@@ -138,7 +156,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     });
   }, [subscribe]);
 
-  const value = useMemo<WebSocketContextValue>(() => ({ subscribe }), [subscribe]);
+  const send = useCallback((envelope: WebSocketEnvelope) => {
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify(envelope));
+  }, []);
+
+  const value = useMemo<WebSocketContextValue>(() => ({ subscribe, send }), [subscribe, send]);
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
@@ -153,4 +177,10 @@ export function useWebSocket(): WebSocketContextValue {
 export function useWebSocketChannel(channel: WebSocketChannelName, handler: ChannelHandler): void {
   const { subscribe } = useWebSocket();
   useEffect(() => subscribe(channel, handler), [subscribe, channel, handler]);
+}
+
+/** Send an envelope over the shared socket; no-ops if it isn't currently open. */
+export function useWebSocketSend(): WebSocketContextValue['send'] {
+  const { send } = useWebSocket();
+  return send;
 }
