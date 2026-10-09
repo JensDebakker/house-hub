@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCalendarEventsQuery, useCreateCalendarEventMutation, useDeleteCalendarEventMutation } from '@/lib/useCalendarEvents';
 
+const CALENDAR_COLOR = '#4f46e5';
+
 export default function CalendarScreen() {
   const { user } = useAuth();
   const householdId = user?.households[0]?.householdId;
@@ -41,7 +43,7 @@ export default function CalendarScreen() {
   );
 
   return (
-    <BigCardShell title="House Calendar" scroll={false}>
+    <BigCardShell title="House Calendar" color={CALENDAR_COLOR} scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Simple upcoming-events list for now — a full calendar grid view can replace this later.
       </Text>

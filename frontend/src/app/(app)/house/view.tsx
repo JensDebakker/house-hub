@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { Household } from '@/types';
 
+const VIEW_HOUSE_COLOR = '#db2777';
+
 export default function ViewHouseScreen() {
   const { user } = useAuth();
   const householdId = user?.households[0]?.householdId;
@@ -20,7 +22,7 @@ export default function ViewHouseScreen() {
   }, [householdId]);
 
   return (
-    <BigCardShell title="View House">
+    <BigCardShell title="View House" color={VIEW_HOUSE_COLOR}>
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
       {household ? (
         <>

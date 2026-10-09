@@ -12,6 +12,7 @@ import {
 } from '@/lib/useShoppingLists';
 
 const DEFAULT_LIST_NAME = 'Shopping List';
+const SHOPPING_COLOR = '#059669';
 
 export default function ShoppingScreen() {
   const { user } = useAuth();
@@ -65,7 +66,7 @@ export default function ShoppingScreen() {
   const isLoading = shoppingListsQuery.isLoading || (shoppingListsQuery.data?.length === 0 && createList.isPending);
 
   return (
-    <BigCardShell title="Shopping List" scroll={false}>
+    <BigCardShell title="Shopping List" color={SHOPPING_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>

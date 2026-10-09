@@ -8,6 +8,8 @@ import { api, getErrorMessage } from '@/lib/api';
 import { useAuthedImage } from '@/lib/useAuthedImage';
 import type { HouseFile } from '@/types';
 
+const FILES_COLOR = '#ca8a04';
+
 function formatBytes(bytes: number): string {
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
   if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
@@ -63,7 +65,7 @@ export default function FilesScreen() {
 
   if (!householdId) {
     return (
-      <BigCardShell title="Files">
+      <BigCardShell title="Files" color={FILES_COLOR}>
         <Text>You&apos;re not part of a house yet.</Text>
       </BigCardShell>
     );
@@ -119,7 +121,7 @@ export default function FilesScreen() {
   };
 
   return (
-    <BigCardShell title="Files">
+    <BigCardShell title="Files" color={FILES_COLOR}>
       <Text style={{ color: '#666' }}>
         Shared files and images for your house. Uploaded images (JPEG, PNG, GIF, WebP, …)
         automatically show up in the screensaver slideshow.

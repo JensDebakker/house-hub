@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateSupplyMutation, useDeleteSupplyMutation, useSuppliesQuery } from '@/lib/useSupplies';
 
+const SUPPLIES_COLOR = '#0891b2';
+
 const WARNING_WINDOW_DAYS = 7;
 
 function daysUntil(dateStr: string): number {
@@ -52,7 +54,7 @@ export default function SuppliesScreen() {
         : null;
 
   return (
-    <BigCardShell title="Medical Supplies" scroll={false}>
+    <BigCardShell title="Medical Supplies" color={SUPPLIES_COLOR} scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Long-press an item to remove it. Yellow = expiring within {WARNING_WINDOW_DAYS} days, red = expired.
       </Text>

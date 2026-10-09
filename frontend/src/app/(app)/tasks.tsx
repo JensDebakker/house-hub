@@ -6,6 +6,8 @@ import { getErrorMessage } from '@/lib/api';
 import { useCreateTaskMutation, useDeleteTaskMutation, useTasksQuery, useUpdateTaskMutation } from '@/lib/useTasks';
 import type { Task } from '@/types';
 
+const TASKS_COLOR = '#dc2626';
+
 export default function TasksScreen() {
   const { user } = useAuth();
   const householdId = user?.households[0]?.householdId;
@@ -45,7 +47,7 @@ export default function TasksScreen() {
           : null;
 
   return (
-    <BigCardShell title="Routine Tasks" scroll={false}>
+    <BigCardShell title="Routine Tasks" color={TASKS_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
