@@ -139,6 +139,16 @@ than one:
   cross-cutting (e.g. docker/CI changes, which legitimately touch `docker/` and
   `.github/workflows/`). A backend-focused agent has no reason to touch `frontend/`, and
   vice versa.
+- **Name new Flyway migrations `V<yyyyMMddHHmmss>__description.sql`, not the next sequential
+  integer.** Checking "what's the latest `V*` on `master`" doesn't work here — each agent is
+  on its own branch and can't see a sibling's migration until it merges, so two agents adding
+  "the next" migration at the same time will always pick the same number (this happened:
+  `V4__add_user_profile_picture.sql` and `V4__add_chat_messages.sql` landed in parallel PRs,
+  and Flyway refused to boot at all once both were on `master` — full backend outage). A
+  timestamp has no "next" to coincide on, so this is a format fix, not a process one; it
+  needs no coordination and no check against anyone else's branch. Flyway treats the digits
+  before `__` purely numerically, so e.g. `V20261009224500__...` sorts correctly after the
+  existing low integer versions without renumbering anything already merged.
 - **Docker/deploy changes (`docker/`, `.github/workflows/deploy.yml`) are their own lane.**
   They depend on env vars defined in `docker/docker-compose.yml` (DB_*, JWT_SECRET, SMTP_*,
   CORS_ALLOWED_ORIGINS, ADMIN_EMAILS) — an agent changing backend config properties that
