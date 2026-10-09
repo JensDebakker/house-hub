@@ -1,12 +1,12 @@
-import { Stack } from 'expo-router';
+import { Slot } from 'expo-router';
+import { View } from 'react-native';
+import { AdminTabBar } from '@/components/AdminTabBar';
 
 export default function AdminLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ title: 'Users' }} />
-      <Stack.Screen name="users/[id]" options={{ title: 'User' }} />
-      <Stack.Screen name="houses/index" options={{ title: 'Houses' }} />
-      <Stack.Screen name="houses/[id]" options={{ title: 'House' }} />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <AdminTabBar />
+      <Slot />
+    </View>
   );
 }

@@ -112,3 +112,52 @@ export type CalendarEvent = {
   start: string;
   end?: string;
 };
+
+export type AdminTask = {
+  id: string;
+  title: string;
+  done: boolean;
+  dueDate?: string;
+  assignedToId?: string;
+  assignedToName?: string;
+  householdId: string;
+  householdName: string;
+};
+
+export type AdminSupply = {
+  id: string;
+  name: string;
+  quantity: number;
+  expiryDate: string;
+  householdId: string;
+  householdName: string;
+};
+
+export type AdminShoppingList = {
+  id: string;
+  name: string;
+  householdId: string;
+  householdName: string;
+  items: ShoppingListItem[];
+};
+
+export type AdminCalendarEvent = {
+  id: string;
+  title: string;
+  start: string;
+  end?: string;
+  householdId: string;
+  householdName: string;
+};
+
+export type AdminFile = {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  householdId: string;
+  householdName: string;
+  uploadedById?: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+};

@@ -68,9 +68,6 @@ export default function AdminUsersScreen() {
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
       <Text style={{ fontSize: 24, fontWeight: '700' }}>Users</Text>
-      <Link href="/admin/houses" style={{ color: '#2563eb' }}>
-        View houses →
-      </Link>
 
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 

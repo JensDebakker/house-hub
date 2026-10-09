@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 
 const COLLAPSED_MARGIN = 18;
+const CARD_MARGIN = 10;
 
 /**
  * Screen chrome for the card-based navigation, and also the building block for the
@@ -95,7 +96,7 @@ export function BigCardShell({
   const fg = textColor ?? (color === 'white' ? '#111827' : '#ffffff');
 
   return (
-    <View ref={containerRef} style={{ flex: 1 }} collapsable={false}>
+    <View ref={containerRef} style={{ flex: 1, margin: CARD_MARGIN }} collapsable={false}>
       <Animated.View
         style={{
           flex: 1,
@@ -109,7 +110,7 @@ export function BigCardShell({
         <Pressable disabled={!collapsed} onPress={onCollapsedPress} style={{ flex: 1 }}>
           <View
             style={{
-              paddingTop: 48,
+              paddingTop: 32,
               paddingHorizontal: 24,
               paddingBottom: 16,
               flexDirection: 'row',
@@ -125,7 +126,7 @@ export function BigCardShell({
             <Text style={{ fontSize: 28, fontWeight: '700', color: fg }}>{title}</Text>
           </View>
 
-          <Animated.View style={{ flex: 1, margin: contentMargin }}>
+          <Animated.View style={{ flex: 1, margin: contentMargin, borderRadius: 20, overflow: 'hidden' }}>
             {collapsed ? (
               // Swallows taps anywhere inside the nested card so they don't fall through
               // to the backdrop Pressable above and bounce back out to this level.

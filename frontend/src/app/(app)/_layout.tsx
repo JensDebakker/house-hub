@@ -43,14 +43,13 @@ function useIdleScreensaverRedirect() {
 // instead of being replaced by it. Tapping that frame returns straight to it.
 export default function AppStackLayout() {
   useIdleScreensaverRedirect();
-  const { user } = useAuth();
   const pathname = usePathname();
   const collapsed = pathname !== '/dashboard';
 
   return (
     <View style={{ flex: 1, backgroundColor: '#e5e7eb' }}>
       <BigCardShell
-        title={`Welcome${user ? `, ${user.displayName}` : ''}`}
+        title="Dashboard"
         color={DASHBOARD_COLOR}
         isRoot
         collapsed={collapsed}
