@@ -2,7 +2,7 @@ import { create, isAxiosError, type AxiosError, type InternalAxiosRequestConfig 
 import { clearTokens, loadTokens, saveTokens } from '@/lib/storage';
 import type { AuthTokens } from '@/types';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080/api';
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080/api';
 
 export const api = create({ baseURL: BASE_URL });
 

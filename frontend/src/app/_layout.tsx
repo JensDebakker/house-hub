@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { WebSocketProvider } from '@/contexts/WebSocketContext';
 
 // react-native-web's showsVerticalScrollIndicator={false} only hides Firefox's
 // scrollbar (via scrollbar-width). This covers Chrome/Safari/Edge too.
@@ -49,7 +50,9 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <RootNavigator />
+      <WebSocketProvider>
+        <RootNavigator />
+      </WebSocketProvider>
     </AuthProvider>
   );
 }
