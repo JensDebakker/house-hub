@@ -21,6 +21,7 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
@@ -34,7 +35,10 @@
     "web": "expo start --web",
     "build:web": "expo export -p web",
     "lint": "expo lint",
-    "gen:api-types": "openapi-typescript http://localhost:8080/api/v3/api-docs -o src/types/api-generated.ts"
+    "gen:api-types": "openapi-typescript http://localhost:8080/api/v3/api-docs -o src/types/api-generated.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:update-snapshots": "playwright test --update-snapshots"
   },
   "private": true
 }
