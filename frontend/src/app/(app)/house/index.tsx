@@ -20,10 +20,28 @@ export default function HouseIndexScreen() {
         />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" disabled />
+        <SubCard title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard title="Leave house" subtitle="Remove yourself" href="/house/leave" color="#e11d48" disabled />
+        <SubCard title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
+      </View>
+      <View style={TILE_WRAPPER}>
+        <SubCard
+          title="Manage house"
+          subtitle="Members & roles"
+          href={householdId ? '/house/manage' : ''}
+          color="#0f766e"
+          disabled={!householdId}
+        />
+      </View>
+      <View style={TILE_WRAPPER}>
+        <SubCard
+          title="Leave house"
+          subtitle="Remove yourself"
+          href={householdId ? '/house/leave' : ''}
+          color="#e11d48"
+          disabled={!householdId}
+        />
       </View>
     </View>
   );

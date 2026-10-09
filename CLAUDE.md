@@ -6,6 +6,8 @@ The content above is the shared, tool-agnostic project context and workflow rule
 readable by non-Claude coding agents). Everything below is Claude Code-specific: exact
 tool names and mechanics for carrying out the rules above in this harness.
 
+Please check @AGENTS.MD aswell!!!
+
 ## Claude Code mechanics
 
 - **Check for a sibling session before starting non-trivial work.** Run `ListAgents` early
@@ -21,3 +23,9 @@ tool names and mechanics for carrying out the rules above in this harness.
   `.claude/agents/`). Prefer dispatching to those over a generic agent when a task is
   clearly confined to one layer — they're pointed at the right directories and stack
   already.
+- **For anything GitHub-side — PR status/reviews, CI checks, issues — use the
+  `github-jens` MCP server tools (`mcp__github-jens__*`)**, not `WebFetch` on GitHub URLs
+  (it can't authenticate) and not the `gh` CLI (not installed in this environment). If
+  that server shows as failed/not connected, say so to the user instead of silently
+  skipping GitHub-side checks or guessing at PR/CI state — reconnecting it is done on their
+  end (`claude mcp` / `/mcp` in an interactive session), not something fixable mid-session.

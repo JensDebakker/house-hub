@@ -24,16 +24,27 @@ cd frontend && npm install && npm run web   # or android / ios
 
 ## Git discipline
 
-**All non-trivial work happens on its own feature branch, never directly on `master`.**
-Before editing, create (or switch to) a branch named after the feature/task, branched off
-latest `master` — e.g. `feature/supplies-crud`, `agent/frontend-shopping-list-wiring`. This
-repo is routinely worked on by more than one agent/session at a time sharing the same
-checkout on disk, so prefer an isolated `git worktree` per branch over switching branches
-in that shared working directory — one agent checking out a different branch there changes
-the files out from under whoever else is mid-edit.
+**Always work on its own feature branch, never directly on `master`.** This applies to
+every change, not just non-trivial ones. Before editing, create (or switch to) a branch
+named after the feature/task, branched off latest `master` — e.g. `feature/supplies-crud`,
+`agent/frontend-shopping-list-wiring`. This repo is routinely worked on by more than one
+agent/session at a time sharing the same checkout on disk, so prefer an isolated `git
+worktree` per branch over switching branches in that shared working directory — one agent
+checking out a different branch there changes the files out from under whoever else is
+mid-edit.
 
 **Once you're on your own feature branch, commit and push to *that branch* freely** — no
 need to ask before each commit/push to your own branch.
+
+- **Commit each committable step as you go**, rather than batching everything into one
+  commit at the end. A "committable step" is a point where the tree builds/tests cleanly
+  and represents one coherent piece of work (one endpoint, one screen, one fix) — commit
+  there rather than carrying a large uncommitted diff.
+- **Push your branch whenever it's in a mergeable state** — i.e. it builds and the commits
+  are clean/coherent, even if the overall feature isn't finished yet. Don't sit on pushes
+  until the very end; a pushed branch is visible and recoverable, an uncommitted local diff
+  is not. "Mergeable" here means mergeable into *your own branch's history*, not ready to
+  merge into `master` — that step still requires the user, per below.
 
 **Never push to `master`, and never merge a branch/PR into `master`, without the user
 explicitly asking for it.** Merging into `master` is a manual, reviewed step the user does
