@@ -80,6 +80,22 @@ export type HouseFile = {
   uploadedById?: string;
   uploadedByName?: string;
   uploadedAt: string;
+  folderId: string | null;
+};
+
+export type HouseFolder = {
+  id: string;
+  name: string;
+  parentFolderId: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+};
+
+export type FolderContents = {
+  folderId: string | null;
+  folders: HouseFolder[];
+  files: HouseFile[];
 };
 
 export type AuthTokens = {
