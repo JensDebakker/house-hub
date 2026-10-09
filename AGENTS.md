@@ -43,13 +43,18 @@ need to ask before each commit/push to your own branch.
 - **Push your branch whenever it's in a mergeable state** — i.e. it builds and the commits
   are clean/coherent, even if the overall feature isn't finished yet. Don't sit on pushes
   until the very end; a pushed branch is visible and recoverable, an uncommitted local diff
-  is not. "Mergeable" here means mergeable into *your own branch's history*, not ready to
-  merge into `master` — that step still requires the user, per below.
+  is not. "Mergeable" here means mergeable into *your own branch's history* — whether it's
+  also ready to merge into `master` is decided separately, per below.
 
-**Never push to `master`, and never merge a branch/PR into `master`, without the user
-explicitly asking for it.** Merging into `master` is a manual, reviewed step the user does
-themselves, or explicitly delegates to a specific agent/session for that one merge — never
-something an agent does on its own as a side effect of finishing a task.
+**By default, review and merge your own feature's PR into `master` yourself once it's
+ready** — don't wait for the user to ask or to do it themselves. "Ready" means: the branch
+builds, the relevant layer's tests/checks pass, and you've actually reviewed the diff (e.g.
+via `/code-review`, or an equivalent careful read-through) rather than merging on faith just
+because you wrote it. Still never force-push to `master`. If the change is risky,
+destructive, touches shared infra you're unsure about, or the user said they want to review
+this particular one themselves, stop and ask before merging instead of merging through it —
+this default doesn't override the general rule of checking before hard-to-reverse,
+shared-impact actions.
 
 **Before resuming work on an existing branch/worktree, confirm it's still alive.** A
 worktree sitting on disk has no idea its branch was merged three commits ago — merging on
@@ -60,7 +65,7 @@ pull latest `master` and cut a new branch for any further work instead.
 
 **Open your own PR via the GitHub MCP tools once your feature is ready for review** —
 `mcp__github-jens__create_pull_request` targeting `master` — rather than waiting for the
-user to open it. You still may not merge it yourself (see above) unless explicitly told to.
+user to open it. Then review and merge it yourself by default, per above.
 
 **Never `git add -A` / `git add .` on this repo, even when asked to commit.** Multiple
 agents routinely share this one working directory (see below) — a broad add can silently
@@ -70,8 +75,8 @@ in the tree before touching any of it.
 
 ## Branch lifecycle after merge
 
-Once a PR merges into `master` (by the user, or by whichever agent/session they asked to
-do that one merge):
+Once a PR merges into `master` (by you, which is the default now, or by the user if they
+chose to handle that one themselves):
 
 - **Delete the branch, both places**: `git push origin --delete <branch>` and
   `git branch -D <branch>` locally. A squash-merged branch isn't fast-forward-reachable
