@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { Household, HouseholdJoinRequest } from '@/types';
 
+const JOIN_HOUSE_COLOR = '#2563eb';
+
 export default function JoinHouseScreen() {
   const { refreshUser } = useAuth();
   const [inviteCode, setInviteCode] = useState('');
@@ -27,7 +29,7 @@ export default function JoinHouseScreen() {
   };
 
   return (
-    <BigCardShell title="Join House">
+    <BigCardShell title="Join House" color={JOIN_HOUSE_COLOR}>
       <Text style={{ color: '#666' }}>Enter the invite code you were given.</Text>
 
       <TextInput
