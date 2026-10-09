@@ -23,6 +23,9 @@ export default function DashboardScreen() {
         <SubCard title="Files" subtitle="Shared uploads" href="/files" color="#ca8a04" />
       </View>
       <View style={TILE_WRAPPER}>
+        <SubCard title="Chat" subtitle="Household messages" href="/chat" color="#db2777" />
+      </View>
+      <View style={TILE_WRAPPER}>
         <SubCard title="House" subtitle="View, leave, or create" href="/house" color="#dc2626" />
       </View>
       <View style={TILE_WRAPPER}>

@@ -1,5 +1,7 @@
 package be.househub.backend.websocket;
 
+import be.househub.backend.dto.chat.ChatMessageResponse;
+import be.househub.backend.service.ChatMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -9,6 +11,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.UUID;
@@ -18,11 +21,11 @@ import java.util.UUID;
  *
  * <p>Only the "chat" channel accepts client-sent messages today: the sender's
  * {@code houseId} (resolved at handshake time, never trusted from the message body) must
- * match the envelope's {@code houseId}, and the payload is relayed as-is to every other
- * open session in that same household. No persistence, no REST history endpoint — this
- * only proves the transport works end-to-end for a future chat feature. Other channels
- * (e.g. "version") are server-to-client only and any client-sent message on them is
- * ignored.
+ * match the envelope's {@code houseId}. The message is persisted via
+ * {@link ChatMessageService} and the persisted (server-assigned id/timestamp/sender
+ * display name) form is relayed to every other open session in that same household —
+ * never echoed back to the sender. Other channels (e.g. "version") are server-to-client
+ * only and any client-sent message on them is ignored.
  */
 @Component
 @RequiredArgsConstructor
@@ -32,6 +35,7 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
     private final SessionRegistry sessionRegistry;
     private final WebSocketBroadcaster broadcaster;
     private final ObjectMapper objectMapper;
+    private final ChatMessageService chatMessageService;
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
@@ -69,6 +73,24 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        broadcaster.broadcastToHouse(sessionHouseId, envelope, session.getId());
+        UUID userId = (UUID) session.getAttributes().get(JwtHandshakeInterceptor.ATTR_USER_ID);
+        JsonNode payload = envelope.payload();
+        String text = payload == null ? null : payload.path("text").asString(null);
+        if (text == null) {
+            log.debug("Ignoring chat message from session {}: missing text payload", session.getId());
+            return;
+        }
+
+        ChatMessageResponse persisted;
+        try {
+            persisted = chatMessageService.persist(sessionHouseId, userId, text);
+        } catch (IllegalArgumentException ex) {
+            log.debug("Dropping chat message from session {}: {}", session.getId(), ex.getMessage());
+            return;
+        }
+
+        MessageEnvelope outgoing = MessageEnvelope.of(
+                MessageEnvelope.CHANNEL_CHAT, sessionHouseId, objectMapper.valueToTree(persisted));
+        broadcaster.broadcastToHouse(sessionHouseId, outgoing, session.getId());
     }
 }

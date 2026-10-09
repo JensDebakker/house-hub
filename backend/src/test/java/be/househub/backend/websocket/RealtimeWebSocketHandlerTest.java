@@ -1,5 +1,7 @@
 package be.househub.backend.websocket;
 
+import be.househub.backend.dto.chat.ChatMessageResponse;
+import be.househub.backend.service.ChatMessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,12 +12,14 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,6 +41,9 @@ class RealtimeWebSocketHandlerTest {
     @Mock
     private WebSocketSession sessionB1; // house B
 
+    @Mock
+    private ChatMessageService chatMessageService;
+
     private SessionRegistry sessionRegistry;
     private RealtimeWebSocketHandler handler;
     private VersionBroadcastListener versionBroadcastListener;
@@ -50,7 +57,7 @@ class RealtimeWebSocketHandlerTest {
         objectMapper = new ObjectMapper();
         sessionRegistry = new SessionRegistry();
         WebSocketBroadcaster broadcaster = new WebSocketBroadcaster(sessionRegistry, objectMapper);
-        handler = new RealtimeWebSocketHandler(sessionRegistry, broadcaster, objectMapper);
+        handler = new RealtimeWebSocketHandler(sessionRegistry, broadcaster, objectMapper, chatMessageService);
         versionBroadcastListener = new VersionBroadcastListener(broadcaster, objectMapper);
         ReflectionTestUtils.setField(versionBroadcastListener, "version", "110");
 
@@ -83,6 +90,12 @@ class RealtimeWebSocketHandlerTest {
 
     @Test
     void chatMessage_relayedToOtherSessionsInSameHouseOnly() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        UUID senderId = UUID.randomUUID();
+        Instant createdAt = Instant.now();
+        when(chatMessageService.persist(eq(houseA), any(UUID.class), eq("hello")))
+                .thenReturn(new ChatMessageResponse(messageId, houseA, senderId, "Alice", "hello", createdAt));
+
         handler.afterConnectionEstablished(sessionA1);
         handler.afterConnectionEstablished(sessionA2);
         handler.afterConnectionEstablished(sessionB1);
@@ -93,6 +106,7 @@ class RealtimeWebSocketHandlerTest {
 
         handler.handleMessage(sessionA1, new TextMessage(chatJson));
 
+        verify(chatMessageService).persist(eq(houseA), any(UUID.class), eq("hello"));
         verify(sessionA2).sendMessage(any(TextMessage.class));
         verify(sessionA1, never()).sendMessage(any(TextMessage.class));
         verify(sessionB1, never()).sendMessage(any(TextMessage.class));
@@ -110,6 +124,7 @@ class RealtimeWebSocketHandlerTest {
         handler.handleMessage(sessionA1, new TextMessage(chatJson));
 
         verify(sessionA2, never()).sendMessage(any(TextMessage.class));
+        verify(chatMessageService, never()).persist(any(UUID.class), any(UUID.class), any(String.class));
     }
 
     @Test

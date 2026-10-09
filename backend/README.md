@@ -66,6 +66,10 @@ the frontend side beyond Auth and Admin):
   `POST .../shopping-lists/{listId}/items`, `PUT/DELETE .../shopping-lists/{listId}/items/{itemId}`
 - `GET/POST /households/{householdId}/supplies`, `PUT/DELETE .../supplies/{id}`
 - `GET/POST /households/{householdId}/calendar-events`, `PUT/DELETE .../calendar-events/{id}`
+- `GET /households/{householdId}/chat-messages` (optional `limit`, default 50, and `before`
+  ISO-8601 instant for "load older" pagination) — newest-first history of messages
+  persisted from the `chat` websocket channel at `/ws`; there is no REST endpoint to send a
+  message, sending only happens over the websocket
 - `GET/POST /households/{householdId}/files` (multipart upload, optional `folderId` param to
   place the upload inside a folder), `GET/DELETE .../files/{id}` — shared files/images for the
   household, capped by `Household.storageLimitBytes` (default 4GB, admin-editable). `GET`
