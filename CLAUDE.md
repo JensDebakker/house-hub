@@ -24,11 +24,24 @@ cd frontend && npm install && npm run web   # or android / ios
 
 ## Git discipline
 
-**Never run `git commit` or `git push` unless the user explicitly asks for it in that
-conversation turn.** This applies to every agent/session working in this repo, not just
-the one being addressed directly — leave changes staged/unstaged in the working tree and
-let the user (or a follow-up explicit request) decide when to commit. Don't commit "to be
-safe" after finishing a task, and don't auto-commit as a side effect of a workflow step.
+**All non-trivial work happens on its own feature branch, never directly on `master`.**
+Before editing, create (or switch to) a branch named after the feature/task, branched off
+latest `master` — e.g. `feature/supplies-crud`, `agent/frontend-shopping-list-wiring`. If
+the environment supports git worktrees (`EnterWorktree`/`ExitWorktree`, or the `Agent`
+tool's `isolation: "worktree"`), prefer that over switching branches in the shared
+checkout — this repo has multiple sessions on one working directory at once (see below),
+and one session checking out a different branch there changes the files out from under
+whoever else is mid-edit. Use a worktree per branch where the tooling allows it.
+
+**Once you're on your own feature branch, commit and push to *that branch* freely** — no
+need to ask the user before each commit/push to your own branch. This applies to every
+agent/session working in this repo.
+
+**Never push to `master`, and never merge a branch/PR into `master`, without the user
+explicitly asking for it in that turn.** Merging into `master` is a manual, reviewed step.
+The user does it themselves, or explicitly asks a specific session to act as "Branch
+Master" for that merge (review the branch/PR and merge it into `master`) — it is never
+something any agent does on its own as a side effect of finishing a task.
 
 **Never `git add -A` / `git add .` on this repo, even when asked to commit.** Multiple
 Claude sessions routinely share this one working directory (see below) — a broad add can
@@ -48,7 +61,9 @@ mid-edit when both wrote to it concurrently. Concretely:
 - **Check for a sibling session before starting non-trivial work.** Run `ListAgents` early
   — if another session on this repo shows up, say so to your user before diving in, and
   coordinate scope (e.g. "I'll take the backend, you take the frontend wiring") rather than
-  both building the same thing independently.
+  both building the same thing independently. Also check existing branches (`git branch -a`)
+  for one that already covers the feature you're about to start, since each feature now
+  gets its own branch.
 - **An unexpected on-disk change is not automatically "someone's deliberate edit you should
   build on"** — the general assumption that a file changed since you read it reflects
   intentional work still applies, but on *this* repo specifically, first consider whether

@@ -30,7 +30,7 @@ export default function DashboardScreen() {
       </View>
       {user?.role === 'ADMIN' ? (
         <View style={TILE_WRAPPER}>
-          <SubCard title="Admin" subtitle="Manage everything" href="/admin" color="#dc2626" />
+          <SubCard title="Admin" subtitle="Manage everything" href="/admin" color="#ea580c" />
         </View>
       ) : null}
 

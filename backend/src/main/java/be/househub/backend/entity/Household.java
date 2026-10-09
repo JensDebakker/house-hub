@@ -34,7 +34,8 @@ public class Household {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    @Column(name = "storage_limit_bytes", nullable = false)
+    @Column(name = "storage_limit_bytes", nullable = false,
+            columnDefinition = "bigint not null default " + DEFAULT_STORAGE_LIMIT_BYTES)
     private long storageLimitBytes = DEFAULT_STORAGE_LIMIT_BYTES;
 
     public static final long DEFAULT_STORAGE_LIMIT_BYTES = 4L * 1024 * 1024 * 1024;

@@ -49,10 +49,9 @@ export function SubCard({
           padding: 16,
           aspectRatio: 1.5,
           flex: 1,
-          justifyContent: 'flex-end',
+          justifyContent: 'flex-start',
           overflow: 'hidden',
         },
-        disabled && { opacity: 0.35 },
         !disabled && pressed && { opacity: 0.85 },
       ]}
     >
@@ -62,20 +61,9 @@ export function SubCard({
       ) : null}
 
       {disabled ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.25)',
-          }}
-        >
-          <View style={{ backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
-            <Text style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>Coming soon</Text>
+        <View style={{ position: 'absolute', top: 10, right: 10 }}>
+          <View style={{ backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+            <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>Coming soon</Text>
           </View>
         </View>
       ) : null}

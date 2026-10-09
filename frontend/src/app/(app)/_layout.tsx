@@ -5,7 +5,8 @@ import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 
 const IDLE_REDIRECT_MS = 2 * 60 * 1000;
-const DASHBOARD_COLOR = '#b91c1c';
+const DASHBOARD_COLOR = '#e3a8a8';
+const DASHBOARD_TEXT_COLOR = '#5c2222';
 
 // After a couple of minutes of no input anywhere in the app, hand off to the
 // screensaver - mirrors how the smart screen is meant to behave when left alone.
@@ -39,7 +40,7 @@ function useIdleScreensaverRedirect() {
 }
 
 // The Dashboard is the base of the card stack: it never unmounts while signed in, and
-// collapses into a red frame (title still visible) around whichever sub-route is open,
+// collapses into a pastel frame (title still visible) around whichever sub-route is open,
 // instead of being replaced by it. Tapping that frame returns straight to it.
 export default function AppStackLayout() {
   useIdleScreensaverRedirect();
@@ -51,7 +52,7 @@ export default function AppStackLayout() {
       <BigCardShell
         title="Dashboard"
         color={DASHBOARD_COLOR}
-        isRoot
+        textColor={DASHBOARD_TEXT_COLOR}
         collapsed={collapsed}
         onCollapsedPress={() => router.replace('/dashboard')}
       >

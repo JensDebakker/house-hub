@@ -15,15 +15,15 @@ export default function HouseIndexScreen() {
           title="View house"
           subtitle="Details & invite code"
           href={householdId ? '/house/view' : ''}
-          color="#2563eb"
+          color="#db2777"
           disabled={!householdId}
         />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard title="Create house" subtitle="Start a new house" href="/house/create" color="#059669" disabled />
+        <SubCard title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" disabled />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard title="Leave house" subtitle="Remove yourself" href="/house/leave" color="#dc2626" disabled />
+        <SubCard title="Leave house" subtitle="Remove yourself" href="/house/leave" color="#e11d48" disabled />
       </View>
     </View>
   );

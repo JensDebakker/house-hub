@@ -2,8 +2,8 @@ import { Picker } from '@react-native-picker/picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } from '@/components/AdminTable';
+import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
@@ -175,9 +175,7 @@ export default function AdminHouseDetailScreen() {
           keyboardType="numeric"
           style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 6, width: 80 }}
         />
-        <Pressable onPress={saveLimit} disabled={busy} style={saveButtonStyle}>
-          <Text style={{ color: 'white', fontWeight: '600' }}>Save</Text>
-        </Pressable>
+        <AdminActionButton label="Save" onPress={saveLimit} disabled={busy} />
         <Text style={{ color: '#666' }}>
           Used: {formatBytes(household.storageUsedBytes)} / {formatBytes(household.storageLimitBytes)}
         </Text>
@@ -197,9 +195,7 @@ export default function AdminHouseDetailScreen() {
               </Cell>
               <Cell width={110}><Text>{m.role}</Text></Cell>
               <Cell width={140}>
-                <Pressable onPress={() => removeMember(m.userId)} disabled={busy}>
-                  <Text style={{ color: '#c62828' }}>Remove</Text>
-                </Pressable>
+                <AdminActionButton label="Remove" variant="danger" onPress={() => removeMember(m.userId)} disabled={busy} />
               </Cell>
             </Row>
           ))}
@@ -217,9 +213,7 @@ export default function AdminHouseDetailScreen() {
               <Picker.Item key={r} label={r} value={r} />
             ))}
           </Picker>
-          <Pressable onPress={addMember} disabled={busy || !newMemberId} style={saveButtonStyle}>
-            <Text style={{ color: 'white', fontWeight: '600' }}>Add member</Text>
-          </Pressable>
+          <AdminActionButton label="Add member" onPress={addMember} disabled={busy || !newMemberId} />
         </View>
       </Section>
 
@@ -302,20 +296,19 @@ export default function AdminHouseDetailScreen() {
               <Cell width={120}><Text numberOfLines={1}>{f.uploadedByName ?? '-'}</Text></Cell>
               <Cell width={120}>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <Pressable onPress={() => downloadFile(id, f.id, f.filename)}>
-                    <Text style={{ color: '#2563eb' }}>Download</Text>
-                  </Pressable>
-                  <Pressable onPress={() => deleteFile(f.id)} disabled={busy}>
-                    <Text style={{ color: '#c62828' }}>Delete</Text>
-                  </Pressable>
+                  <AdminActionButton label="Download" variant="link" onPress={() => downloadFile(id, f.id, f.filename)} />
+                  <AdminActionButton label="Delete" variant="danger" onPress={() => deleteFile(f.id)} disabled={busy} />
                 </View>
               </Cell>
             </Row>
           ))}
         </TableContainer>
-        <Pressable onPress={uploadFile} disabled={busy} style={[saveButtonStyle, { marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 16 }]}>
-          <Text style={{ color: 'white', fontWeight: '600' }}>Upload file</Text>
-        </Pressable>
+        <AdminActionButton
+          label="Upload file"
+          onPress={uploadFile}
+          disabled={busy}
+          style={{ marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 16 }}
+        />
       </Section>
     </ScrollView>
   );

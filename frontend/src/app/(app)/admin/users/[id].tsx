@@ -1,8 +1,8 @@
 import { Picker } from '@react-native-picker/picker';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } from '@/components/AdminTable';
+import { ScrollView, Text, View } from 'react-native';
+import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
@@ -120,9 +120,7 @@ export default function AdminUserDetailScreen() {
               </Cell>
               <Cell width={110}><Text>{h.role}</Text></Cell>
               <Cell width={110}>
-                <Pressable onPress={() => removeFromHousehold(h.householdId)} disabled={busy}>
-                  <Text style={{ color: '#c62828' }}>Remove</Text>
-                </Pressable>
+                <AdminActionButton label="Remove" variant="danger" onPress={() => removeFromHousehold(h.householdId)} disabled={busy} />
               </Cell>
             </Row>
           ))}
@@ -140,9 +138,7 @@ export default function AdminUserDetailScreen() {
               <Picker.Item key={r} label={r} value={r} />
             ))}
           </Picker>
-          <Pressable onPress={addToHousehold} disabled={busy || !newHouseholdId} style={saveButtonStyle}>
-            <Text style={{ color: 'white', fontWeight: '600' }}>Add to house</Text>
-          </Pressable>
+          <AdminActionButton label="Add to house" onPress={addToHousehold} disabled={busy || !newHouseholdId} />
         </View>
       </View>
 

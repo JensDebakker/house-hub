@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
+import { Platform, ScrollView, Text, View } from 'react-native';
+import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
@@ -119,12 +119,8 @@ export default function AdminFilesScreen() {
             </Cell>
             <Cell width={COLS.actions}>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <Pressable onPress={() => downloadFile(f.householdId, f.id, f.filename)}>
-                  <Text style={{ color: '#2563eb' }}>Download</Text>
-                </Pressable>
-                <Pressable onPress={() => remove(f)} disabled={busyId === f.id}>
-                  <Text style={{ color: '#c62828' }}>Delete</Text>
-                </Pressable>
+                <AdminActionButton label="Download" variant="link" onPress={() => downloadFile(f.householdId, f.id, f.filename)} small />
+                <AdminActionButton label="Delete" variant="danger" onPress={() => remove(f)} disabled={busyId === f.id} small />
               </View>
             </Cell>
           </Row>

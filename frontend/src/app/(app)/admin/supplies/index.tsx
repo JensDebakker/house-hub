@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } from '@/components/AdminTable';
+import { ScrollView, Text, TextInput, View } from 'react-native';
+import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
@@ -131,18 +131,14 @@ export default function AdminSuppliesScreen() {
             </Cell>
             <Cell width={COLS.actions}>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <Pressable
+                <AdminActionButton
+                  label="Save"
                   onPress={() => save(s.id)}
-                  disabled={busyId === s.id}
-                  style={[saveButtonStyle, { paddingHorizontal: 12 }]}
-                >
-                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>
-                    {busyId === s.id ? '…' : 'Save'}
-                  </Text>
-                </Pressable>
-                <Pressable onPress={() => remove(s.id)} disabled={busyId === s.id}>
-                  <Text style={{ color: '#c62828' }}>Delete</Text>
-                </Pressable>
+                  busy={busyId === s.id}
+                  small
+                  style={{ paddingHorizontal: 12 }}
+                />
+                <AdminActionButton label="Delete" variant="danger" onPress={() => remove(s.id)} disabled={busyId === s.id} small />
               </View>
             </Cell>
           </Row>

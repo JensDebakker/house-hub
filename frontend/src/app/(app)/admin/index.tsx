@@ -1,8 +1,8 @@
 import { Picker } from '@react-native-picker/picker';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } from '@/components/AdminTable';
+import { ScrollView, Text, View } from 'react-native';
+import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
@@ -117,15 +117,7 @@ export default function AdminUsersScreen() {
               </View>
             </Cell>
             <Cell width={COLS.save}>
-              <Pressable
-                onPress={() => save(u.id)}
-                disabled={savingId === u.id}
-                style={({ pressed }) => [saveButtonStyle, pressed && { opacity: 0.8 }]}
-              >
-                <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>
-                  {savingId === u.id ? '…' : 'Save'}
-                </Text>
-              </Pressable>
+              <AdminActionButton label="Save" onPress={() => save(u.id)} busy={savingId === u.id} small />
             </Cell>
           </Row>
         ))}
