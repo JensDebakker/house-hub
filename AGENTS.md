@@ -11,6 +11,7 @@ share a repo.
 | Infra | `docker/` | docker-compose (db + backend + frontend + nginx proxy), VPS deploy via `.github/workflows/deploy.yml` |
 
 Full requirements/design: [docs/IDEAS.md](docs/IDEAS.md). Backend endpoints: [backend/README.md](backend/README.md).
+Frontend dev/testing (incl. Playwright visual testing): [frontend/README.md](frontend/README.md).
 
 ## Dev commands
 

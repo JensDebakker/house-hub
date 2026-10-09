@@ -11,6 +11,11 @@ Layout under `frontend/src/`: `app/` (expo-router routes, incl. `(app)`, `(auth)
 
 - Run `cd frontend && npm run web` to check a change in the browser; `npm run lint`
   before considering work done.
+- For UI/animation changes, verify visually with Playwright rather than just reading the
+  code: `npm run test:e2e` (headless) or `npm run test:e2e:ui` (interactive, watch the
+  actual browser). See `frontend/README.md#testing` for setup and `frontend/e2e/` for
+  existing specs — add a spec there for new screens/components worth a visual regression
+  check, and run `npm run test:e2e:update-snapshots` after an intentional UI change.
 - API base URL comes from `EXPO_PUBLIC_API_URL` (see `.env.example`); don't hardcode
   hosts.
 - Several screens (Tasks/Shopping/Supplies/Calendar/Screensaver) still use local mock
