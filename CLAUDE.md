@@ -23,3 +23,9 @@ Please check @AGENTS.MD aswell!!!
   `.claude/agents/`). Prefer dispatching to those over a generic agent when a task is
   clearly confined to one layer — they're pointed at the right directories and stack
   already.
+- **For anything GitHub-side — PR status/reviews, CI checks, issues — use the
+  `github-jens` MCP server tools (`mcp__github-jens__*`)**, not `WebFetch` on GitHub URLs
+  (it can't authenticate) and not the `gh` CLI (not installed in this environment). If
+  that server shows as failed/not connected, say so to the user instead of silently
+  skipping GitHub-side checks or guessing at PR/CI state — reconnecting it is done on their
+  end (`claude mcp` / `/mcp` in an interactive session), not something fixable mid-session.
