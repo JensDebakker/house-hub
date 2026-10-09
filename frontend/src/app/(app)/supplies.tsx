@@ -3,6 +3,8 @@ import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
 import type { Supply } from '@/types';
 
+const SUPPLIES_COLOR = '#0891b2';
+
 let nextId = 1;
 const WARNING_WINDOW_DAYS = 7;
 
@@ -40,7 +42,7 @@ export default function SuppliesScreen() {
   };
 
   return (
-    <BigCardShell title="Medical Supplies" scroll={false}>
+    <BigCardShell title="Medical Supplies" color={SUPPLIES_COLOR} scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Long-press an item to remove it. Yellow = expiring within {WARNING_WINDOW_DAYS} days, red = expired.
       </Text>
