@@ -6,6 +6,8 @@ The content above is the shared, tool-agnostic project context and workflow rule
 readable by non-Claude coding agents). Everything below is Claude Code-specific: exact
 tool names and mechanics for carrying out the rules above in this harness.
 
+Please check @AGENTS.MD aswell!!!
+
 ## Claude Code mechanics
 
 - **Check for a sibling session before starting non-trivial work.** Run `ListAgents` early
