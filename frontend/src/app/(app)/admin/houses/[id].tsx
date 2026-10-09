@@ -50,7 +50,10 @@ export default function AdminHouseDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (isAdmin && id) load();
+    if (!isAdmin || !id) return;
+    (async () => {
+      await load();
+    })();
   }, [isAdmin, id, load]);
 
   if (!isAdmin) {

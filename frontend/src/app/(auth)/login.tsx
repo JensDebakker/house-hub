@@ -16,8 +16,9 @@ export default function LoginScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await login(email.trim(), password);
-      router.replace('/');
+      const user = await login(email.trim(), password);
+      const householdId = user.households[0]?.householdId;
+      router.replace(householdId ? `/screensaver/${householdId}` : '/dashboard');
     } catch (err) {
       setError(getErrorMessage(err, 'Login failed. Check your email and password.'));
     } finally {

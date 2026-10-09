@@ -9,10 +9,10 @@ type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
-  verifyEmail: (token: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<User>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
 };
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await api.post<LoginResponse>('/auth/login', { email, password });
     await saveTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
     setUser(data.user);
+    return data.user;
   };
 
   // Registration no longer logs the user in - the account must be email-verified first.
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await api.post<LoginResponse>('/auth/verify-email', { token });
     await saveTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
     setUser(data.user);
+    return data.user;
   };
 
   const forgotPassword = async (email: string) => {

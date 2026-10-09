@@ -1,10 +1,19 @@
 import { Link } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/lib/api';
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
+  const [version, setVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<{ version: string }>('/version')
+      .then(({ data }) => setVersion(data.version))
+      .catch(() => setVersion(null));
+  }, []);
 
   return (
     <BigCardShell title="Settings">
@@ -23,6 +32,10 @@ export default function SettingsScreen() {
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>Log out</Text>
       </Pressable>
+
+      {version ? (
+        <Text style={{ color: '#999', fontSize: 12, textAlign: 'center' }}>App version: {version}</Text>
+      ) : null}
     </BigCardShell>
   );
 }

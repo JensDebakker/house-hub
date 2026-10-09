@@ -5,10 +5,36 @@ on:
     branches: [master]
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bump app version
+        id: bump
+        run: |
+          set -euo pipefail
+          FILE=backend/src/main/resources/application.properties
+          CURRENT=$(grep '^app\.version=' "$FILE" | cut -d= -f2 | tr -d '[:space:]')
+          if ! [[ "$CURRENT" =~ ^[0-9]+$ ]]; then
+            echo "Could not parse a numeric app.version from $FILE (got: '$CURRENT')" >&2
+            exit 1
+          fi
+          NEXT=$((CURRENT + 1))
+          sed -i "s/^app\.version=.*/app.version=$NEXT/" "$FILE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: bump version to v$NEXT [skip ci]"
+          git push
+
+      # The VPS's authorized_keys entry forces the real deploy command (git pull +
+      # docker compose up -d --build), which picks up the version bump above since
+      # it was pushed to master before this step runs.
       - name: SSH and redeploy
         uses: appleboy/ssh-action@v1.2.0
         with:

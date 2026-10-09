@@ -26,6 +26,10 @@ origin, e.g. `https://jensdebakker.com` — defaults to `*` for local dev) — s
 
 ## Endpoints
 
+- `GET /version` — public, `{ version }` (e.g. `"v100"`) — shown in the frontend's Settings
+  screen. `app.version` is a plain number bumped by `.github/workflows/deploy.yml` on every
+  push to master; don't edit it by hand.
+
 Auth (matches the frontend's existing `src/lib/api.ts` contract exactly):
 - `POST /auth/register` — `{ email, password, displayName }` → `{ accessToken, refreshToken, user }`
 - `POST /auth/login` — `{ email, password }` → same shape as register
