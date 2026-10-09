@@ -1,7 +1,7 @@
 import { router, Slot, usePathname } from 'expo-router';
 import { BigCardShell } from '@/components/BigCardShell';
 
-const HOUSE_COLOR = '#0f766e';
+const HOUSE_COLOR = '#dc2626';
 
 // Same pattern as the Dashboard, one level deeper: this card stays mounted for as long as
 // any /house/* route is open, and collapses into a teal frame around View/Leave/Create.
