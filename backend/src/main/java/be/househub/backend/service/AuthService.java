@@ -183,7 +183,7 @@ public class AuthService {
 
     private boolean isConfiguredAdminEmail(String email) {
         Set<String> configured = adminEmails.stream()
-                .map(email -> email.trim())
+                .map(raw -> raw.trim())
                 .filter(s -> !s.isEmpty())
                 .map(this::normalizeEmail)
                 .collect(java.util.stream.Collectors.toSet());
