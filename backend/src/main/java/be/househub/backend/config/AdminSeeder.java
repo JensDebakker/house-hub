@@ -30,7 +30,7 @@ public class AdminSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         adminEmails.stream()
-                .map(String::trim)
+                .map(email -> email.trim())
                 .filter(email -> !email.isEmpty())
                 .map(email -> email.toLowerCase(Locale.ROOT))
                 .forEach(email -> userRepository.findByEmail(email).ifPresent(user -> {
