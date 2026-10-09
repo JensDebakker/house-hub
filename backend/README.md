@@ -36,7 +36,24 @@ Auth (matches the frontend's existing `src/lib/api.ts` contract exactly):
 - `POST /auth/refresh` — `{ refreshToken }` → `{ accessToken, refreshToken }`
 - `GET /auth/me` — (Bearer token) → `{ id, email, displayName, role, households, emailVerified }`,
   where `households` is a list of `{ householdId, householdName, role }` — a user can belong to
-  more than one household (admin-managed; there's no self-service join flow yet)
+  more than one household
+
+Household self-service (join/leave/manage), each usable by any authenticated user unless noted:
+- `POST /households` — `{ name }` → 201 + `HouseholdResponse`; creates a brand-new household
+  with a freshly generated unique invite code and makes the caller its OWNER
+- `POST /households/join` — `{ inviteCode }` → 201 + `HouseholdResponse`; invite code is
+  trimmed/uppercased before lookup. 404 if no household matches the code; 409 if the caller is
+  already a member of that household. On success the caller becomes a MEMBER
+- `POST /households/{householdId}/leave` — 204; caller must already be a member (404/403 via
+  the same access check as other household-scoped endpoints otherwise). If the caller is the
+  sole member, the membership is deleted and the household is left in place (empty, not
+  cascade-deleted). If the caller is an OWNER and no other OWNER remains in the household, 409
+  ("last owner" — promote another member first). Otherwise the membership is deleted
+- `DELETE /households/{householdId}/members/{userId}` — 204; caller must be an OWNER of that
+  household (or ADMIN). 400 if `userId` is the caller's own id (use the leave endpoint instead);
+  404 if the target isn't a member of that household
+- `GET /households/{householdId}/members` — any existing member (or ADMIN) → 200 +
+  `List<{ userId, displayName, email, role }>`
 
 Household-scoped resources — every one of these takes `{householdId}` in the path and is
 usable by any member of that household, or by an ADMIN for any household (the frontend
@@ -55,7 +72,8 @@ the frontend side beyond Auth and Admin):
 
 All of the above (except `/auth/**`) require `Authorization: Bearer <accessToken>`.
 Registering a new user creates a new household for them (as the OWNER); additional
-memberships are granted by an admin via the `/admin/**` endpoints below.
+memberships are granted either self-service (see above) or by an admin via the `/admin/**`
+endpoints below.
 
 Admin (`ROLE_ADMIN` only):
 - `GET /admin/users`, `GET /admin/users/{id}`, `PATCH /admin/users/{id}` (global role)
