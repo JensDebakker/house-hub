@@ -15,6 +15,9 @@ type AuthContextValue = {
   verifyEmail: (token: string) => Promise<User>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
+  /** Re-fetches the current user from the backend and updates context state - use after
+   * anything that changes `user.households` server-side (create/join/leave a household). */
+  refreshUser: () => Promise<User>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -75,6 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.message;
   };
 
+  const refreshUser = async () => {
+    const { data } = await api.get<User>('/auth/me');
+    setUser(data);
+    return data;
+  };
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -86,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyEmail,
       forgotPassword,
       resetPassword,
+      refreshUser,
     }),
     [user, isLoading],
   );

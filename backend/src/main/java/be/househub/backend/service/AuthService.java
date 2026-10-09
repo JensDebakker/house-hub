@@ -53,6 +53,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final HouseholdRepository householdRepository;
     private final HouseholdMembershipRepository membershipRepository;
+    private final HouseholdService householdService;
     private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -71,7 +72,7 @@ public class AuthService {
 
         Household household = new Household();
         household.setName(request.displayName() + "'s household");
-        household.setInviteCode(generateInviteCode());
+        household.setInviteCode(householdService.generateInviteCode());
         household = householdRepository.save(household);
 
         User user = new User();
@@ -192,21 +193,6 @@ public class AuthService {
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private static final String INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-    private String generateInviteCode() {
-        String code;
-        do {
-            StringBuilder sb = new StringBuilder(8);
-            for (int i = 0; i < 8; i++) {
-                sb.append(INVITE_CODE_ALPHABET.charAt(
-                        java.util.concurrent.ThreadLocalRandom.current().nextInt(INVITE_CODE_ALPHABET.length())));
-            }
-            code = sb.toString();
-        } while (householdRepository.existsByInviteCode(code));
-        return code;
     }
 
     private AuthResponse buildAuthResponse(User user) {

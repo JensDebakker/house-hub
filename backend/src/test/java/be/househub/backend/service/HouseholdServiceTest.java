@@ -1,0 +1,268 @@
+package be.househub.backend.service;
+
+import be.househub.backend.dto.admin.HouseholdMemberResponse;
+import be.househub.backend.dto.household.HouseholdResponse;
+import be.househub.backend.entity.Household;
+import be.househub.backend.entity.HouseholdMembership;
+import be.househub.backend.entity.HouseholdRole;
+import be.househub.backend.entity.User;
+import be.househub.backend.exception.ResourceNotFoundException;
+import be.househub.backend.repository.CalendarEventRepository;
+import be.househub.backend.repository.HouseFileRepository;
+import be.househub.backend.repository.HouseholdMembershipRepository;
+import be.househub.backend.repository.HouseholdRepository;
+import be.househub.backend.repository.ShoppingListRepository;
+import be.househub.backend.repository.SupplyRepository;
+import be.househub.backend.repository.TaskRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class HouseholdServiceTest {
+
+    @Mock
+    private HouseholdRepository householdRepository;
+    @Mock
+    private HouseholdMembershipRepository membershipRepository;
+    @Mock
+    private TaskRepository taskRepository;
+    @Mock
+    private SupplyRepository supplyRepository;
+    @Mock
+    private ShoppingListRepository shoppingListRepository;
+    @Mock
+    private CalendarEventRepository calendarEventRepository;
+    @Mock
+    private HouseFileRepository houseFileRepository;
+
+    private HouseholdService householdService;
+
+    @BeforeEach
+    void setUp() {
+        householdService = new HouseholdService(
+                householdRepository, membershipRepository, taskRepository,
+                supplyRepository, shoppingListRepository, calendarEventRepository, houseFileRepository);
+    }
+
+    private User userWithId() {
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setDisplayName("Alice");
+        user.setEmail("alice@example.com");
+        return user;
+    }
+
+    private Household householdWithId() {
+        Household household = new Household();
+        household.setId(UUID.randomUUID());
+        household.setName("The Smiths");
+        household.setInviteCode("ABCD1234");
+        return household;
+    }
+
+    @Test
+    void generateInviteCode_retriesUntilUnique() {
+        when(householdRepository.existsByInviteCode(anyString())).thenReturn(true, true, false);
+
+        String code = householdService.generateInviteCode();
+
+        assertThat(code).hasSize(8);
+        verify(householdRepository, org.mockito.Mockito.times(3)).existsByInviteCode(anyString());
+    }
+
+    @Test
+    void createHousehold_savesHouseholdAndOwnerMembership() {
+        User owner = userWithId();
+        when(householdRepository.existsByInviteCode(anyString())).thenReturn(false);
+        when(householdRepository.save(any(Household.class))).thenAnswer(invocation -> {
+            Household h = invocation.getArgument(0);
+            h.setId(UUID.randomUUID());
+            return h;
+        });
+        stubEmptyCounts();
+
+        HouseholdResponse response = householdService.createHousehold(owner, "New Household");
+
+        assertThat(response.name()).isEqualTo("New Household");
+
+        org.mockito.ArgumentCaptor<HouseholdMembership> captor = org.mockito.ArgumentCaptor.forClass(HouseholdMembership.class);
+        verify(membershipRepository).save(captor.capture());
+        assertThat(captor.getValue().getUser()).isEqualTo(owner);
+        assertThat(captor.getValue().getRole()).isEqualTo(HouseholdRole.OWNER);
+    }
+
+    @Test
+    void joinHousehold_normalizesCodeAndCreatesMembership() {
+        User user = userWithId();
+        Household household = householdWithId();
+        when(householdRepository.findByInviteCode("ABCD1234")).thenReturn(Optional.of(household));
+        when(membershipRepository.existsByUserIdAndHouseholdId(user.getId(), household.getId())).thenReturn(false);
+        stubEmptyCounts();
+
+        HouseholdResponse response = householdService.joinHousehold(user, "  abcd1234  ");
+
+        assertThat(response.id()).isEqualTo(household.getId());
+        org.mockito.ArgumentCaptor<HouseholdMembership> captor = org.mockito.ArgumentCaptor.forClass(HouseholdMembership.class);
+        verify(membershipRepository).save(captor.capture());
+        assertThat(captor.getValue().getRole()).isEqualTo(HouseholdRole.MEMBER);
+        assertThat(captor.getValue().getUser()).isEqualTo(user);
+    }
+
+    @Test
+    void joinHousehold_unknownCode_throwsNotFound() {
+        User user = userWithId();
+        when(householdRepository.findByInviteCode("NOPE0000")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> householdService.joinHousehold(user, "nope0000"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void joinHousehold_alreadyMember_throwsConflict() {
+        User user = userWithId();
+        Household household = householdWithId();
+        when(householdRepository.findByInviteCode("ABCD1234")).thenReturn(Optional.of(household));
+        when(membershipRepository.existsByUserIdAndHouseholdId(user.getId(), household.getId())).thenReturn(true);
+
+        assertThatThrownBy(() -> householdService.joinHousehold(user, "ABCD1234"))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(membershipRepository, never()).save(any());
+    }
+
+    @Test
+    void leaveHousehold_soleMember_deletesMembership() {
+        User user = userWithId();
+        Household household = householdWithId();
+        HouseholdMembership membership = membership(user, household, HouseholdRole.OWNER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(1L);
+
+        householdService.leaveHousehold(user, household.getId());
+
+        verify(membershipRepository).deleteByUserIdAndHouseholdId(user.getId(), household.getId());
+    }
+
+    @Test
+    void leaveHousehold_regularMemberAmongMany_alwaysAllowed() {
+        User user = userWithId();
+        Household household = householdWithId();
+        HouseholdMembership membership = membership(user, household, HouseholdRole.MEMBER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(3L);
+
+        householdService.leaveHousehold(user, household.getId());
+
+        verify(membershipRepository).deleteByUserIdAndHouseholdId(user.getId(), household.getId());
+    }
+
+    @Test
+    void leaveHousehold_ownerWithAnotherOwner_allowed() {
+        User user = userWithId();
+        Household household = householdWithId();
+        HouseholdMembership membership = membership(user, household, HouseholdRole.OWNER);
+        User otherOwnerUser = userWithId();
+        HouseholdMembership otherOwner = membership(otherOwnerUser, household, HouseholdRole.OWNER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(2L);
+        when(membershipRepository.findByHouseholdId(household.getId())).thenReturn(List.of(membership, otherOwner));
+
+        householdService.leaveHousehold(user, household.getId());
+
+        verify(membershipRepository).deleteByUserIdAndHouseholdId(user.getId(), household.getId());
+    }
+
+    @Test
+    void leaveHousehold_lastOwner_throwsConflict() {
+        User user = userWithId();
+        Household household = householdWithId();
+        HouseholdMembership membership = membership(user, household, HouseholdRole.OWNER);
+        User otherMemberUser = userWithId();
+        HouseholdMembership otherMember = membership(otherMemberUser, household, HouseholdRole.MEMBER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(2L);
+        when(membershipRepository.findByHouseholdId(household.getId())).thenReturn(List.of(membership, otherMember));
+
+        assertThatThrownBy(() -> householdService.leaveHousehold(user, household.getId()))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(membershipRepository, never()).deleteByUserIdAndHouseholdId(any(), any());
+    }
+
+    @Test
+    void removeMember_existingMember_deletes() {
+        UUID householdId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        when(membershipRepository.existsByUserIdAndHouseholdId(userId, householdId)).thenReturn(true);
+
+        householdService.removeMember(householdId, userId);
+
+        verify(membershipRepository).deleteByUserIdAndHouseholdId(userId, householdId);
+    }
+
+    @Test
+    void removeMember_notAMember_throwsNotFound() {
+        UUID householdId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        when(membershipRepository.existsByUserIdAndHouseholdId(userId, householdId)).thenReturn(false);
+
+        assertThatThrownBy(() -> householdService.removeMember(householdId, userId))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(membershipRepository, never()).deleteByUserIdAndHouseholdId(any(), any());
+    }
+
+    @Test
+    void findMembers_mapsToResponseShape() {
+        Household household = householdWithId();
+        User user = userWithId();
+        HouseholdMembership membership = membership(user, household, HouseholdRole.OWNER);
+        when(membershipRepository.findByHouseholdId(household.getId())).thenReturn(List.of(membership));
+
+        List<HouseholdMemberResponse> members = householdService.findMembers(household.getId());
+
+        assertThat(members).hasSize(1);
+        assertThat(members.get(0).userId()).isEqualTo(user.getId());
+        assertThat(members.get(0).displayName()).isEqualTo(user.getDisplayName());
+        assertThat(members.get(0).email()).isEqualTo(user.getEmail());
+        assertThat(members.get(0).role()).isEqualTo(HouseholdRole.OWNER);
+    }
+
+    private HouseholdMembership membership(User user, Household household, HouseholdRole role) {
+        HouseholdMembership membership = new HouseholdMembership();
+        membership.setId(UUID.randomUUID());
+        membership.setUser(user);
+        membership.setHousehold(household);
+        membership.setRole(role);
+        return membership;
+    }
+
+    private void stubEmptyCounts() {
+        when(taskRepository.countByHouseholdId(any())).thenReturn(0L);
+        when(supplyRepository.countByHouseholdId(any())).thenReturn(0L);
+        when(shoppingListRepository.countByHouseholdId(any())).thenReturn(0L);
+        when(calendarEventRepository.countByHouseholdId(any())).thenReturn(0L);
+        when(houseFileRepository.countByHouseholdId(any())).thenReturn(0L);
+        when(houseFileRepository.sumSizeBytesByHouseholdId(any())).thenReturn(0L);
+        when(membershipRepository.countByHouseholdId(any())).thenReturn(1L);
+    }
+}
