@@ -173,7 +173,7 @@ export default function AdminTasksScreen() {
                 <Pressable
                   onPress={() => save(t.id)}
                   disabled={busyId === t.id}
-                  style={[saveButtonStyle, { paddingHorizontal: 12, flex: undefined }]}
+                  style={[saveButtonStyle, { paddingHorizontal: 12 }]}
                 >
                   <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>
                     {busyId === t.id ? '…' : 'Save'}

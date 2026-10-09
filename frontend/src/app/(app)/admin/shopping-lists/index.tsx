@@ -112,7 +112,7 @@ export default function AdminShoppingListsScreen() {
                   <Pressable
                     onPress={() => save(l.id)}
                     disabled={busyId === l.id}
-                    style={[saveButtonStyle, { paddingHorizontal: 12, flex: undefined }]}
+                    style={[saveButtonStyle, { paddingHorizontal: 12 }]}
                   >
                     <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>
                       {busyId === l.id ? '…' : 'Save'}

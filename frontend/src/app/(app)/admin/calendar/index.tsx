@@ -5,22 +5,28 @@ import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } fro
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
-import type { AdminSupply } from '@/types';
+import type { AdminCalendarEvent } from '@/types';
 
 const COLS = {
-  name: 200,
+  title: 200,
   household: 160,
-  quantity: 90,
-  expiryDate: 130,
+  start: 180,
+  end: 180,
   actions: 140,
 };
 const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
-type Edits = { name: string; quantity: string; expiryDate: string };
+type Edits = { title: string; start: string; end: string };
 
-export default function AdminSuppliesScreen() {
+function toLocalInput(iso?: string): string {
+  if (!iso) return '';
+  // yyyy-MM-ddTHH:mm, trimmed from the ISO instant, for a <input type=datetime-local>-style field
+  return iso.slice(0, 16);
+}
+
+export default function AdminCalendarEventsScreen() {
   const { user } = useAuth();
-  const [supplies, setSupplies] = useState<AdminSupply[]>([]);
+  const [events, setEvents] = useState<AdminCalendarEvent[]>([]);
   const [edits, setEdits] = useState<Record<string, Edits>>({});
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -31,15 +37,15 @@ export default function AdminSuppliesScreen() {
     if (!isAdmin) return;
     (async () => {
       try {
-        const { data } = await api.get<AdminSupply[]>('/admin/supplies');
-        setSupplies(data);
+        const { data } = await api.get<AdminCalendarEvent[]>('/admin/calendar-events');
+        setEvents(data);
         setEdits(
           Object.fromEntries(
-            data.map((s) => [s.id, { name: s.name, quantity: String(s.quantity), expiryDate: s.expiryDate }]),
+            data.map((e) => [e.id, { title: e.title, start: toLocalInput(e.start), end: toLocalInput(e.end) }]),
           ),
         );
       } catch (err) {
-        setError(getErrorMessage(err, 'Failed to load supplies.'));
+        setError(getErrorMessage(err, 'Failed to load calendar events.'));
       }
     })();
   }, [isAdmin]);
@@ -53,32 +59,32 @@ export default function AdminSuppliesScreen() {
     );
   }
 
-  const save = async (supplyId: string) => {
-    const edit = edits[supplyId];
+  const save = async (eventId: string) => {
+    const edit = edits[eventId];
     setError(null);
-    setBusyId(supplyId);
+    setBusyId(eventId);
     try {
-      const { data } = await api.patch<AdminSupply>(`/admin/supplies/${supplyId}`, {
-        name: edit.name,
-        quantity: Number(edit.quantity) || 0,
-        expiryDate: edit.expiryDate,
+      const { data } = await api.patch<AdminCalendarEvent>(`/admin/calendar-events/${eventId}`, {
+        title: edit.title,
+        start: edit.start ? new Date(edit.start).toISOString() : undefined,
+        end: edit.end ? new Date(edit.end).toISOString() : undefined,
       });
-      setSupplies((prev) => prev.map((s) => (s.id === supplyId ? data : s)));
+      setEvents((prev) => prev.map((e) => (e.id === eventId ? data : e)));
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update supply.'));
+      setError(getErrorMessage(err, 'Failed to update event.'));
     } finally {
       setBusyId(null);
     }
   };
 
-  const remove = async (supplyId: string) => {
+  const remove = async (eventId: string) => {
     setError(null);
-    setBusyId(supplyId);
+    setBusyId(eventId);
     try {
-      await api.delete(`/admin/supplies/${supplyId}`);
-      setSupplies((prev) => prev.filter((s) => s.id !== supplyId));
+      await api.delete(`/admin/calendar-events/${eventId}`);
+      setEvents((prev) => prev.filter((e) => e.id !== eventId));
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete supply.'));
+      setError(getErrorMessage(err, 'Failed to delete event.'));
     } finally {
       setBusyId(null);
     }
@@ -86,61 +92,61 @@ export default function AdminSuppliesScreen() {
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 24, fontWeight: '700' }}>Supplies</Text>
+      <Text style={{ fontSize: 24, fontWeight: '700' }}>Calendar Events</Text>
 
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
       <TableContainer width={TABLE_WIDTH}>
         <HeaderRow>
-          <HeaderCell width={COLS.name}>Name</HeaderCell>
+          <HeaderCell width={COLS.title}>Title</HeaderCell>
           <HeaderCell width={COLS.household}>House</HeaderCell>
-          <HeaderCell width={COLS.quantity}>Qty</HeaderCell>
-          <HeaderCell width={COLS.expiryDate}>Expiry</HeaderCell>
+          <HeaderCell width={COLS.start}>Start</HeaderCell>
+          <HeaderCell width={COLS.end}>End</HeaderCell>
           <HeaderCell width={COLS.actions} />
         </HeaderRow>
 
-        {supplies.map((s, index) => (
-          <Row key={s.id} index={index}>
-            <Cell width={COLS.name}>
+        {events.map((e, index) => (
+          <Row key={e.id} index={index}>
+            <Cell width={COLS.title}>
               <TextInput
-                value={edits[s.id]?.name ?? ''}
-                onChangeText={(v) => setEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], name: v } }))}
+                value={edits[e.id]?.title ?? ''}
+                onChangeText={(v) => setEdits((prev) => ({ ...prev, [e.id]: { ...prev[e.id], title: v } }))}
                 style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 6 }}
               />
             </Cell>
             <Cell width={COLS.household}>
-              <Link href={`/admin/houses/${s.householdId}`} style={{ color: '#2563eb' }} numberOfLines={1}>
-                {s.householdName}
+              <Link href={`/admin/houses/${e.householdId}`} style={{ color: '#2563eb' }} numberOfLines={1}>
+                {e.householdName}
               </Link>
             </Cell>
-            <Cell width={COLS.quantity}>
+            <Cell width={COLS.start}>
               <TextInput
-                value={edits[s.id]?.quantity ?? ''}
-                onChangeText={(v) => setEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], quantity: v } }))}
-                keyboardType="numeric"
+                value={edits[e.id]?.start ?? ''}
+                onChangeText={(v) => setEdits((prev) => ({ ...prev, [e.id]: { ...prev[e.id], start: v } }))}
+                placeholder="YYYY-MM-DDTHH:mm"
                 style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 6 }}
               />
             </Cell>
-            <Cell width={COLS.expiryDate}>
+            <Cell width={COLS.end}>
               <TextInput
-                value={edits[s.id]?.expiryDate ?? ''}
-                onChangeText={(v) => setEdits((prev) => ({ ...prev, [s.id]: { ...prev[s.id], expiryDate: v } }))}
-                placeholder="YYYY-MM-DD"
+                value={edits[e.id]?.end ?? ''}
+                onChangeText={(v) => setEdits((prev) => ({ ...prev, [e.id]: { ...prev[e.id], end: v } }))}
+                placeholder="YYYY-MM-DDTHH:mm"
                 style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 6 }}
               />
             </Cell>
             <Cell width={COLS.actions}>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <Pressable
-                  onPress={() => save(s.id)}
-                  disabled={busyId === s.id}
+                  onPress={() => save(e.id)}
+                  disabled={busyId === e.id}
                   style={[saveButtonStyle, { paddingHorizontal: 12 }]}
                 >
                   <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>
-                    {busyId === s.id ? '…' : 'Save'}
+                    {busyId === e.id ? '…' : 'Save'}
                   </Text>
                 </Pressable>
-                <Pressable onPress={() => remove(s.id)} disabled={busyId === s.id}>
+                <Pressable onPress={() => remove(e.id)} disabled={busyId === e.id}>
                   <Text style={{ color: '#c62828' }}>Delete</Text>
                 </Pressable>
               </View>

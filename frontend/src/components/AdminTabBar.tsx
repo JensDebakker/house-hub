@@ -1,14 +1,18 @@
 import { Link, usePathname } from 'expo-router';
 import { ScrollView } from 'react-native';
 
+// `href` points at the literal route Expo Router's typed-routes generates for nested
+// index screens (`/admin/houses/index`, not `/admin/houses`); `path` is the canonical,
+// `/index`-stripped pathname the router actually reports at runtime, used to highlight
+// the active tab.
 const TABS = [
-  { href: '/admin', label: 'Users' },
-  { href: '/admin/houses', label: 'Houses' },
-  { href: '/admin/tasks', label: 'Tasks' },
-  { href: '/admin/supplies', label: 'Supplies' },
-  { href: '/admin/shopping-lists', label: 'Shopping Lists' },
-  { href: '/admin/calendar', label: 'Calendar' },
-  { href: '/admin/files', label: 'Files' },
+  { href: '/admin', path: '/admin', label: 'Users' },
+  { href: '/admin/houses/index', path: '/admin/houses', label: 'Houses' },
+  { href: '/admin/tasks/index', path: '/admin/tasks', label: 'Tasks' },
+  { href: '/admin/supplies/index', path: '/admin/supplies', label: 'Supplies' },
+  { href: '/admin/shopping-lists/index', path: '/admin/shopping-lists', label: 'Shopping Lists' },
+  { href: '/admin/calendar/index', path: '/admin/calendar', label: 'Calendar' },
+  { href: '/admin/files/index', path: '/admin/files', label: 'Files' },
 ] as const;
 
 export function AdminTabBar() {
@@ -22,7 +26,7 @@ export function AdminTabBar() {
       contentContainerStyle={{ padding: 12, gap: 8 }}
     >
       {TABS.map((tab) => {
-        const active = tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href);
+        const active = tab.path === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.path);
         return (
           <Link
             key={tab.href}
