@@ -103,7 +103,13 @@ export function BigCardShell({
   const fg = textColor ?? (color === 'white' ? '#111827' : '#ffffff');
   const transform = [{ translateX }, { translateY }, { scaleX }, { scaleY }];
 
-  const header = (
+  // Once collapsed into a frame around a nested card, the title is no longer the
+  // main focus - shrink it and reclaim most of the space it used to take up.
+  const header = collapsed ? (
+    <View style={{ paddingTop: 10, paddingHorizontal: 16, paddingBottom: 6 }}>
+      <Text style={{ fontSize: 14, fontWeight: '700', color: fg }}>{title}</Text>
+    </View>
+  ) : (
     <View style={{ paddingTop: 32, paddingHorizontal: 24, paddingBottom: 16 }}>
       <Text style={{ fontSize: 28, fontWeight: '700', color: fg }}>{title}</Text>
     </View>
@@ -150,7 +156,11 @@ export function BigCardShell({
     <View ref={containerRef} style={{ flex: 1, margin: CARD_MARGIN }} collapsable={false}>
       <Animated.View style={{ flex: 1, opacity: dest ? 1 : 0, transform }}>
         {scroll ? (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ minHeight: '100%' }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ minHeight: '100%' }}
+            showsVerticalScrollIndicator={false}
+          >
             {card}
           </ScrollView>
         ) : (

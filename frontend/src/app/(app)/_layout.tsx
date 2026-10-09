@@ -5,8 +5,7 @@ import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 
 const IDLE_REDIRECT_MS = 2 * 60 * 1000;
-const DASHBOARD_COLOR = '#e3a8a8';
-const DASHBOARD_TEXT_COLOR = '#5c2222';
+const DASHBOARD_COLOR = '#2563eb';
 
 // After a couple of minutes of no input anywhere in the app, hand off to the
 // screensaver - mirrors how the smart screen is meant to behave when left alone.
@@ -52,7 +51,6 @@ export default function AppStackLayout() {
       <BigCardShell
         title="Dashboard"
         color={DASHBOARD_COLOR}
-        textColor={DASHBOARD_TEXT_COLOR}
         collapsed={collapsed}
         onCollapsedPress={() => router.replace('/dashboard')}
       >

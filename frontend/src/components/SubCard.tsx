@@ -2,6 +2,20 @@ import { router } from 'expo-router';
 import { useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+function hexToRgb(hex: string) {
+  const clean = hex.replace('#', '');
+  const value = parseInt(clean, 16);
+  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+}
+
+// Blends a card's accent color toward white, used for its neutral/pastel fill
+// so the accent itself only shows up as the border.
+function pastelize(hex: string, amount = 0.85) {
+  const { r, g, b } = hexToRgb(hex);
+  const mix = (c: number) => Math.round(c + (255 - c) * amount);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
 /**
  * A tappable menu tile. On press, measures its own on-screen position and carries it
  * along as route params so the destination screen (wrapped in BigCardShell) can animate
@@ -44,20 +58,26 @@ export function SubCard({
       onPress={onPress}
       style={({ pressed }) => [
         {
-          backgroundColor: color,
-          borderRadius: 18,
+          backgroundColor: pastelize(color),
+          borderWidth: 2,
+          borderColor: color,
+          borderTopLeftRadius: 0,
+          borderBottomRightRadius: 0,
+          borderTopRightRadius: 18,
+          borderBottomLeftRadius: 18,
           padding: 16,
           aspectRatio: 1.5,
           flex: 1,
-          justifyContent: 'flex-start',
+          alignItems: 'center',
+          justifyContent: 'center',
           overflow: 'hidden',
         },
         !disabled && pressed && { opacity: 0.85 },
       ]}
     >
-      <Text style={{ fontSize: 17, fontWeight: '700', color: 'white' }}>{title}</Text>
+      <Text style={{ fontSize: 17, fontWeight: '700', color, textAlign: 'center' }}>{title}</Text>
       {subtitle ? (
-        <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>{subtitle}</Text>
+        <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2, textAlign: 'center' }}>{subtitle}</Text>
       ) : null}
 
       {disabled ? (
