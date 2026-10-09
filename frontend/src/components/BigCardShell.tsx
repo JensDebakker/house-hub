@@ -1,9 +1,9 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { oppositeCorners, pastelize } from '@/lib/color';
 
-const COLLAPSED_MARGIN = 18;
+const COLLAPSED_MARGIN = 8;
 const CARD_MARGIN = 10;
 
 // A colored card gets a pastel fill with the accent as its border - the same treatment
@@ -13,6 +13,25 @@ function cardSurface(color: string) {
   return color === 'white'
     ? { backgroundColor: 'white' }
     : { backgroundColor: pastelize(color), borderWidth: 2, borderColor: color };
+}
+
+// At most one BigCardShell is ever "open" (collapsed=false) at a time, since each level
+// of the card stack only goes active once its own route is the exact match - so a single
+// slot is enough to let whichever one is currently open register a reverse-of-entrance
+// shrink animation, for `navigateBackFromCard` to play before the route (and this card)
+// actually goes away.
+let activeCardExit: (() => Promise<void>) | null = null;
+
+/** Wraps a "go back to the parent" navigation call so the currently open card's exit
+ * animation (if one is registered) finishes before the route change unmounts it. */
+export function navigateBackFromCard(navigate: () => void) {
+  if (!activeCardExit) {
+    navigate();
+    return;
+  }
+  const exit = activeCardExit;
+  activeCardExit = null;
+  exit().then(navigate);
 }
 
 /**
@@ -87,6 +106,24 @@ export function BigCardShell({
     Animated.timing(collapseAnim, { toValue: collapsed ? 1 : 0, duration: 240, useNativeDriver: false }).start();
   }, [collapsed, collapseAnim]);
 
+  // While this card is the open one, register the reverse of its entrance animation so
+  // navigateBackFromCard can shrink it back down (and fade it out) before the route change
+  // that would otherwise just make it disappear instantly.
+  useEffect(() => {
+    if (collapsed) return;
+    const exit = () =>
+      new Promise<void>((resolve) => {
+        Animated.parallel([
+          Animated.timing(contentOpacity, { toValue: 0, duration: 160, useNativeDriver: true }),
+          Animated.timing(progress, { toValue: 0, duration: 220, useNativeDriver: true }),
+        ]).start(() => resolve());
+      });
+    activeCardExit = exit;
+    return () => {
+      if (activeCardExit === exit) activeCardExit = null;
+    };
+  }, [collapsed, contentOpacity, progress]);
+
   const originX = hasOrigin ? Number(params.cardX) : dest ? dest.x : 0;
   const originY = hasOrigin ? Number(params.cardY) : dest ? dest.y + dest.h : 0;
   const originW = hasOrigin ? Number(params.cardW) : dest ? dest.w : 1;
@@ -113,16 +150,26 @@ export function BigCardShell({
   const fg = textColor ?? (color === 'white' ? '#111827' : color);
   const transform = [{ translateX }, { translateY }, { scaleX }, { scaleY }];
 
-  // Once collapsed into a frame around a nested card, the title is no longer the
-  // main focus - shrink it and reclaim most of the space it used to take up.
-  const header = collapsed ? (
-    <View style={{ paddingTop: 10, paddingHorizontal: 16, paddingBottom: 6 }}>
-      <Text style={{ fontSize: 14, fontWeight: '700', color: fg, textAlign: 'center' }}>{title}</Text>
-    </View>
-  ) : (
-    <View style={{ paddingTop: 32, paddingHorizontal: 24, paddingBottom: 16 }}>
-      <Text style={{ fontSize: 28, fontWeight: '700', color: fg, textAlign: 'center' }}>{title}</Text>
-    </View>
+  // Once collapsed into a frame around a nested card, the title is no longer the main
+  // focus - shrink it and reclaim most of the space it used to take up. Driven off the
+  // same collapseAnim as contentMargin above, so it eases in both directions: shrinking
+  // as a nested card opens on top of it, growing back as that card is tapped away.
+  const titlePaddingTop = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 4] });
+  const titlePaddingBottom = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 4] });
+  const titlePaddingHorizontal = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 16] });
+  const titleFontSize = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28, 14] });
+  const header = (
+    <Animated.View
+      style={{
+        paddingTop: titlePaddingTop,
+        paddingHorizontal: titlePaddingHorizontal,
+        paddingBottom: titlePaddingBottom,
+      }}
+    >
+      <Animated.Text style={{ fontSize: titleFontSize, fontWeight: '700', color: fg, textAlign: 'center' }}>
+        {title}
+      </Animated.Text>
+    </Animated.View>
   );
 
   if (collapsed) {
