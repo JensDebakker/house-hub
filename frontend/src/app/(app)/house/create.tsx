@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { Household, HouseholdCreateRequest } from '@/types';
 
+const CREATE_HOUSE_COLOR = '#c026d3';
+
 export default function CreateHouseScreen() {
   const { refreshUser } = useAuth();
   const [name, setName] = useState('');
@@ -51,7 +53,7 @@ export default function CreateHouseScreen() {
   }
 
   return (
-    <BigCardShell title="Create House">
+    <BigCardShell title="Create House" color={CREATE_HOUSE_COLOR}>
       <Text style={{ color: '#666' }}>Give your new house a name.</Text>
 
       <TextInput

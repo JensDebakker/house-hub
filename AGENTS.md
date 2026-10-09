@@ -51,11 +51,40 @@ explicitly asking for it.** Merging into `master` is a manual, reviewed step the
 themselves, or explicitly delegates to a specific agent/session for that one merge — never
 something an agent does on its own as a side effect of finishing a task.
 
+**Before resuming work on an existing branch/worktree, confirm it's still alive.** A
+worktree sitting on disk has no idea its branch was merged three commits ago — merging on
+GitHub doesn't touch the local checkout at all. Check via the GitHub MCP tools
+(`mcp__github-jens__list_pull_requests` / `pull_request_read`) whether its PR already
+merged, or diff it against latest `master`. If it's already merged, stop committing to it:
+pull latest `master` and cut a new branch for any further work instead.
+
+**Open your own PR via the GitHub MCP tools once your feature is ready for review** —
+`mcp__github-jens__create_pull_request` targeting `master` — rather than waiting for the
+user to open it. You still may not merge it yourself (see above) unless explicitly told to.
+
 **Never `git add -A` / `git add .` on this repo, even when asked to commit.** Multiple
 agents routinely share this one working directory (see below) — a broad add can silently
 sweep up another agent's in-progress, unreviewed edits into your commit. Stage named paths
 you specifically authored/reviewed, and run `git status` first to see what else is sitting
 in the tree before touching any of it.
+
+## Branch lifecycle after merge
+
+Once a PR merges into `master` (by the user, or by whichever agent/session they asked to
+do that one merge):
+
+- **Delete the branch, both places**: `git push origin --delete <branch>` and
+  `git branch -D <branch>` locally. A squash-merged branch isn't fast-forward-reachable
+  from itself anymore, so the local delete needs `-D` (force), not `-d` — that's expected,
+  not a sign anything went wrong.
+- **Remove its worktree immediately**: `git worktree remove <path>`. A merged worktree left
+  lying around is the single biggest cause of an agent waking up and committing to a branch
+  that's already dead — the merge happened on GitHub and never touched the worktree, so an
+  agent resuming there has no way to tell its branch is gone unless it checks (see above).
+- **No separate archive step first.** With squash merges, the squash commit on `master`
+  already contains the branch's full diff, so there's nothing extra to lose by deleting.
+  Recovering it later is `git revert <squash-sha>`; the closed PR's "Restore branch" button
+  on GitHub covers the short-term case too.
 
 ## Working alongside other agents/sessions on this repo
 

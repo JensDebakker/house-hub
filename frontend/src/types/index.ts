@@ -80,6 +80,22 @@ export type HouseFile = {
   uploadedById?: string;
   uploadedByName?: string;
   uploadedAt: string;
+  folderId: string | null;
+};
+
+export type HouseFolder = {
+  id: string;
+  name: string;
+  parentFolderId: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdAt: string;
+};
+
+export type FolderContents = {
+  folderId: string | null;
+  folders: HouseFolder[];
+  files: HouseFile[];
 };
 
 export type AuthTokens = {
@@ -95,8 +111,20 @@ export type Task = {
   dueDate?: string;
 };
 
+export type TaskRequest = {
+  title: string;
+  done: boolean;
+  assignedTo?: string;
+  dueDate?: string;
+};
+
 export type ShoppingListItem = {
   id: string;
+  label: string;
+  checked: boolean;
+};
+
+export type ShoppingListItemRequest = {
   label: string;
   checked: boolean;
 };
@@ -107,6 +135,10 @@ export type ShoppingList = {
   items: ShoppingListItem[];
 };
 
+export type ShoppingListRequest = {
+  name: string;
+};
+
 export type Supply = {
   id: string;
   name: string;
@@ -114,8 +146,20 @@ export type Supply = {
   expiryDate: string;
 };
 
+export type SupplyRequest = {
+  name: string;
+  quantity: number;
+  expiryDate: string;
+};
+
 export type CalendarEvent = {
   id: string;
+  title: string;
+  start: string;
+  end?: string;
+};
+
+export type CalendarEventRequest = {
   title: string;
   start: string;
   end?: string;

@@ -10,6 +10,7 @@ public record HouseFileResponse(
         long sizeBytes,
         UUID uploadedById,
         String uploadedByName,
-        Instant uploadedAt
+        Instant uploadedAt,
+        UUID folderId
 ) {
 }

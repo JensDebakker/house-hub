@@ -19,4 +19,8 @@ public interface HouseFileRepository extends JpaRepository<HouseFile, UUID> {
 
     @Query("select coalesce(sum(f.sizeBytes), 0) from HouseFile f where f.household.id = :householdId")
     long sumSizeBytesByHouseholdId(@Param("householdId") UUID householdId);
+
+    @Query("select f from HouseFile f where f.household.id = :householdId and " +
+            "((:folderId is null and f.folder is null) or f.folder.id = :folderId)")
+    List<HouseFile> findChildren(@Param("householdId") UUID householdId, @Param("folderId") UUID folderId);
 }

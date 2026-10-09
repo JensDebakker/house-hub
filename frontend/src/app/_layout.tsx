@@ -1,5 +1,6 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
@@ -48,12 +49,15 @@ function RootNavigator() {
 
 export default function RootLayout() {
   useHideWebScrollbars();
+  const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <AuthProvider>
-      <WebSocketProvider>
-        <RootNavigator />
-      </WebSocketProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <WebSocketProvider>
+          <RootNavigator />
+        </WebSocketProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

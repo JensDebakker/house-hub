@@ -5,6 +5,7 @@
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-picker/picker": "2.11.4",
+    "@tanstack/react-query": "^5.104.1",
     "axios": "^1.20.0",
     "expo": "~57.0.27",
     "expo-constants": "~57.0.21",
@@ -23,6 +24,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
+    "openapi-typescript": "^7.13.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -31,7 +33,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "build:web": "expo export -p web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "gen:api-types": "openapi-typescript http://localhost:8080/api/v3/api-docs -o src/types/api-generated.ts"
   },
   "private": true
 }
