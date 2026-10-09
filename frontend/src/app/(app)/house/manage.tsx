@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { HouseholdMember } from '@/types';
 
+const MANAGE_HOUSE_COLOR = '#0f766e';
+
 export default function ManageHouseScreen() {
   const { user, refreshUser } = useAuth();
   const householdId = user?.households[0]?.householdId;
@@ -86,14 +88,14 @@ export default function ManageHouseScreen() {
 
   if (!householdId) {
     return (
-      <BigCardShell title="Manage House">
+      <BigCardShell title="Manage House" color={MANAGE_HOUSE_COLOR}>
         <Text style={{ color: '#999' }}>You&apos;re not currently in a house.</Text>
       </BigCardShell>
     );
   }
 
   return (
-    <BigCardShell title="Manage House">
+    <BigCardShell title="Manage House" color={MANAGE_HOUSE_COLOR}>
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
       {members.length === 0 && !error ? <Text style={{ color: '#999' }}>Loading…</Text> : null}

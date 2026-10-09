@@ -31,7 +31,7 @@ export default function CreateHouseScreen() {
 
   if (created) {
     return (
-      <BigCardShell title="Create House">
+      <BigCardShell title="Create House" color={CREATE_HOUSE_COLOR}>
         <Text style={{ fontSize: 20, fontWeight: '700' }}>{created.name} is ready!</Text>
         <Text style={{ color: '#666' }}>Share this invite code so others can join:</Text>
         <Text style={{ fontSize: 28, fontWeight: '700', letterSpacing: 2 }}>{created.inviteCode}</Text>

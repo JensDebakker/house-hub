@@ -146,7 +146,11 @@ export function BigCardShell({
       })
     : 0;
 
-  const contentMargin = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, COLLAPSED_MARGIN] });
+  // No top margin here: the title's own padding/font shrink (below) already frees up
+  // space above the nested card as it collapses, and the nested card contributes its own
+  // CARD_MARGIN on top regardless - stacking a top margin here on top of that would leave
+  // the nested card's border sitting further down than the shrunk title actually requires.
+  const contentMarginSides = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, COLLAPSED_MARGIN] });
   const fg = textColor ?? (color === 'white' ? '#111827' : color);
   const transform = [{ translateX }, { translateY }, { scaleX }, { scaleY }];
 
@@ -187,7 +191,16 @@ export function BigCardShell({
         >
           <Pressable onPress={onCollapsedPress} style={{ flex: 1 }}>
             {header}
-            <Animated.View style={{ flex: 1, margin: contentMargin, ...oppositeCorners(20), overflow: 'hidden' }}>
+            <Animated.View
+              style={{
+                flex: 1,
+                marginTop: 0,
+                marginBottom: contentMarginSides,
+                marginHorizontal: contentMarginSides,
+                ...oppositeCorners(20),
+                overflow: 'hidden',
+              }}
+            >
               {/* Swallows taps anywhere inside the nested card so they don't fall through
                   to the backdrop Pressable above and bounce back out to this level. */}
               <Pressable style={{ flex: 1 }} onPress={() => {}}>

@@ -42,7 +42,7 @@ export default function LeaveHouseScreen() {
 
   if (!householdId) {
     return (
-      <BigCardShell title="Leave House">
+      <BigCardShell title="Leave House" color={LEAVE_HOUSE_COLOR}>
         <Text style={{ color: '#999' }}>You&apos;re not currently in a house.</Text>
       </BigCardShell>
     );
