@@ -33,14 +33,15 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={isAuthenticated}>
         <Stack.Screen name="(app)" />
+        {/* Smart-screen kiosk display — a house member feature, so it stays behind auth
+            like the rest of the app; the backend still scopes its data to householdId
+            membership on top of this. */}
+        <Stack.Screen name="screensaver/[householdId]" />
       </Stack.Protected>
 
       <Stack.Protected guard={!isAuthenticated}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
-
-      {/* Public kiosk display for the smart screen — never behind auth. */}
-      <Stack.Screen name="screensaver/[householdId]" />
     </Stack>
   );
 }
