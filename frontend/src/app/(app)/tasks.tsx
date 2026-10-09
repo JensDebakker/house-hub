@@ -3,6 +3,8 @@ import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
 import type { Task } from '@/types';
 
+const TASKS_COLOR = '#dc2626';
+
 let nextId = 1;
 
 export default function TasksScreen() {
@@ -24,7 +26,7 @@ export default function TasksScreen() {
   };
 
   return (
-    <BigCardShell title="Routine Tasks" scroll={false}>
+    <BigCardShell title="Routine Tasks" color={TASKS_COLOR} scroll={false}>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
           placeholder="Add a task…"

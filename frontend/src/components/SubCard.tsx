@@ -1,20 +1,7 @@
 import { router } from 'expo-router';
 import { useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
-
-function hexToRgb(hex: string) {
-  const clean = hex.replace('#', '');
-  const value = parseInt(clean, 16);
-  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
-}
-
-// Blends a card's accent color toward white, used for its neutral/pastel fill
-// so the accent itself only shows up as the border.
-function pastelize(hex: string, amount = 0.85) {
-  const { r, g, b } = hexToRgb(hex);
-  const mix = (c: number) => Math.round(c + (255 - c) * amount);
-  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
-}
+import { oppositeCorners, pastelize } from '@/lib/color';
 
 /**
  * A tappable menu tile. On press, measures its own on-screen position and carries it
@@ -61,15 +48,12 @@ export function SubCard({
           backgroundColor: pastelize(color),
           borderWidth: 2,
           borderColor: color,
-          borderTopLeftRadius: 0,
-          borderBottomRightRadius: 0,
-          borderTopRightRadius: 18,
-          borderBottomLeftRadius: 18,
+          ...oppositeCorners(18),
           padding: 16,
           aspectRatio: 1.5,
           flex: 1,
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           overflow: 'hidden',
         },
         !disabled && pressed && { opacity: 0.85 },

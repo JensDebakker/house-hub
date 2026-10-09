@@ -5,6 +5,8 @@ import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 
+const LEAVE_HOUSE_COLOR = '#e11d48';
+
 export default function LeaveHouseScreen() {
   const { user, refreshUser } = useAuth();
   const householdId = user?.households[0]?.householdId;
@@ -47,7 +49,7 @@ export default function LeaveHouseScreen() {
   }
 
   return (
-    <BigCardShell title="Leave House">
+    <BigCardShell title="Leave House" color={LEAVE_HOUSE_COLOR}>
       <Text style={{ color: '#666' }}>
         You&apos;re a member of {householdName}. Leaving removes your access to its tasks, supplies,
         shopping lists, calendar, and files.

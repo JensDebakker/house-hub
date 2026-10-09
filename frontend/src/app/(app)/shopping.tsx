@@ -3,6 +3,8 @@ import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
 import type { ShoppingListItem } from '@/types';
 
+const SHOPPING_COLOR = '#059669';
+
 let nextId = 1;
 
 export default function ShoppingScreen() {
@@ -24,7 +26,7 @@ export default function ShoppingScreen() {
   };
 
   return (
-    <BigCardShell title="Shopping List" scroll={false}>
+    <BigCardShell title="Shopping List" color={SHOPPING_COLOR} scroll={false}>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
           placeholder="Add an item…"
