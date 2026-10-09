@@ -1,5 +1,5 @@
 import { router, Slot, usePathname } from 'expo-router';
-import { BigCardShell } from '@/components/BigCardShell';
+import { BigCardShell, navigateBackFromCard } from '@/components/BigCardShell';
 
 const HOUSE_COLOR = '#dc2626';
 
@@ -14,7 +14,7 @@ export default function HouseLayout() {
       title="House"
       color={HOUSE_COLOR}
       collapsed={collapsed}
-      onCollapsedPress={() => router.replace('/house')}
+      onCollapsedPress={() => navigateBackFromCard(() => router.replace('/house'))}
     >
       <Slot />
     </BigCardShell>

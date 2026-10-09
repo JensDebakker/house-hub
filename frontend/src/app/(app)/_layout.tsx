@@ -1,7 +1,7 @@
 import { router, Slot, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { BigCardShell, navigateBackFromCard } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 
 const IDLE_REDIRECT_MS = 2 * 60 * 1000;
@@ -52,7 +52,7 @@ export default function AppStackLayout() {
         title="Dashboard"
         color={DASHBOARD_COLOR}
         collapsed={collapsed}
-        onCollapsedPress={() => router.replace('/dashboard')}
+        onCollapsedPress={() => navigateBackFromCard(() => router.replace('/dashboard'))}
       >
         <Slot />
       </BigCardShell>
