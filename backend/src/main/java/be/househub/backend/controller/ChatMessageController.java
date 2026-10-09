@@ -1,0 +1,35 @@
+package be.househub.backend.controller;
+
+import be.househub.backend.dto.chat.ChatMessageResponse;
+import be.househub.backend.entity.Household;
+import be.househub.backend.security.SecurityUtils;
+import be.househub.backend.service.ChatMessageService;
+import be.househub.backend.service.HouseholdAccessService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/households/{householdId}/chat-messages")
+@RequiredArgsConstructor
+public class ChatMessageController {
+
+    private final ChatMessageService chatMessageService;
+    private final HouseholdAccessService householdAccessService;
+
+    @GetMapping
+    public List<ChatMessageResponse> history(
+            @PathVariable UUID householdId,
+            @RequestParam(defaultValue = "50") int limit,
+            @RequestParam(required = false) Instant before) {
+        Household household = householdAccessService.requireAccess(SecurityUtils.getCurrentUser(), householdId);
+        return chatMessageService.history(household, limit, before);
+    }
+}
