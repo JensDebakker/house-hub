@@ -30,7 +30,7 @@ export default function RegisterScreen() {
   return (
     <ScreenContainer>
       <Text style={{ fontSize: 28, fontWeight: '700' }}>Create account</Text>
-      <Text style={{ color: '#666' }}>Join or start a household</Text>
+      <Text style={{ color: '#666' }}>Join or start a house</Text>
 
       <TextInput
         placeholder="Display name"

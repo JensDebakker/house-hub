@@ -28,7 +28,7 @@ export default function LoginScreen() {
   return (
     <ScreenContainer>
       <Text style={{ fontSize: 28, fontWeight: '700' }}>House Hub</Text>
-      <Text style={{ color: '#666' }}>Log in to your household</Text>
+      <Text style={{ color: '#666' }}>Log in to your house</Text>
 
       <TextInput
         placeholder="Email"

@@ -80,7 +80,7 @@ export default function AdminUsersScreen() {
           <HeaderCell width={COLS.email}>Email</HeaderCell>
           <HeaderCell width={COLS.verified}>Verified</HeaderCell>
           <HeaderCell width={COLS.role}>Role</HeaderCell>
-          <HeaderCell width={COLS.households}>Households</HeaderCell>
+          <HeaderCell width={COLS.households}>Houses</HeaderCell>
           <HeaderCell width={COLS.save} />
         </HeaderRow>
 

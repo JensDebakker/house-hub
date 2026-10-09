@@ -7,7 +7,7 @@ export default function AuthLandingScreen() {
     <ScreenContainer>
       <Text style={{ fontSize: 32, fontWeight: '700' }}>House Hub</Text>
       <Text style={{ color: '#666', marginBottom: 8 }}>
-        Manage your household — tasks, shopping, supplies, and more.
+        Manage your house — tasks, shopping, supplies, and more.
       </Text>
 
       <Pressable

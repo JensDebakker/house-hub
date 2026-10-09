@@ -12,22 +12,22 @@ export default function DashboardScreen() {
     <BigCardShell title={`Welcome${user ? `, ${user.displayName}` : ''}`} showBack={false}>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
-          <SubCard title="Tasks" subtitle="Routine chores" href="/tasks" color="#2563eb" />
+          <SubCard title="Tasks" subtitle="Routine chores" href="/tasks" color="#2563eb" disabled />
         </View>
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
-          <SubCard title="Shopping" subtitle="Lists" href="/shopping" color="#059669" />
+          <SubCard title="Shopping" subtitle="Lists" href="/shopping" color="#059669" disabled />
         </View>
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
-          <SubCard title="Supplies" subtitle="Medical & stock" href="/supplies" color="#b45309" />
+          <SubCard title="Supplies" subtitle="Medical & stock" href="/supplies" color="#b45309" disabled />
         </View>
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
-          <SubCard title="Calendar" subtitle="Household events" href="/calendar" color="#7c3aed" />
+          <SubCard title="Calendar" subtitle="House events" href="/calendar" color="#7c3aed" disabled />
         </View>
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
           <SubCard title="Files" subtitle="Shared uploads" href="/files" color="#0891b2" />
         </View>
         <View style={{ flexBasis: '47%', flexGrow: 1 }}>
-          <SubCard title="Settings" subtitle="Account & household" href="/settings" color="#64748b" />
+          <SubCard title="Settings" subtitle="Account & house" href="/settings" color="#64748b" />
         </View>
         {user?.role === 'ADMIN' ? (
           <View style={{ flexBasis: '47%', flexGrow: 1 }}>
@@ -41,7 +41,7 @@ export default function DashboardScreen() {
           Open the screensaver preview →
         </Link>
       ) : (
-        <Text style={{ color: '#999' }}>Join or create a household to preview the screensaver.</Text>
+        <Text style={{ color: '#999' }}>Join or create a house to preview the screensaver.</Text>
       )}
     </BigCardShell>
   );

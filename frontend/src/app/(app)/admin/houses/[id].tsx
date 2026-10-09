@@ -45,7 +45,7 @@ export default function AdminHouseDetailScreen() {
       setAllUsers(usersRes.data);
       setLimitGb((detailRes.data.household.storageLimitBytes / 1024 ** 3).toString());
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load household.'));
+      setError(getErrorMessage(err, 'Failed to load house.'));
     }
   }, [id]);
 

@@ -63,7 +63,7 @@ export default function AdminUserDetailScreen() {
       await api.post(`/admin/households/${newHouseholdId}/members`, { userId: id, role: newRole });
       await load();
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to add household membership.'));
+      setError(getErrorMessage(err, 'Failed to add house membership.'));
     } finally {
       setBusy(false);
     }
@@ -76,7 +76,7 @@ export default function AdminUserDetailScreen() {
       await api.delete(`/admin/households/${householdId}/members/${id}`);
       await load();
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to remove household membership.'));
+      setError(getErrorMessage(err, 'Failed to remove house membership.'));
     } finally {
       setBusy(false);
     }
@@ -101,10 +101,10 @@ export default function AdminUserDetailScreen() {
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600' }}>Households</Text>
+        <Text style={{ fontSize: 18, fontWeight: '600' }}>Houses</Text>
         <TableContainer width={440}>
           <HeaderRow>
-            <HeaderCell width={220}>Household</HeaderCell>
+            <HeaderCell width={220}>House</HeaderCell>
             <HeaderCell width={110}>Role</HeaderCell>
             <HeaderCell width={110}>-</HeaderCell>
           </HeaderRow>
@@ -127,7 +127,7 @@ export default function AdminUserDetailScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <Picker selectedValue={newHouseholdId} onValueChange={setNewHouseholdId} style={{ width: 220 }}>
-            <Picker.Item label="Select a household…" value="" />
+            <Picker.Item label="Select a house…" value="" />
             {joinableHouseholds.map((h) => (
               <Picker.Item key={h.id} label={h.name} value={h.id} />
             ))}
@@ -138,7 +138,7 @@ export default function AdminUserDetailScreen() {
             ))}
           </Picker>
           <Pressable onPress={addToHousehold} disabled={busy || !newHouseholdId} style={saveButtonStyle}>
-            <Text style={{ color: 'white', fontWeight: '600' }}>Add to household</Text>
+            <Text style={{ color: 'white', fontWeight: '600' }}>Add to house</Text>
           </Pressable>
         </View>
       </View>

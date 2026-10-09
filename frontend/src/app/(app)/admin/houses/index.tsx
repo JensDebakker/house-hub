@@ -41,7 +41,7 @@ export default function AdminHousesScreen() {
         const { data } = await api.get<Household[]>('/admin/households');
         setHouseholds(data);
       } catch (err) {
-        setError(getErrorMessage(err, 'Failed to load households.'));
+        setError(getErrorMessage(err, 'Failed to load houses.'));
       }
     })();
   }, [isAdmin]);

@@ -1,36 +1,67 @@
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, Text, View } from 'react-native';
+import { Animated, Image, Platform, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-
-// Placeholder slides until the backend serves real household photos.
-const SLIDES = [
-  { color: '#1d4ed8', caption: 'Family trip' },
-  { color: '#059669', caption: 'Weekend BBQ' },
-  { color: '#b45309', caption: 'Birthday party' },
-];
+import { api } from '@/lib/api';
+import type { HouseFile } from '@/types';
 
 const SLIDE_DURATION_MS = 6000;
 const IDLE_TIMEOUT_MS = 10000;
+const FALLBACK_BACKGROUND = '#111827';
 
 export default function ScreensaverScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const [slideUrls, setSlideUrls] = useState<string[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [now, setNow] = useState(new Date());
   const [controlsVisible, setControlsVisible] = useState(true);
   const cardAnim = useRef(new Animated.Value(1)).current;
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Images uploaded to the house's Files panel double as screensaver slides - loaded as
+  // blob URLs since a plain <img src> can't carry the Authorization header the file
+  // endpoint needs. Web only for now (blob: URIs aren't valid Image sources on native).
   useEffect(() => {
+    if (!householdId || Platform.OS !== 'web') return;
+    let cancelled = false;
+    const createdUrls: string[] = [];
+
+    (async () => {
+      try {
+        const { data } = await api.get<HouseFile[]>(`/households/${householdId}/files`);
+        const images = data.filter((f) => f.contentType.startsWith('image/'));
+        const urls = await Promise.all(
+          images.map(async (f) => {
+            const res = await api.get(`/households/${householdId}/files/${f.id}`, { responseType: 'blob' });
+            const url = URL.createObjectURL(res.data as Blob);
+            createdUrls.push(url);
+            return url;
+          }),
+        );
+        if (!cancelled) setSlideUrls(urls);
+      } catch {
+        // No images yet, or not reachable from here - the plain background is fine.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      createdUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [householdId]);
+
+  useEffect(() => {
+    if (slideUrls.length === 0) return;
     const slideTimer = setInterval(
-      () => setSlideIndex((i) => (i + 1) % SLIDES.length),
+      () => setSlideIndex((i) => (i + 1) % slideUrls.length),
       SLIDE_DURATION_MS,
     );
+    return () => clearInterval(slideTimer);
+  }, [slideUrls.length]);
+
+  useEffect(() => {
     const clockTimer = setInterval(() => setNow(new Date()), 1000);
-    return () => {
-      clearInterval(slideTimer);
-      clearInterval(clockTimer);
-    };
+    return () => clearInterval(clockTimer);
   }, []);
 
   useEffect(() => {
@@ -67,11 +98,20 @@ export default function ScreensaverScreen() {
     return () => window.removeEventListener('mousemove', wake);
   }, []);
 
-  const slide = SLIDES[slideIndex];
+  const currentSlideUrl = slideUrls[slideIndex];
 
   return (
-    <Pressable style={{ flex: 1, backgroundColor: slide.color }} onPress={wake}>
+    <Pressable style={{ flex: 1, backgroundColor: FALLBACK_BACKGROUND }} onPress={wake}>
       <StatusBar hidden />
+
+      {currentSlideUrl ? (
+        <Image
+          key={currentSlideUrl}
+          source={{ uri: currentSlideUrl }}
+          resizeMode="cover"
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+      ) : null}
 
       <View style={{ position: 'absolute', top: 32, left: 32 }}>
         <Text style={{ color: 'white', fontSize: 48, fontWeight: '700' }}>
@@ -107,16 +147,9 @@ export default function ScreensaverScreen() {
             padding: 20,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
           }}
         >
-          <View>
-            <Text style={{ color: 'white', fontSize: 24, fontWeight: '600' }}>{slide.caption}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-              Household: {householdId}
-            </Text>
-          </View>
-
           <Link
             href="/"
             style={{

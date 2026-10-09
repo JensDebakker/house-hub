@@ -24,7 +24,7 @@ export default function CalendarScreen() {
   };
 
   return (
-    <BigCardShell title="Household Calendar" scroll={false}>
+    <BigCardShell title="House Calendar" scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Simple upcoming-events list for now — a full calendar grid view can replace this later.
       </Text>
