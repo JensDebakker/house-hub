@@ -12,6 +12,7 @@ public record UserResponse(
         String displayName,
         Role role,
         List<HouseholdMembershipResponse> households,
-        boolean emailVerified
+        boolean emailVerified,
+        boolean hasProfilePicture
 ) {
 }

@@ -45,4 +45,10 @@ public class User {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    @Column(name = "profile_picture_key")
+    private String profilePictureKey;
+
+    @Column(name = "profile_picture_content_type")
+    private String profilePictureContentType;
 }
