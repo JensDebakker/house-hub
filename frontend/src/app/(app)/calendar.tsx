@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { dateKey, MonthGrid } from '@/components/MonthGrid';
+import { dateKey, MonthGrid, parseDateKey } from '@/components/MonthGrid';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
@@ -67,7 +67,7 @@ export default function CalendarScreen() {
 
   const addEvent = () => {
     if (!title.trim() || !dateInput.trim()) return;
-    const startInstant = new Date(dateInput).toISOString();
+    const startInstant = parseDateKey(dateInput).toISOString();
     createEvent.mutate({ title: title.trim(), start: startInstant });
     setTitle('');
   };
