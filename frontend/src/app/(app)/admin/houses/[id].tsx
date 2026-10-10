@@ -426,7 +426,15 @@ export default function AdminHouseDetailScreen() {
         </Text>
       </View>
 
-      <DatabaseTabBar active={tab} onChange={setTab} />
+      <DatabaseTabBar
+        active={tab}
+        onChange={(next) => {
+          setTab(next);
+          // Clears any error left over from the previous tab's last action, so it doesn't
+          // keep showing above an unrelated table the admin just switched to.
+          setError(null);
+        }}
+      />
 
       {tab === 'Members' ? (
         <View style={{ gap: 8 }}>
