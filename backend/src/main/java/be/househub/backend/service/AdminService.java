@@ -3,7 +3,6 @@ package be.househub.backend.service;
 import be.househub.backend.dto.admin.AddMembershipRequest;
 import be.househub.backend.dto.admin.AdminCalendarEventResponse;
 import be.househub.backend.dto.admin.AdminCalendarEventUpdateRequest;
-import be.househub.backend.dto.admin.AdminFileResponse;
 import be.househub.backend.dto.admin.AdminShoppingListResponse;
 import be.househub.backend.dto.admin.AdminShoppingListUpdateRequest;
 import be.househub.backend.dto.admin.AdminSupplyResponse;
@@ -23,7 +22,6 @@ import be.househub.backend.dto.shopping.ShoppingListItemResponse;
 import be.househub.backend.dto.task.TaskResponse;
 import be.househub.backend.entity.CalendarEvent;
 import be.househub.backend.entity.Household;
-import be.househub.backend.entity.HouseFile;
 import be.househub.backend.entity.HouseholdMembership;
 import be.househub.backend.entity.ShoppingList;
 import be.househub.backend.entity.Supply;
@@ -31,7 +29,6 @@ import be.househub.backend.entity.Task;
 import be.househub.backend.entity.User;
 import be.househub.backend.exception.ResourceNotFoundException;
 import be.househub.backend.repository.CalendarEventRepository;
-import be.househub.backend.repository.HouseFileRepository;
 import be.househub.backend.repository.HouseholdMembershipRepository;
 import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.ShoppingListRepository;
@@ -57,7 +54,6 @@ public class AdminService {
     private final SupplyRepository supplyRepository;
     private final ShoppingListRepository shoppingListRepository;
     private final CalendarEventRepository calendarEventRepository;
-    private final HouseFileRepository houseFileRepository;
     private final HouseholdService householdService;
     private final TaskService taskService;
     private final SupplyService supplyService;
@@ -166,12 +162,6 @@ public class AdminService {
         membershipRepository.deleteByUserIdAndHouseholdId(userId, householdId);
     }
 
-    public List<AdminTaskResponse> listTasks() {
-        return taskRepository.findAll().stream()
-                .map(this::toAdminTaskResponse)
-                .toList();
-    }
-
     @Transactional
     public AdminTaskResponse updateTask(UUID taskId, AdminTaskUpdateRequest request) {
         Task task = taskRepository.findById(taskId)
@@ -198,12 +188,6 @@ public class AdminService {
         taskRepository.delete(task);
     }
 
-    public List<AdminSupplyResponse> listSupplies() {
-        return supplyRepository.findAll().stream()
-                .map(this::toAdminSupplyResponse)
-                .toList();
-    }
-
     @Transactional
     public AdminSupplyResponse updateSupply(UUID supplyId, AdminSupplyUpdateRequest request) {
         Supply supply = supplyRepository.findById(supplyId)
@@ -227,12 +211,6 @@ public class AdminService {
         supplyRepository.delete(supply);
     }
 
-    public List<AdminShoppingListResponse> listShoppingLists() {
-        return shoppingListRepository.findAll().stream()
-                .map(this::toAdminShoppingListResponse)
-                .toList();
-    }
-
     @Transactional
     public AdminShoppingListResponse updateShoppingList(UUID listId, AdminShoppingListUpdateRequest request) {
         ShoppingList list = shoppingListRepository.findById(listId)
@@ -248,12 +226,6 @@ public class AdminService {
         ShoppingList list = shoppingListRepository.findById(listId)
                 .orElseThrow(() -> new ResourceNotFoundException("ShoppingList", listId));
         shoppingListRepository.delete(list);
-    }
-
-    public List<AdminCalendarEventResponse> listCalendarEvents() {
-        return calendarEventRepository.findAll().stream()
-                .map(this::toAdminCalendarEventResponse)
-                .toList();
     }
 
     @Transactional
@@ -277,12 +249,6 @@ public class AdminService {
         CalendarEvent event = calendarEventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("CalendarEvent", eventId));
         calendarEventRepository.delete(event);
-    }
-
-    public List<AdminFileResponse> listFiles() {
-        return houseFileRepository.findAll().stream()
-                .map(this::toAdminFileResponse)
-                .toList();
     }
 
     private AdminTaskResponse toAdminTaskResponse(Task task) {
@@ -329,20 +295,6 @@ public class AdminService {
                 event.getEnd(),
                 event.getHousehold().getId(),
                 event.getHousehold().getName()
-        );
-    }
-
-    private AdminFileResponse toAdminFileResponse(HouseFile file) {
-        return new AdminFileResponse(
-                file.getId(),
-                file.getFilename(),
-                file.getContentType(),
-                file.getSizeBytes(),
-                file.getHousehold().getId(),
-                file.getHousehold().getName(),
-                file.getUploadedBy() != null ? file.getUploadedBy().getId() : null,
-                file.getUploadedBy() != null ? file.getUploadedBy().getDisplayName() : null,
-                file.getUploadedAt()
         );
     }
 
