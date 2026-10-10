@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
+import { InviteLinkButton } from '@/components/InviteLinkButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
@@ -36,6 +37,7 @@ export default function CreateHouseScreen() {
         <Text style={{ fontSize: 20, fontWeight: '700' }}>{created.name} is ready!</Text>
         <Text style={{ color: '#666' }}>Share this invite code so others can join:</Text>
         <Text style={{ fontSize: 28, fontWeight: '700', letterSpacing: 2 }}>{created.inviteCode}</Text>
+        <InviteLinkButton inviteCode={created.inviteCode} color={CREATE_HOUSE_COLOR} />
 
         <Pressable
           onPress={() => router.replace('/house/view')}

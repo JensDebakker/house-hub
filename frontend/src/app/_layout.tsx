@@ -32,6 +32,10 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      {/* Reachable regardless of auth state - it decides for itself what to do with the
+          code depending on whether a user is logged in. */}
+      <Stack.Screen name="join" />
+
       <Stack.Protected guard={isAuthenticated}>
         <Stack.Screen name="(app)" />
         {/* Smart-screen kiosk display — a house member feature, so it stays behind auth

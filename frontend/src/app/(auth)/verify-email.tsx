@@ -4,17 +4,19 @@ import { ActivityIndicator, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { joinPendingHousehold } from '@/lib/pendingInvite';
 
 export default function VerifyEmailScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
-  const { verifyEmail } = useAuth();
+  const { verifyEmail, refreshUser } = useAuth();
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
 
     verifyEmail(token)
-      .then(() => {
+      .then(async () => {
+        if (await joinPendingHousehold()) await refreshUser();
         router.replace('/dashboard');
       })
       .catch((err) => {
