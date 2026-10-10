@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { InAppBrowserBanner } from '@/components/InAppBrowserBanner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
 
@@ -56,12 +57,18 @@ export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <WebSocketProvider>
-          <RootNavigator />
-        </WebSocketProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <View style={{ flex: 1 }}>
+      {/* Rendered outside auth/loading state so it shows up as early as possible - the
+          whole point is to catch someone before the in-app browser's JS throttling can
+          strand them mid-load. */}
+      <InAppBrowserBanner />
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <WebSocketProvider>
+            <RootNavigator />
+          </WebSocketProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </View>
   );
 }
