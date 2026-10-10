@@ -31,17 +31,83 @@ export function navigateBackFromCard(navigate: () => void) {
 }
 
 /**
+ * A title-bar display or action slot. `transform: scale` (used to visually shrink this
+ * alongside the title as a module collapses) never shrinks an element's own contribution to
+ * its parent's layout - that's true in CSS and in React Native's Yoga layout engine alike,
+ * since transforms are purely a paint-time effect. Left alone, that means the header row
+ * would keep reserving this slot's full, unscaled size even while it's rendered visually
+ * smaller - wasted invisible height that stops the title bar from ever getting as short as it
+ * looks, which in turn stops a nested module from rising to fully occupy the space that
+ * shrinking the title (and this slot) was supposed to free up.
+ *
+ * Fixed by measuring the slot's natural (pre-transform) size via a hidden, unscaled shadow
+ * copy, then explicitly sizing the real (visible) wrapper to `naturalSize * scale` with
+ * `overflow: hidden`. That visible box now actually shrinks in lockstep with the visual
+ * scale, so the row's real reserved height tracks what's on screen.
+ *
+ * The shadow copy has to be a sibling kept entirely out of the shrinking box, not nested
+ * inside it - an in-flow child measured from inside a box that's itself sized off that same
+ * measurement creates a feedback loop (each pass's smaller box constrains the child's own
+ * layout width, which re-fires onLayout with an even smaller size, shrinking the box
+ * further, converging to zero) and even `position: 'absolute'` on that child isn't a full
+ * fix: Yoga's auto-sizing for an absolutely-positioned child isn't fully decoupled from its
+ * positioned ancestor's current size either, which under-measures and clips real content
+ * (confirmed: "1 online" was rendering as "1 o" once the row had fully collapsed, from a
+ * slightly-too-small reserved box). A sibling that the shrinking box's own size can never
+ * feed back into has no such loop to fall into.
+ */
+function TitleBarSlot({
+  content,
+  scale,
+}: {
+  content: ReactNode;
+  scale: Animated.WithAnimatedValue<number>;
+}) {
+  const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
+
+  if (!content) return null;
+
+  // Swallows taps so they don't fall through to whatever Pressable wraps the whole header
+  // (the collapsed frame's tap-to-go-back, or a tile's tap-to-open) - the same idiom already
+  // used below for a collapsed frame's nested child.
+  const inner = (
+    <Pressable onPress={() => {}} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {content}
+    </Pressable>
+  );
+
+  return (
+    <>
+      <View
+        style={{ position: 'absolute', opacity: 0 }}
+        pointerEvents="none"
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setNaturalSize((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
+        }}
+      >
+        {inner}
+      </View>
+      <Animated.View
+        style={{
+          width: naturalSize ? Animated.multiply(scale, naturalSize.width) : undefined,
+          height: naturalSize ? Animated.multiply(scale, naturalSize.height) : undefined,
+          overflow: 'hidden',
+        }}
+      >
+        <Animated.View style={{ transform: [{ scale }] }}>{inner}</Animated.View>
+      </Animated.View>
+    </>
+  );
+}
+
+/**
  * Lays out a module's title bar as a row: optional displays on the left, the title centered
  * and flexible in the middle, optional action buttons on the right. Shared by the collapsed,
  * open and fullscreen render modes below - each just passes either Animated interpolations
  * (collapsed/open, so the row shrinks in sync with the title as the module collapses) or
  * plain static numbers (fullscreen, which has no parent to collapse in response to) for the
  * sizing fields; Animated.View/Text accept either in the same style object.
- *
- * Displays and actions are each wrapped in their own no-op-onPress Pressable so a tap on them
- * doesn't fall through to whatever Pressable wraps the whole header (the collapsed frame's
- * tap-to-go-back, or a tile's tap-to-open) - the same "swallow" idiom already used below for a
- * collapsed frame's nested child.
  */
 function renderHeaderRow({
   fg,
@@ -68,23 +134,11 @@ function renderHeaderRow({
     <Animated.View
       style={{ flexDirection: 'row', alignItems: 'center', paddingTop, paddingHorizontal, paddingBottom }}
     >
-      <Animated.View style={{ transform: [{ scale }] }}>
-        {displays ? (
-          <Pressable onPress={() => {}} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {displays}
-          </Pressable>
-        ) : null}
-      </Animated.View>
+      <TitleBarSlot content={displays} scale={scale} />
       <Animated.Text style={{ flex: 1, fontSize, fontWeight: '700', color: fg, textAlign: 'center' }}>
         {title}
       </Animated.Text>
-      <Animated.View style={{ transform: [{ scale }] }}>
-        {actions ? (
-          <Pressable onPress={() => {}} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {actions}
-          </Pressable>
-        ) : null}
-      </Animated.View>
+      <TitleBarSlot content={actions} scale={scale} />
     </Animated.View>
   );
 }
@@ -311,23 +365,25 @@ export function Module({
           <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2, textAlign: 'center' }}>{subtitle}</Text>
         ) : null}
 
+        {/* Left corner is the display slot, same as the title bar row in card mode - "Coming
+            soon" is a read-only status for an inactive module, not an action, so it belongs
+            here. Right stays reserved exclusively for titleBarActions (real buttons), never
+            a display, so the two can never land in the same corner. */}
         {disabled ? (
-          <View style={{ position: 'absolute', top: 10, right: 10 }}>
+          <View style={{ position: 'absolute', top: 10, left: 10 }}>
             <View style={{ backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
               <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>Coming soon</Text>
             </View>
+          </View>
+        ) : titleBarDisplays ? (
+          <View style={{ position: 'absolute', top: 10, left: 10 }}>
+            <Pressable onPress={() => {}}>{titleBarDisplays}</Pressable>
           </View>
         ) : null}
 
         {!disabled && titleBarActions ? (
           <View style={{ position: 'absolute', top: 10, right: 10 }}>
             <Pressable onPress={() => {}}>{titleBarActions}</Pressable>
-          </View>
-        ) : null}
-
-        {titleBarDisplays ? (
-          <View style={{ position: 'absolute', top: 10, left: 10 }}>
-            <Pressable onPress={() => {}}>{titleBarDisplays}</Pressable>
           </View>
         ) : null}
       </Pressable>
