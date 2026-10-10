@@ -112,6 +112,10 @@ Admin (`ROLE_ADMIN` only):
 - `GET /admin/households`, `GET /admin/households/{id}` (full drill-down: members + tasks +
   supplies + shopping lists + calendar events + files), `PATCH /admin/households/{id}` (name,
   storage limit)
+- `DELETE /admin/households/{id}` — 204; permanently deletes the household and everything in
+  it (memberships, tasks, supplies, shopping lists, calendar events, chat messages, files/
+  folders incl. their blobs on disk). No confirmation/undo at the API level — the frontend is
+  expected to confirm before calling it.
 - `POST /admin/households/{id}/members`, `PATCH .../members/{userId}`, `DELETE .../members/{userId}`
   — add/change-role/remove a household membership
 - `GET /admin/database/health` — connectivity check (`SELECT 1` through the app's own

@@ -4,26 +4,34 @@ import be.househub.backend.dto.admin.HouseholdMemberResponse;
 import be.househub.backend.dto.household.HouseholdMembershipResponse;
 import be.househub.backend.dto.household.HouseholdResponse;
 import be.househub.backend.entity.Household;
+import be.househub.backend.entity.HouseFile;
+import be.househub.backend.entity.HouseFolder;
 import be.househub.backend.entity.HouseholdMembership;
 import be.househub.backend.entity.HouseholdRole;
 import be.househub.backend.entity.User;
 import be.househub.backend.exception.ResourceNotFoundException;
 import be.househub.backend.repository.CalendarEventRepository;
+import be.househub.backend.repository.ChatMessageRepository;
 import be.househub.backend.repository.HouseFileRepository;
+import be.househub.backend.repository.HouseFolderRepository;
 import be.househub.backend.repository.HouseholdMembershipRepository;
 import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.ShoppingListRepository;
 import be.househub.backend.repository.SupplyRepository;
 import be.househub.backend.repository.TaskRepository;
 import be.househub.backend.repository.UserRepository;
+import be.househub.backend.service.storage.FileStorageService;
 import be.househub.backend.websocket.SessionRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -43,6 +51,9 @@ public class HouseholdService {
     private final ShoppingListRepository shoppingListRepository;
     private final CalendarEventRepository calendarEventRepository;
     private final HouseFileRepository houseFileRepository;
+    private final HouseFolderRepository houseFolderRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final FileStorageService fileStorageService;
     private final SessionRegistry sessionRegistry;
 
     public List<HouseholdMembershipResponse> findMemberships(UUID userId) {
@@ -233,5 +244,79 @@ public class HouseholdService {
                 .map(m -> new HouseholdMemberResponse(
                         m.getUser().getId(), m.getUser().getDisplayName(), m.getUser().getEmail(), m.getRole()))
                 .toList();
+    }
+
+    /**
+     * Permanently deletes a household and everything in it (admin-only - there's no
+     * self-service equivalent). None of the household_id foreign keys below cascade at
+     * the DB level (only users.default_household_id does, via ON DELETE SET NULL), so
+     * each dependent table is emptied explicitly. Members who had this household as
+     * their default are re-promoted to one of their remaining memberships (or null)
+     * the same way {@link #clearDefaultIfLeavingHousehold} does for every other path
+     * that removes a membership - otherwise they'd keep that invariant violated (DB
+     * nulls the FK, but nothing picks a replacement) until they manually pick one.
+     * Disk blobs have no FK to respect, so their deletion is deferred until the very
+     * end (right before the household row itself) to keep the window where a later
+     * failure rolls back the DB but can't undo an already-deleted blob as small as
+     * possible - but the house_files *rows* still have to go before house_folders
+     * (file.folder_id -> folder.id) and before the household row, same as every other
+     * dependent table.
+     */
+    @Transactional
+    public void deleteHousehold(UUID householdId) {
+        Household household = householdRepository.findById(householdId)
+                .orElseThrow(() -> new ResourceNotFoundException("Household", householdId));
+
+        List<UUID> memberUserIds = membershipRepository.findByHouseholdId(householdId).stream()
+                .map(m -> m.getUser().getId())
+                .distinct()
+                .toList();
+
+        List<HouseFile> files = houseFileRepository.findByHouseholdId(householdId);
+        houseFileRepository.deleteAll(files);
+
+        deleteFoldersDeepestFirst(householdId);
+
+        shoppingListRepository.deleteAll(shoppingListRepository.findByHouseholdId(householdId));
+        taskRepository.deleteByHouseholdId(householdId);
+        supplyRepository.deleteByHouseholdId(householdId);
+        calendarEventRepository.deleteByHouseholdId(householdId);
+        chatMessageRepository.deleteByHouseholdId(householdId);
+        membershipRepository.deleteByHouseholdId(householdId);
+        memberUserIds.forEach(userId -> clearDefaultIfLeavingHousehold(userId, householdId));
+
+        files.forEach(file -> fileStorageService.delete(file.getStorageKey()));
+        householdRepository.delete(household);
+    }
+
+    /**
+     * house_folders is self-referential (parent_folder_id -> house_folders.id) with no
+     * cascade, so children must go before their parents. Repeatedly deletes whichever
+     * remaining folders aren't currently any other remaining folder's parent, i.e. the
+     * current leaves of what's left of the tree. A well-formed tree always empties this
+     * way; the no-progress check only guards against a parent-cycle that shouldn't be
+     * reachable through the app's own folder-creation code, so it fails loudly instead
+     * of hanging the request (and its DB connection) forever.
+     */
+    private void deleteFoldersDeepestFirst(UUID householdId) {
+        List<HouseFolder> remaining = new ArrayList<>(houseFolderRepository.findByHouseholdId(householdId));
+        while (!remaining.isEmpty()) {
+            Set<UUID> parentIds = new HashSet<>();
+            for (HouseFolder folder : remaining) {
+                if (folder.getParentFolder() != null) {
+                    parentIds.add(folder.getParentFolder().getId());
+                }
+            }
+
+            List<HouseFolder> leaves = remaining.stream()
+                    .filter(folder -> !parentIds.contains(folder.getId()))
+                    .toList();
+            if (leaves.isEmpty()) {
+                throw new IllegalStateException(
+                        "house_folders for household " + householdId + " contains a parent cycle - refusing to loop forever");
+            }
+            houseFolderRepository.deleteAll(leaves);
+            remaining.removeAll(leaves);
+        }
     }
 }
