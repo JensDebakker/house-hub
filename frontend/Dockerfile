@@ -3,9 +3,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-# --legacy-peer-deps: openapi-typescript (dev-only, used by gen:api-types) peer-requires
-# typescript ^5.x while the project runs ~6.0.3; it's never invoked at build time.
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 COPY . .
 
