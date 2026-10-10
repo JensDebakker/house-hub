@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { loadTokens } from '@/lib/storage';
+import { getValidAccessToken } from '@/lib/api';
 import { getWebSocketUrl } from '@/lib/ws';
 
 /** 'chat' and 'presence' are household-scoped - the socket connection itself must be
@@ -63,10 +63,15 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     if (!activeRef.current) return;
 
     (async () => {
-      const tokens = await loadTokens();
-      if (!tokens?.accessToken || !activeRef.current) return;
+      // Centralizes the "is this access token still valid" check (and refreshes it if
+      // not) the same way the REST 401 flow does - without this, a token that went stale
+      // while the page was idle/backgrounded (e.g. bfcache) gets read from storage as-is
+      // and every reconnect attempt fails the handshake forever, since nothing else here
+      // ever triggers a refresh.
+      const accessToken = await getValidAccessToken();
+      if (!accessToken || !activeRef.current) return;
 
-      const socket = new WebSocket(getWebSocketUrl(tokens.accessToken, householdId));
+      const socket = new WebSocket(getWebSocketUrl(accessToken, householdId));
       socketRef.current = socket;
 
       socket.onopen = () => {
@@ -132,6 +137,40 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       socketRef.current = null;
     };
   }, [isAuthenticated, householdId, connect]);
+
+  // Web only: the browser's back-forward cache force-closes any open WebSocket when the
+  // page is frozen, and a page can sit frozen/backgrounded long enough for the stored
+  // access token to expire. `pageshow` with `event.persisted` is the signal a bfcache
+  // restore just happened; recover immediately instead of waiting out whatever backoff
+  // had accumulated before the page was frozen.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const recover = () => {
+      if (!activeRef.current || socketRef.current) return;
+
+      backoffRef.current = INITIAL_BACKOFF_MS;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      connectRef.current();
+    };
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) recover();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') recover();
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // "version" channel: on web (the always-open kiosk display) a changed version
   // means the backend redeployed, so force a reload. Native has no equivalent
