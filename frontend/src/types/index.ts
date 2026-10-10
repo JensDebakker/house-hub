@@ -212,6 +212,11 @@ export type ChatMessage = {
   createdAt: string;
 };
 
+export type ChatMessageDeletedEvent = {
+  deletedId: string;
+  householdId: string;
+};
+
 export type AdminFile = {
   id: string;
   filename: string;

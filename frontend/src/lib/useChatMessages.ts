@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWebSocketChannel, useWebSocketSend } from '@/contexts/WebSocketContext';
 import { api } from '@/lib/api';
-import type { ChatMessage } from '@/types';
+import type { ChatMessage, ChatMessageDeletedEvent } from '@/types';
 
 /** Prefix for client-generated ids on optimistically-appended messages, so incoming
  * "real" messages (which always have a server-assigned uuid) can be told apart from
@@ -38,6 +38,17 @@ export function useChatMessagesQuery(householdId: string | undefined) {
   const handleIncoming = useCallback(
     (payload: unknown) => {
       if (!householdId) return;
+
+      if (payload != null && typeof payload === 'object' && 'deletedId' in payload) {
+        const event = payload as ChatMessageDeletedEvent;
+        if (event.householdId !== householdId) return;
+
+        queryClient.setQueryData<ChatMessage[]>(chatMessagesQueryKey(householdId), (current) =>
+          (current ?? []).filter((m) => m.id !== event.deletedId),
+        );
+        return;
+      }
+
       const message = payload as ChatMessage;
       if (message.householdId !== householdId) return;
 
@@ -90,4 +101,29 @@ export function useSendChatMessage(householdId: string | undefined) {
     },
     [householdId, queryClient, send, user],
   );
+}
+
+/** Deletes a chat message over REST. There's no websocket echo back to the deleter (only
+ * other connected clients get the `deletedId` event), so the deleter's own cache is
+ * updated optimistically here rather than waiting on a server response. */
+export function useDeleteChatMessage(householdId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/households/${householdId}/chat-messages/${id}`);
+    },
+    onMutate: async (id: string) => {
+      if (!householdId) return undefined;
+      const previous = queryClient.getQueryData<ChatMessage[]>(chatMessagesQueryKey(householdId));
+      queryClient.setQueryData<ChatMessage[]>(chatMessagesQueryKey(householdId), (current) =>
+        (current ?? []).filter((m) => m.id !== id),
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (!householdId || !context?.previous) return;
+      queryClient.setQueryData<ChatMessage[]>(chatMessagesQueryKey(householdId), context.previous);
+    },
+  });
 }
