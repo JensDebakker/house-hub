@@ -1,9 +1,10 @@
 import { View } from 'react-native';
 import { Module } from '@/components/Module';
-
-const TILE_WRAPPER = { flexBasis: '31%' } as const;
+import { useResponsiveColumns } from '@/lib/useResponsiveColumns';
 
 export default function AdminIndexScreen() {
+  const { tileWrapperStyle: TILE_WRAPPER } = useResponsiveColumns();
+
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
       <View style={TILE_WRAPPER}>

@@ -92,6 +92,11 @@ function TitleBarSlot({
         style={{
           width: naturalSize ? Animated.multiply(scale, naturalSize.width) : undefined,
           height: naturalSize ? Animated.multiply(scale, naturalSize.height) : undefined,
+          // Caps how much of the row a single slot can claim regardless of its natural
+          // content size, so unusually wide display/action content can't push the title
+          // down to nothing (or past the card's own edge) on a narrow window - the title's
+          // own flex: 1 absorbs whatever room this leaves it, down to its own text width.
+          maxWidth: '35%',
           overflow: 'hidden',
         }}
       >
@@ -368,21 +373,24 @@ export function Module({
         {/* Left corner is the display slot, same as the title bar row in card mode - "Coming
             soon" is a read-only status for an inactive module, not an action, so it belongs
             here. Right stays reserved exclusively for titleBarActions (real buttons), never
-            a display, so the two can never land in the same corner. */}
+            a display, so the two can never land in the same corner. Both corners cap at 45%
+            of the tile's own width (percentage resolves against the tile, the nearest
+            positioned ancestor) with overflow hidden - on a small tile from a dense grid
+            column count, fixed-size badge content must never spill past the tile's edge. */}
         {disabled ? (
-          <View style={{ position: 'absolute', top: 10, left: 10 }}>
+          <View style={{ position: 'absolute', top: 10, left: 10, maxWidth: '45%', overflow: 'hidden' }}>
             <View style={{ backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-              <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>Coming soon</Text>
+              <Text numberOfLines={1} style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>Coming soon</Text>
             </View>
           </View>
         ) : titleBarDisplays ? (
-          <View style={{ position: 'absolute', top: 10, left: 10 }}>
+          <View style={{ position: 'absolute', top: 10, left: 10, maxWidth: '45%', overflow: 'hidden' }}>
             <Pressable onPress={() => {}}>{titleBarDisplays}</Pressable>
           </View>
         ) : null}
 
         {!disabled && titleBarActions ? (
-          <View style={{ position: 'absolute', top: 10, right: 10 }}>
+          <View style={{ position: 'absolute', top: 10, right: 10, maxWidth: '45%', overflow: 'hidden' }}>
             <Pressable onPress={() => {}}>{titleBarActions}</Pressable>
           </View>
         ) : null}
