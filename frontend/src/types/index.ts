@@ -203,6 +203,34 @@ export type AdminCalendarEvent = {
   householdName: string;
 };
 
+export type FeedbackType = 'BUG' | 'SUGGESTION';
+
+export type FeedbackStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+export type FeedbackAttachment = {
+  id: string;
+  contentType: string;
+  originalFilename: string;
+};
+
+export type FeedbackTicket = {
+  id: string;
+  type: FeedbackType;
+  description: string;
+  status: FeedbackStatus;
+  createdAt: string;
+  updatedAt: string;
+  attachments: FeedbackAttachment[];
+};
+
+// Matches the flat userId/userEmail/userDisplayName fields on the backend's
+// AdminFeedbackResponse (same convention as its other Admin*Response DTOs).
+export type AdminFeedbackTicket = FeedbackTicket & {
+  userId: string;
+  userEmail: string;
+  userDisplayName: string;
+};
+
 export type ChatMessage = {
   id: string;
   householdId: string;
