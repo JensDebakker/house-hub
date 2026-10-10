@@ -1,13 +1,25 @@
+import { usePathname } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getValidAccessToken } from '@/lib/api';
 import { getWebSocketUrl } from '@/lib/ws';
 
+// Matches "/house/<id>/..." but not the two literal, non-household siblings of the
+// dynamic segment ("/house/create", "/house/join") or the bare "/house" redirect itself.
+const HOUSE_ROUTE_PATTERN = /^\/house\/(?!create$|join$)([^/]+)/;
+
+/** The household whose route is currently open, if any - "" and "/dashboard" (the Houses
+ * overview), "/house/create", and "/house/join" all have no household of their own. */
+function householdIdFromPathname(pathname: string): string | undefined {
+  return HOUSE_ROUTE_PATTERN.exec(pathname)?.[1];
+}
+
 /** 'chat' and 'presence' are household-scoped - the socket connection itself must be
  * opened with the current household's id (see `connect` below) for the backend's chat
- * relay / presence tracker to deliver anything on these channels. That's the default for
- * every session in this app (see `householdId` below), so no extra wiring is needed. */
+ * relay / presence tracker to deliver anything on these channels. `householdId` below
+ * tracks whichever house's route is currently open, so this stays correct without any
+ * extra per-channel wiring. */
 export type WebSocketChannelName = 'version' | 'chat' | 'presence';
 
 export type WebSocketEnvelope<TPayload = unknown> = {
@@ -31,10 +43,15 @@ const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, user } = useAuth();
-  // Multi-household switching isn't built yet - every screen in this app follows the
-  // same "household 0 is THE household" pattern, so the socket connection does too.
-  const householdId = user?.households[0]?.householdId;
+  const { isAuthenticated } = useAuth();
+  // Household-scoped channels ('chat', 'presence') need the socket itself opened with
+  // whichever house is actually being viewed right now - derived from the route, not a
+  // fixed "household 0" convention, now that the Houses overview lets a user be on no
+  // house's route at all (and multiple houses exist to switch between). No socket is
+  // held open while on that overview (or house/create, house/join): see the early return
+  // below.
+  const pathname = usePathname();
+  const householdId = householdIdFromPathname(pathname);
 
   const socketRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Map<WebSocketChannelName, Set<ChannelHandler>>>(new Map());
@@ -110,12 +127,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [connect]);
 
   // Re-runs (tearing the socket down and reconnecting) whenever `householdId` changes,
-  // not just when `isAuthenticated` flips - household data can arrive a tick after login,
-  // and the socket must be opened with the right houseId for the backend's chat relay to
-  // deliver anything, so a late-arriving id needs an immediate reconnect rather than
-  // waiting for the next backoff-scheduled retry.
+  // not just when `isAuthenticated` flips - navigating between houses (or to/from the
+  // Houses overview, which has none) must immediately swap or drop the connection rather
+  // than waiting out whatever backoff had accumulated for the previous house. No
+  // `householdId` (Houses overview, house/create, house/join) means no socket at all:
+  // this effect's own cleanup (below) already closed whatever was open for the
+  // previously active house, if any, by the time this run's early return is reached.
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !householdId) return;
 
     activeRef.current = true;
     backoffRef.current = INITIAL_BACKOFF_MS;

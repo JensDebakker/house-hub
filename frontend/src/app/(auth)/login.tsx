@@ -5,6 +5,7 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
+import { resolveDefaultHousehold } from '@/lib/households';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 
 const LOGIN_COLOR = '#2563eb';
@@ -59,9 +60,10 @@ export default function LoginScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await login(email.trim(), password);
-      if (await joinPendingHousehold()) await refreshUser();
-      router.replace('/dashboard');
+      let currentUser = await login(email.trim(), password);
+      if (await joinPendingHousehold()) currentUser = await refreshUser();
+      const defaultHousehold = resolveDefaultHousehold(currentUser);
+      router.replace(defaultHousehold ? `/house/${defaultHousehold.householdId}/dashboard` : '/dashboard');
     } catch (err) {
       setError(getErrorMessage(err, 'Login failed. Check your email and password.'));
     } finally {
