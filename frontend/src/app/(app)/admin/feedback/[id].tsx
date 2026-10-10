@@ -15,7 +15,7 @@ const STATUS_OPTIONS: FeedbackStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CL
 export default function AdminFeedbackDetailScreen() {
   const isAdmin = useRequireAdmin();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const ticketQuery = useAdminFeedbackQuery(id);
+  const ticketQuery = useAdminFeedbackQuery(isAdmin, id);
   const updateStatus = useUpdateAdminFeedbackStatusMutation();
 
   if (!isAdmin) {

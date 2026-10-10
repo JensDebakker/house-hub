@@ -10,24 +10,25 @@ export function adminFeedbackDetailQueryKey(ticketId: string) {
   return ['admin', 'feedback', ticketId] as const;
 }
 
-export function useAdminFeedbackListQuery() {
+export function useAdminFeedbackListQuery(isAdmin: boolean) {
   return useQuery({
     queryKey: adminFeedbackQueryKey(),
     queryFn: async () => {
       const { data } = await api.get<AdminFeedbackTicket[]>('/admin/feedback');
       return data;
     },
+    enabled: isAdmin,
   });
 }
 
-export function useAdminFeedbackQuery(ticketId: string | undefined) {
+export function useAdminFeedbackQuery(isAdmin: boolean, ticketId: string | undefined) {
   return useQuery({
     queryKey: adminFeedbackDetailQueryKey(ticketId ?? ''),
     queryFn: async () => {
       const { data } = await api.get<AdminFeedbackTicket>(`/admin/feedback/${ticketId}`);
       return data;
     },
-    enabled: Boolean(ticketId),
+    enabled: isAdmin && Boolean(ticketId),
   });
 }
 

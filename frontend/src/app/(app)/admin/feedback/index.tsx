@@ -26,7 +26,7 @@ const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
 export default function AdminFeedbackListScreen() {
   const isAdmin = useRequireAdmin();
-  const feedbackQuery = useAdminFeedbackListQuery();
+  const feedbackQuery = useAdminFeedbackListQuery(isAdmin);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<FeedbackStatus | 'ALL'>('ALL');

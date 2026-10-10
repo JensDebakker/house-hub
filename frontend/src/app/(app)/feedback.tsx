@@ -179,6 +179,7 @@ export default function FeedbackScreen() {
         <FlatList
           data={tickets}
           keyExtractor={(item) => item.id}
+          style={{ flex: 1 }}
           contentContainerStyle={{ gap: 8, paddingTop: 4, paddingBottom: 16 }}
           ListEmptyComponent={<Text style={{ color: '#999' }}>You haven&apos;t submitted any feedback yet.</Text>}
           renderItem={({ item }) => <TicketRow ticket={item} />}

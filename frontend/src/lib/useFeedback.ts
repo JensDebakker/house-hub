@@ -53,13 +53,12 @@ export function useCreateFeedbackMutation(userId: string | undefined) {
       formData.append('type', request.type);
       formData.append('description', request.description);
       // Same per-platform FormData construction as the profile-picture upload in
-      // settings.tsx (web needs a real Blob; native accepts the {uri,name,type} shape) -
-      // just repeated per file, under the same `files` field name for each part.
-      for (const asset of request.files) {
-        if (Platform.OS === 'web') {
-          const blob = await fetch(asset.uri).then((r) => r.blob());
-          formData.append('files', blob, asset.name);
-        } else {
+      // settings.tsx (web needs a real Blob; native accepts the {uri,name,type} shape).
+      if (Platform.OS === 'web') {
+        const blobs = await Promise.all(request.files.map((asset) => fetch(asset.uri).then((r) => r.blob())));
+        blobs.forEach((blob, i) => formData.append('files', blob, request.files[i].name));
+      } else {
+        for (const asset of request.files) {
           formData.append('files', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
         }
       }
