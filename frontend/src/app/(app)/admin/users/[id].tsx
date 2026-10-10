@@ -3,7 +3,7 @@ import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household, HouseholdRole, UserDetail } from '@/types';
@@ -43,17 +43,17 @@ export default function AdminUserDetailScreen() {
 
   if (!isAdmin) {
     return (
-      <BigCardShell title="User" color={USERS_COLOR}>
+      <Module title="User" color={USERS_COLOR}>
         <Text>You don&apos;t have access to this page.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
   if (!detail) {
     return (
-      <BigCardShell title="User" color={USERS_COLOR}>
+      <Module title="User" color={USERS_COLOR}>
         {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : <Text>Loading…</Text>}
-      </BigCardShell>
+      </Module>
     );
   }
 
@@ -88,7 +88,7 @@ export default function AdminUserDetailScreen() {
   const joinableHouseholds = allHouseholds.filter((h) => !joinedIds.has(h.id));
 
   return (
-    <BigCardShell title={detail.displayName} color={USERS_COLOR}>
+    <Module title={detail.displayName} color={USERS_COLOR}>
       <View>
         <Text style={{ color: '#666' }}>{detail.email} · {detail.role}</Text>
         <Text style={{ color: '#666' }}>
@@ -157,6 +157,6 @@ export default function AdminUserDetailScreen() {
           ))}
         </TableContainer>
       </View>
-    </BigCardShell>
+    </Module>
   );
 }

@@ -3,7 +3,7 @@ import { Link } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { AdminUser, Role } from '@/types';
@@ -53,9 +53,9 @@ export default function AdminUsersScreen() {
 
   if (!isAdmin) {
     return (
-      <BigCardShell title="Users" color={USERS_COLOR}>
+      <Module title="Users" color={USERS_COLOR}>
         <Text>You don&apos;t have access to this page.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
@@ -73,7 +73,7 @@ export default function AdminUsersScreen() {
   };
 
   return (
-    <BigCardShell title="Users" color={USERS_COLOR}>
+    <Module title="Users" color={USERS_COLOR}>
       <TextInput
         value={search}
         onChangeText={setSearch}
@@ -134,7 +134,7 @@ export default function AdminUsersScreen() {
           </Row>
         ))}
       </TableContainer>
-    </BigCardShell>
+    </Module>
   );
 }
 
