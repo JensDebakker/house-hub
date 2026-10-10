@@ -1,5 +1,5 @@
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,9 +9,11 @@ export default function VerifyEmailScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const { verifyEmail } = useAuth();
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  const requestedTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || requestedTokenRef.current === token) return;
+    requestedTokenRef.current = token;
 
     verifyEmail(token)
       .then(() => {

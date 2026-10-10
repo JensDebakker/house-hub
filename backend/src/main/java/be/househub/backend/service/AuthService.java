@@ -134,8 +134,33 @@ public class AuthService {
 
     @Transactional
     public AuthResponse verifyEmail(String rawToken) {
-        VerificationToken token = consumeToken(rawToken, VerificationTokenType.EMAIL_VERIFY);
+        VerificationToken token = verificationTokenRepository.findByToken(rawToken)
+                .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
+
+        if (token.getType() != VerificationTokenType.EMAIL_VERIFY) {
+            throw new InvalidVerificationTokenException("Invalid or already-used token");
+        }
+
         User user = token.getUser();
+
+        // A used email-verify token whose user is already verified means this exact
+        // token already succeeded once (tokens are single-use and unique per
+        // register/resend call) - a replay (double-submit, double-click) should log
+        // the user in rather than error, instead of erroring on the retry.
+        if (token.isUsed()) {
+            if (user.isEmailVerified()) {
+                return buildAuthResponse(user);
+            }
+            throw new InvalidVerificationTokenException("Invalid or already-used token");
+        }
+
+        if (token.isExpired()) {
+            throw new InvalidVerificationTokenException("Token has expired");
+        }
+
+        token.setUsed(true);
+        verificationTokenRepository.save(token);
+
         user.setEmailVerified(true);
         userRepository.save(user);
         return buildAuthResponse(user);
