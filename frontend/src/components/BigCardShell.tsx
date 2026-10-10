@@ -146,14 +146,28 @@ export function BigCardShell({
     : 0;
 
   const fg = textColor ?? (color === 'white' ? '#111827' : color);
-  const transform = [{ translateX }, { translateY }, { scaleX }, { scaleY }];
+
+  // A small mid-transition settle - as the title shrinks or grows, the frame dips slightly
+  // (down while shrinking, up while growing) instead of the content just snapping into the
+  // newly-freed space the instant padding/font-size finish animating. Returns to 0 at both
+  // ends (collapseAnim 0 and 1) so it never leaves a permanent offset at rest - only a bump
+  // in the middle of the transition.
+  const settleTranslateY = collapseAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 6, 0] });
+  const transform = [{ translateX }, { translateY }, { scaleX }, { scaleY }, { translateY: settleTranslateY }];
 
   // Once collapsed into a frame around a nested card, the title is no longer the main
   // focus - shrink it and reclaim most of the space it used to take up. Driven off the
   // same collapseAnim as contentMargin above, so it eases in both directions: shrinking
   // as a nested card opens on top of it, growing back as that card is tapped away.
-  const titlePaddingTop = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 4] });
-  const titlePaddingBottom = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 4] });
+  //
+  // paddingTop settles to CARD_MARGIN and paddingBottom to 0 (not some smaller padding on
+  // both sides) so the visual gap above the title (paddingTop, against the frame's own
+  // border) ends up equal to the gap below it (paddingBottom + the nested card's own
+  // CARD_MARGIN, against the nested card's border) - both exactly CARD_MARGIN, instead of
+  // the bottom gap coming out larger just because the nested card contributes its own
+  // margin that the top side has no equivalent of.
+  const titlePaddingTop = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [14, CARD_MARGIN] });
+  const titlePaddingBottom = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
   const titlePaddingHorizontal = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 16] });
   const titleFontSize = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28, 14] });
   const header = (
