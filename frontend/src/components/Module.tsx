@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 import { oppositeCorners, pastelize } from '@/lib/color';
 
-const CARD_MARGIN = 10;
+const CARD_MARGIN = 6;
 
 // A colored card gets a pastel fill with the accent as its border - the same treatment
 // used by a tile, so the module's color carries through from tile to opened card.
@@ -92,14 +92,16 @@ function TitleBarSlot({
         style={{
           width: naturalSize ? Animated.multiply(scale, naturalSize.width) : undefined,
           height: naturalSize ? Animated.multiply(scale, naturalSize.height) : undefined,
-          // Caps how much of the row a single slot can claim regardless of its natural
-          // content size, so unusually wide display/action content can't push the title
-          // down to nothing (or past the card's own edge) on a narrow window - the title's
-          // own flex: 1 absorbs whatever room this leaves it, down to its own text width.
-          maxWidth: '35%',
           overflow: 'hidden',
         }}
       >
+        {/* No maxWidth cap here (tried once, reverted): it constrains this box to less than
+            the visible inner's natural size whenever content is wide enough to need it, and
+            the visible inner is a normal in-flow child of this box (unlike the measuring
+            copy above, which is an out-of-flow sibling specifically so it's immune to this) -
+            so capping this box also squeezes the inner's own layout width, wrapping/clipping
+            real content instead of cleanly cropping it. Confirmed: the online badge started
+            getting cut off on its right and bottom edges under real use. */}
         <Animated.View style={{ transform: [{ scale }] }}>{inner}</Animated.View>
       </Animated.View>
     </>
@@ -317,8 +319,8 @@ export function Module({
   // CARD_MARGIN, against the nested card's border) - both exactly CARD_MARGIN, instead of
   // the bottom gap coming out larger just because the nested card contributes its own
   // margin that the top side has no equivalent of.
-  const titlePaddingTop = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [14, CARD_MARGIN] });
-  const titlePaddingBottom = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
+  const titlePaddingTop = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [10, CARD_MARGIN] });
+  const titlePaddingBottom = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [6, 0] });
   const titlePaddingHorizontal = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 16] });
   const titleFontSize = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28, 14] });
   // Title bar displays/actions shrink at roughly the same ratio the title's own font size
