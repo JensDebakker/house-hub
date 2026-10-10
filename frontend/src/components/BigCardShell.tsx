@@ -7,11 +7,8 @@ const CARD_MARGIN = 10;
 
 // A colored card gets a pastel fill with the accent as its border - the same treatment
 // as a SubCard tile - so the module's color carries through from tile to opened card.
-// The default 'white' shell (unused by any module card today) stays a plain white card.
 function cardSurface(color: string) {
-  return color === 'white'
-    ? { backgroundColor: 'white' }
-    : { backgroundColor: pastelize(color), borderWidth: 2, borderColor: color };
+  return { backgroundColor: pastelize(color), borderWidth: 2, borderColor: color };
 }
 
 // At most one BigCardShell is ever "open" (collapsed=false) at a time, since each level
@@ -56,7 +53,7 @@ export function navigateBackFromCard(navigate: () => void) {
  */
 export function BigCardShell({
   title,
-  color = 'white',
+  color,
   textColor,
   collapsed = false,
   onCollapsedPress,
@@ -64,7 +61,7 @@ export function BigCardShell({
   children,
 }: {
   title: string;
-  color?: string;
+  color: string;
   textColor?: string;
   /** True while one of this card's own sub-routes is open on top of it. */
   collapsed?: boolean;
