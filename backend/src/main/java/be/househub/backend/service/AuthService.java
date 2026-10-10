@@ -42,6 +42,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -54,6 +55,7 @@ public class AuthService {
 
     private static final long EMAIL_VERIFY_TTL_HOURS = 24;
     private static final long PASSWORD_RESET_TTL_HOURS = 1;
+    private static final long EMAIL_VERIFY_REPLAY_WINDOW_HOURS = 1;
 
     private final UserRepository userRepository;
     private final HouseholdRepository householdRepository;
@@ -145,10 +147,14 @@ public class AuthService {
 
         // A used email-verify token whose user is already verified means this exact
         // token already succeeded once (tokens are single-use and unique per
-        // register/resend call) - a replay (double-submit, double-click) should log
-        // the user in rather than error, instead of erroring on the retry.
+        // register/resend call) - a replay (double-submit, double-click) within the
+        // replay window should log the user in rather than error. Past that window the
+        // token reverts to erroring, so a copy of the link leaked later (access logs,
+        // browser history, a forward) can't be used to log in indefinitely.
         if (token.isUsed()) {
-            if (user.isEmailVerified()) {
+            boolean withinReplayWindow = token.getUsedAt() != null
+                    && token.getUsedAt().plus(Duration.ofHours(EMAIL_VERIFY_REPLAY_WINDOW_HOURS)).isAfter(Instant.now());
+            if (user.isEmailVerified() && withinReplayWindow) {
                 return buildAuthResponse(user);
             }
             throw new InvalidVerificationTokenException("Invalid or already-used token");
@@ -159,6 +165,7 @@ public class AuthService {
         }
 
         token.setUsed(true);
+        token.setUsedAt(Instant.now());
         verificationTokenRepository.save(token);
 
         user.setEmailVerified(true);
@@ -248,6 +255,7 @@ public class AuthService {
         }
 
         token.setUsed(true);
+        token.setUsedAt(Instant.now());
         verificationTokenRepository.save(token);
         return token;
     }

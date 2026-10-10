@@ -6,6 +6,7 @@ import be.househub.backend.dto.auth.RegisterResponse;
 import be.househub.backend.entity.HouseholdMembership;
 import be.househub.backend.entity.HouseholdRole;
 import be.househub.backend.entity.User;
+import be.househub.backend.entity.VerificationToken;
 import be.househub.backend.entity.VerificationTokenType;
 import be.househub.backend.exception.InvalidVerificationTokenException;
 import be.househub.backend.repository.HouseholdMembershipRepository;
@@ -16,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -83,6 +86,22 @@ class AuthServiceIntegrationTest {
         AuthResponse response = authService.verifyEmail(token);
 
         assertThat(response.accessToken()).isNotBlank();
+    }
+
+    @Test
+    void verifyEmail_replayPastTheOneHourWindow_throws() {
+        // A leaked copy of the link (access logs, browser history, a forward) found after the
+        // replay window must not work as an indefinite login credential.
+        authService.register(new RegisterRequest("stale.replay@example.com", "a-valid-password", "Stale Replay"));
+        String token = emailVerifyTokenFor("stale.replay@example.com");
+        authService.verifyEmail(token);
+
+        VerificationToken persisted = verificationTokenRepository.findByToken(token).orElseThrow();
+        persisted.setUsedAt(Instant.now().minus(Duration.ofHours(2)));
+        verificationTokenRepository.save(persisted);
+
+        assertThatThrownBy(() -> authService.verifyEmail(token))
+                .isInstanceOf(InvalidVerificationTokenException.class);
     }
 
     @Test
