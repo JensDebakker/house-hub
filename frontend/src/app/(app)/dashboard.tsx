@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { HouseStatusBadges } from '@/components/HouseStatusBadges';
 import { Module } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { formatHouseStatus } from '@/lib/houseStatus';
 import { setDefaultHousehold } from '@/lib/households';
 
 const DEFAULT_MARKER_COLOR = 'rgba(0,0,0,0.55)';
@@ -62,11 +62,9 @@ export default function DashboardScreen() {
             key={household.householdId}
             tile
             title={household.householdName}
+            subtitle={formatHouseStatus(household.memberCount ?? 0, household.onlineCount ?? 0)}
             href={`/house/${household.householdId}/dashboard`}
             color="#2563eb"
-            titleBarDisplays={
-              <HouseStatusBadges memberCount={household.memberCount ?? 0} onlineCount={household.onlineCount ?? 0} />
-            }
             titleBarActions={
               <DefaultHouseMarker
                 isDefault={Boolean(household.isDefault)}

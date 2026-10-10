@@ -4,6 +4,7 @@ import { ActivityIndicator, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { resolveDefaultHousehold } from '@/lib/households';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 
 export default function VerifyEmailScreen() {
@@ -17,9 +18,10 @@ export default function VerifyEmailScreen() {
     requestedTokenRef.current = token;
 
     verifyEmail(token)
-      .then(async () => {
-        if (await joinPendingHousehold()) await refreshUser();
-        router.replace('/dashboard');
+      .then(async (initialUser) => {
+        const currentUser = (await joinPendingHousehold()) ? await refreshUser() : initialUser;
+        const defaultHousehold = resolveDefaultHousehold(currentUser);
+        router.replace(defaultHousehold ? `/house/${defaultHousehold.householdId}/dashboard` : '/dashboard');
       })
       .catch((err) => {
         setVerifyError(getErrorMessage(err, 'This verification link is invalid or has expired.'));
