@@ -51,6 +51,21 @@ public class WebSocketBroadcaster {
         }
     }
 
+    /**
+     * Sends the envelope to every open session registered against {@code houseId}, with no
+     * exclusion. Used when the broadcast originates from a REST call rather than a connected
+     * websocket session, so there is no sender session to exclude.
+     */
+    public void broadcastToHouse(UUID houseId, MessageEnvelope envelope) {
+        String json = serialize(envelope);
+        if (json == null) {
+            return;
+        }
+        for (SessionRegistry.SessionInfo info : sessionRegistry.inHouse(houseId)) {
+            send(info.session(), json);
+        }
+    }
+
     private String serialize(MessageEnvelope envelope) {
         try {
             return objectMapper.writeValueAsString(envelope);

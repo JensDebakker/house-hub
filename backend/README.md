@@ -69,7 +69,10 @@ the frontend side beyond Auth and Admin):
 - `GET /households/{householdId}/chat-messages` (optional `limit`, default 50, and `before`
   ISO-8601 instant for "load older" pagination) — newest-first history of messages
   persisted from the `chat` websocket channel at `/ws`; there is no REST endpoint to send a
-  message, sending only happens over the websocket
+  message, sending only happens over the websocket. `DELETE .../chat-messages/{id}` deletes a
+  message (own message, or any message in the household for a household OWNER/global ADMIN)
+  and broadcasts a `ChatMessageDeletedEvent` (`deletedId`, `householdId`) on the same `chat`
+  websocket channel so other connected clients can remove it live
 - `GET/POST /households/{householdId}/files` (multipart upload, optional `folderId` param to
   place the upload inside a folder), `GET/DELETE .../files/{id}` — shared files/images for the
   household, capped by `Household.storageLimitBytes` (default 4GB, admin-editable). `GET`
