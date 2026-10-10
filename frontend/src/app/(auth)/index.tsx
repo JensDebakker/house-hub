@@ -1,14 +1,28 @@
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
+import { loadPendingInviteCode } from '@/lib/storage';
 
 export default function AuthLandingScreen() {
+  const [hasPendingInvite, setHasPendingInvite] = useState(false);
+
+  useEffect(() => {
+    loadPendingInviteCode().then((code) => setHasPendingInvite(code !== null));
+  }, []);
+
   return (
     <ScreenContainer>
       <Text style={{ fontSize: 32, fontWeight: '700' }}>House Hub</Text>
       <Text style={{ color: '#666', marginBottom: 8 }}>
         Manage your house — tasks, shopping, supplies, and more.
       </Text>
+
+      {hasPendingInvite ? (
+        <Text style={{ color: '#2563eb', fontWeight: '600' }}>
+          Sign in or register to join the house you were invited to.
+        </Text>
+      ) : null}
 
       <Pressable
         onPress={() => router.push('/(auth)/login')}

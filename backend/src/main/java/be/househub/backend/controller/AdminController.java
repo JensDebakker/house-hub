@@ -3,6 +3,8 @@ package be.househub.backend.controller;
 import be.househub.backend.dto.admin.AddMembershipRequest;
 import be.househub.backend.dto.admin.AdminCalendarEventResponse;
 import be.househub.backend.dto.admin.AdminCalendarEventUpdateRequest;
+import be.househub.backend.dto.admin.AdminDatabaseHealthResponse;
+import be.househub.backend.dto.admin.AdminDatabaseTableResponse;
 import be.househub.backend.dto.admin.AdminShoppingListResponse;
 import be.househub.backend.dto.admin.AdminShoppingListUpdateRequest;
 import be.househub.backend.dto.admin.AdminSupplyResponse;
@@ -18,6 +20,7 @@ import be.househub.backend.dto.household.HouseholdMembershipResponse;
 import be.househub.backend.dto.household.HouseholdResponse;
 import be.househub.backend.dto.household.HouseholdUpdateRequest;
 import be.househub.backend.service.AdminService;
+import be.househub.backend.service.DatabaseDiagnosticsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -40,6 +43,7 @@ import java.util.UUID;
 public class AdminController {
 
     private final AdminService adminService;
+    private final DatabaseDiagnosticsService databaseDiagnosticsService;
 
     @GetMapping("/users")
     public List<AdminUserResponse> listUsers() {
@@ -131,5 +135,15 @@ public class AdminController {
     public ResponseEntity<Void> deleteCalendarEvent(@PathVariable UUID eventId) {
         adminService.deleteCalendarEvent(eventId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/database/health")
+    public AdminDatabaseHealthResponse databaseHealth() {
+        return databaseDiagnosticsService.checkHealth();
+    }
+
+    @GetMapping("/database/schema")
+    public List<AdminDatabaseTableResponse> databaseSchema() {
+        return databaseDiagnosticsService.describeSchema();
     }
 }

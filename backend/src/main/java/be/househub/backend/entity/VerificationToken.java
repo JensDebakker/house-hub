@@ -47,6 +47,9 @@ public class VerificationToken {
     @Column(nullable = false)
     private boolean used = false;
 
+    @Column(name = "used_at")
+    private Instant usedAt;
+
     public boolean isExpired() {
         return Instant.now().isAfter(expiresAt);
     }
