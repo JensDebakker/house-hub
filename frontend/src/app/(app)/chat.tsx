@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useChatMessagesQuery, useSendChatMessage } from '@/lib/useChatMessages';
@@ -43,7 +43,7 @@ export default function ChatScreen() {
     : null;
 
   return (
-    <BigCardShell title="Chat" color={CHAT_COLOR} scroll={false}>
+    <Module title="Chat" color={CHAT_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       {messagesQuery.isLoading ? (
@@ -102,6 +102,6 @@ export default function ChatScreen() {
           <Text style={{ color: 'white', fontWeight: '600' }}>Send</Text>
         </Pressable>
       </View>
-    </BigCardShell>
+    </Module>
   );
 }

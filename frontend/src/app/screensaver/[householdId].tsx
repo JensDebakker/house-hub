@@ -2,12 +2,14 @@ import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, Platform, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Module } from '@/components/Module';
 import { api } from '@/lib/api';
 import type { HouseFile } from '@/types';
 
 const SLIDE_DURATION_MS = 6000;
 const IDLE_TIMEOUT_MS = 10000;
 const FALLBACK_BACKGROUND = '#111827';
+const SCREENSAVER_COLOR = '#7c3aed';
 
 export default function ScreensaverScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
@@ -101,71 +103,73 @@ export default function ScreensaverScreen() {
   const currentSlideUrl = slideUrls[slideIndex];
 
   return (
-    <Pressable style={{ flex: 1, backgroundColor: FALLBACK_BACKGROUND }} onPress={wake}>
-      <StatusBar hidden />
+    <Module fullscreen title="Screensaver" color={SCREENSAVER_COLOR}>
+      <Pressable style={{ flex: 1, backgroundColor: FALLBACK_BACKGROUND }} onPress={wake}>
+        <StatusBar hidden />
 
-      {currentSlideUrl ? (
-        <Image
-          key={currentSlideUrl}
-          source={{ uri: currentSlideUrl }}
-          resizeMode="cover"
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-      ) : null}
+        {currentSlideUrl ? (
+          <Image
+            key={currentSlideUrl}
+            source={{ uri: currentSlideUrl }}
+            resizeMode="cover"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+        ) : null}
 
-      <View style={{ position: 'absolute', top: 32, left: 32 }}>
-        <Text style={{ color: 'white', fontSize: 48, fontWeight: '700' }}>
-          {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-        <Text style={{ color: 'white', fontSize: 18 }}>
-          {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-        </Text>
-      </View>
+        <View style={{ position: 'absolute', top: 32, left: 32 }}>
+          <Text style={{ color: 'white', fontSize: 48, fontWeight: '700' }}>
+            {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+          <Text style={{ color: 'white', fontSize: 18 }}>
+            {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+          </Text>
+        </View>
 
-      <Animated.View
-        pointerEvents={controlsVisible ? 'auto' : 'none'}
-        style={{
-          position: 'absolute',
-          bottom: 32,
-          left: 32,
-          right: 32,
-          opacity: cardAnim,
-          transform: [
-            {
-              translateY: cardAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [40, 0],
-              }),
-            },
-          ],
-        }}
-      >
-        <View
+        <Animated.View
+          pointerEvents={controlsVisible ? 'auto' : 'none'}
           style={{
-            backgroundColor: 'rgba(0,0,0,0.35)',
-            borderRadius: 16,
-            padding: 20,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
+            position: 'absolute',
+            bottom: 32,
+            left: 32,
+            right: 32,
+            opacity: cardAnim,
+            transform: [
+              {
+                translateY: cardAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [40, 0],
+                }),
+              },
+            ],
           }}
         >
-          <Link
-            href="/"
+          <View
             style={{
-              color: 'white',
-              fontWeight: '600',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              paddingVertical: 10,
-              paddingHorizontal: 18,
-              borderRadius: 10,
-              overflow: 'hidden',
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              borderRadius: 16,
+              padding: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
             }}
           >
-            Open House Hub →
-          </Link>
-        </View>
-      </Animated.View>
-    </Pressable>
+            <Link
+              href="/"
+              style={{
+                color: 'white',
+                fontWeight: '600',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                paddingVertical: 10,
+                paddingHorizontal: 18,
+                borderRadius: 10,
+                overflow: 'hidden',
+              }}
+            >
+              Open House Hub →
+            </Link>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </Module>
   );
 }

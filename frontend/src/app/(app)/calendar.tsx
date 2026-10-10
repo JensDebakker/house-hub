@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCalendarEventsQuery, useCreateCalendarEventMutation, useDeleteCalendarEventMutation } from '@/lib/useCalendarEvents';
@@ -43,7 +43,7 @@ export default function CalendarScreen() {
   );
 
   return (
-    <BigCardShell title="House Calendar" color={CALENDAR_COLOR} scroll={false}>
+    <Module title="House Calendar" color={CALENDAR_COLOR} scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Simple upcoming-events list for now — a full calendar grid view can replace this later.
       </Text>
@@ -97,6 +97,6 @@ export default function CalendarScreen() {
           )}
         />
       )}
-    </BigCardShell>
+    </Module>
   );
 }

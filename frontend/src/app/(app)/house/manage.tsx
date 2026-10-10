@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { HouseholdMember } from '@/types';
@@ -61,14 +61,14 @@ export default function ManageHouseScreen() {
 
   if (!householdId) {
     return (
-      <BigCardShell title="Manage House" color={MANAGE_HOUSE_COLOR}>
+      <Module title="Manage House" color={MANAGE_HOUSE_COLOR}>
         <Text style={{ color: '#999' }}>You&apos;re not currently in a house.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
   return (
-    <BigCardShell title="Manage House" color={MANAGE_HOUSE_COLOR}>
+    <Module title="Manage House" color={MANAGE_HOUSE_COLOR}>
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
       {members.length === 0 && !error ? <Text style={{ color: '#999' }}>Loading…</Text> : null}
@@ -138,6 +138,6 @@ export default function ManageHouseScreen() {
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>Leave house</Text>
       </Pressable>
-    </BigCardShell>
+    </Module>
   );
 }

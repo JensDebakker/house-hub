@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } from '@/components/AdminTable';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { useAuthedImage } from '@/lib/useAuthedImage';
@@ -81,9 +81,9 @@ export default function FilesScreen() {
 
   if (!householdId) {
     return (
-      <BigCardShell title="Files" color={FILES_COLOR}>
+      <Module title="Files" color={FILES_COLOR}>
         <Text>You&apos;re not part of a house yet.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
@@ -197,7 +197,7 @@ export default function FilesScreen() {
   };
 
   return (
-    <BigCardShell title="Files" color={FILES_COLOR}>
+    <Module title="Files" color={FILES_COLOR}>
       <Text style={{ color: '#666' }}>
         Shared files and images for your house. Uploaded images (JPEG, PNG, GIF, WebP, …)
         automatically show up in the screensaver slideshow, no matter which folder they&apos;re in.
@@ -333,6 +333,6 @@ export default function FilesScreen() {
           </Pressable>
         </View>
       ) : null}
-    </BigCardShell>
+    </Module>
   );
 }
