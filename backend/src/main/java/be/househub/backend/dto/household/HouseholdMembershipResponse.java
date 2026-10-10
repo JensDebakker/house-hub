@@ -7,6 +7,9 @@ import java.util.UUID;
 public record HouseholdMembershipResponse(
         UUID householdId,
         String householdName,
-        HouseholdRole role
+        HouseholdRole role,
+        long memberCount,
+        long onlineCount,
+        boolean isDefault
 ) {
 }

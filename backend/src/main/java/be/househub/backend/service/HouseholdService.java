@@ -15,10 +15,13 @@ import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.ShoppingListRepository;
 import be.househub.backend.repository.SupplyRepository;
 import be.househub.backend.repository.TaskRepository;
+import be.househub.backend.repository.UserRepository;
+import be.househub.backend.websocket.SessionRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -34,16 +37,44 @@ public class HouseholdService {
 
     private final HouseholdRepository householdRepository;
     private final HouseholdMembershipRepository membershipRepository;
+    private final UserRepository userRepository;
     private final TaskRepository taskRepository;
     private final SupplyRepository supplyRepository;
     private final ShoppingListRepository shoppingListRepository;
     private final CalendarEventRepository calendarEventRepository;
     private final HouseFileRepository houseFileRepository;
+    private final SessionRegistry sessionRegistry;
 
     public List<HouseholdMembershipResponse> findMemberships(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        UUID defaultHouseholdId = user.getDefaultHousehold() != null ? user.getDefaultHousehold().getId() : null;
+
         return membershipRepository.findByUserId(userId).stream()
-                .map(m -> new HouseholdMembershipResponse(m.getHousehold().getId(), m.getHousehold().getName(), m.getRole()))
+                .map(m -> toMembershipResponse(m, defaultHouseholdId))
                 .toList();
+    }
+
+    /**
+     * For callers (e.g. admin endpoints) that already have the owning {@link User}
+     * loaded (e.g. right after creating/updating their membership), so they can skip
+     * a redundant lookup.
+     */
+    public HouseholdMembershipResponse toMembershipResponse(HouseholdMembership membership, User user) {
+        UUID defaultHouseholdId = user.getDefaultHousehold() != null ? user.getDefaultHousehold().getId() : null;
+        return toMembershipResponse(membership, defaultHouseholdId);
+    }
+
+    private HouseholdMembershipResponse toMembershipResponse(HouseholdMembership m, UUID defaultHouseholdId) {
+        UUID householdId = m.getHousehold().getId();
+        return new HouseholdMembershipResponse(
+                householdId,
+                m.getHousehold().getName(),
+                m.getRole(),
+                membershipRepository.countByHouseholdId(householdId),
+                sessionRegistry.distinctUserCount(householdId),
+                householdId.equals(defaultHouseholdId)
+        );
     }
 
     public HouseholdResponse toResponse(Household household) {
@@ -94,6 +125,11 @@ public class HouseholdService {
         membership.setRole(HouseholdRole.OWNER);
         membershipRepository.save(membership);
 
+        if (owner.getDefaultHousehold() == null) {
+            owner.setDefaultHousehold(household);
+            userRepository.save(owner);
+        }
+
         return toResponse(household);
     }
 
@@ -112,6 +148,11 @@ public class HouseholdService {
         membership.setHousehold(household);
         membership.setRole(HouseholdRole.MEMBER);
         membershipRepository.save(membership);
+
+        if (user.getDefaultHousehold() == null) {
+            user.setDefaultHousehold(household);
+            userRepository.save(user);
+        }
 
         return toResponse(household);
     }
@@ -132,6 +173,51 @@ public class HouseholdService {
         }
 
         membershipRepository.deleteByUserIdAndHouseholdId(user.getId(), householdId);
+        clearDefaultIfLeavingHousehold(user.getId(), householdId);
+    }
+
+    /**
+     * Shared by every path that removes a user's membership in a household
+     * ({@link #leaveHousehold}, {@link #removeMember}, and {@code AdminService}'s
+     * removal path via {@link #removeMember}): if the household the user just lost
+     * membership in was their default, clears it and auto-promotes one of their
+     * remaining memberships (if any) to be the new default — never leaves a user's
+     * {@code defaultHousehold} pointing at a household they're no longer a member of.
+     * Picks the same "natural default" the backfill migration uses for the same
+     * situation: a membership they OWN, tiebroken by earliest {@code joinedAt}.
+     */
+    private void clearDefaultIfLeavingHousehold(UUID userId, UUID householdId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        boolean wasDefault = user.getDefaultHousehold() != null
+                && user.getDefaultHousehold().getId().equals(householdId);
+        if (!wasDefault) {
+            return;
+        }
+
+        List<HouseholdMembership> remaining = membershipRepository.findByUserId(userId);
+        Household newDefault = remaining.stream()
+                .min(Comparator
+                        .comparing((HouseholdMembership m) -> m.getRole() == HouseholdRole.OWNER ? 0 : 1)
+                        .thenComparing(HouseholdMembership::getJoinedAt))
+                .map(HouseholdMembership::getHousehold)
+                .orElse(null);
+        user.setDefaultHousehold(newDefault);
+        userRepository.save(user);
+    }
+
+    /**
+     * Sets {@code householdId} as the user's default household — the one that opens
+     * automatically on login. The user must already be a member of it.
+     */
+    @Transactional
+    public void setDefaultHousehold(User user, UUID householdId) {
+        HouseholdMembership membership = membershipRepository.findByUserIdAndHouseholdId(user.getId(), householdId)
+                .orElseThrow(() -> new ResourceNotFoundException("HouseholdMembership", user.getId()));
+
+        user.setDefaultHousehold(membership.getHousehold());
+        userRepository.save(user);
     }
 
     @Transactional
@@ -140,6 +226,7 @@ public class HouseholdService {
             throw new ResourceNotFoundException("HouseholdMembership", userId);
         }
         membershipRepository.deleteByUserIdAndHouseholdId(userId, householdId);
+        clearDefaultIfLeavingHousehold(userId, householdId);
     }
 
     public List<HouseholdMemberResponse> findMembers(UUID householdId) {

@@ -156,7 +156,12 @@ public class AdminService {
         membership.setRole(request.role());
         membershipRepository.save(membership);
 
-        return new HouseholdMembershipResponse(household.getId(), household.getName(), membership.getRole());
+        if (user.getDefaultHousehold() == null) {
+            user.setDefaultHousehold(household);
+            userRepository.save(user);
+        }
+
+        return householdService.toMembershipResponse(membership, user);
     }
 
     @Transactional
@@ -165,12 +170,12 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("HouseholdMembership", userId));
         membership.setRole(request.role());
         membershipRepository.save(membership);
-        return new HouseholdMembershipResponse(householdId, membership.getHousehold().getName(), membership.getRole());
+        return householdService.toMembershipResponse(membership, membership.getUser());
     }
 
     @Transactional
     public void removeMembership(UUID householdId, UUID userId) {
-        membershipRepository.deleteByUserIdAndHouseholdId(userId, householdId);
+        householdService.removeMember(householdId, userId);
     }
 
     @Transactional

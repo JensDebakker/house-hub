@@ -94,6 +94,9 @@ public class AuthService {
         membership.setRole(HouseholdRole.OWNER);
         membershipRepository.save(membership);
 
+        savedUser.setDefaultHousehold(household);
+        userRepository.save(savedUser);
+
         issueAndSendToken(savedUser, VerificationTokenType.EMAIL_VERIFY, EMAIL_VERIFY_TTL_HOURS,
                 token -> mailService.sendVerificationEmail(savedUser.getEmail(), token));
 
@@ -290,9 +293,7 @@ public class AuthService {
     }
 
     private UserResponse toUserResponse(User user) {
-        List<HouseholdMembershipResponse> households = membershipRepository.findByUserId(user.getId()).stream()
-                .map(m -> new HouseholdMembershipResponse(m.getHousehold().getId(), m.getHousehold().getName(), m.getRole()))
-                .toList();
+        List<HouseholdMembershipResponse> households = householdService.findMemberships(user.getId());
         return new UserResponse(
                 user.getId(),
                 user.getEmail(),
