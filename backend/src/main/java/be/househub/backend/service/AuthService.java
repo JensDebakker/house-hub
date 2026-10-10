@@ -42,6 +42,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -54,6 +55,7 @@ public class AuthService {
 
     private static final long EMAIL_VERIFY_TTL_HOURS = 24;
     private static final long PASSWORD_RESET_TTL_HOURS = 1;
+    private static final long EMAIL_VERIFY_REPLAY_WINDOW_HOURS = 1;
 
     private final UserRepository userRepository;
     private final HouseholdRepository householdRepository;
@@ -134,8 +136,30 @@ public class AuthService {
 
     @Transactional
     public AuthResponse verifyEmail(String rawToken) {
-        VerificationToken token = consumeToken(rawToken, VerificationTokenType.EMAIL_VERIFY);
+        VerificationToken token = lookupToken(rawToken, VerificationTokenType.EMAIL_VERIFY);
         User user = token.getUser();
+
+        // A used email-verify token whose user is already verified means this exact
+        // token already succeeded once (tokens are single-use and unique per
+        // register/resend call) - a replay (double-submit, double-click) within the
+        // replay window should log the user in rather than error. Past that window the
+        // token reverts to erroring, so a copy of the link leaked later (access logs,
+        // browser history, a forward) can't be used to log in indefinitely.
+        if (token.isUsed()) {
+            boolean withinReplayWindow = token.getUsedAt() != null
+                    && token.getUsedAt().plus(Duration.ofHours(EMAIL_VERIFY_REPLAY_WINDOW_HOURS)).isAfter(Instant.now());
+            if (user.isEmailVerified() && withinReplayWindow) {
+                return buildAuthResponse(user);
+            }
+            throw new InvalidVerificationTokenException("Invalid or already-used token");
+        }
+
+        if (token.isExpired()) {
+            throw new InvalidVerificationTokenException("Token has expired");
+        }
+
+        markUsed(token);
+
         user.setEmailVerified(true);
         userRepository.save(user);
         return buildAuthResponse(user);
@@ -212,19 +236,33 @@ public class AuthService {
     }
 
     private VerificationToken consumeToken(String rawToken, VerificationTokenType expectedType) {
-        VerificationToken token = verificationTokenRepository.findByToken(rawToken)
-                .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
+        VerificationToken token = lookupToken(rawToken, expectedType);
 
-        if (token.isUsed() || token.getType() != expectedType) {
+        if (token.isUsed()) {
             throw new InvalidVerificationTokenException("Invalid or already-used token");
         }
         if (token.isExpired()) {
             throw new InvalidVerificationTokenException("Token has expired");
         }
 
-        token.setUsed(true);
-        verificationTokenRepository.save(token);
+        markUsed(token);
         return token;
+    }
+
+    private VerificationToken lookupToken(String rawToken, VerificationTokenType expectedType) {
+        VerificationToken token = verificationTokenRepository.findByToken(rawToken)
+                .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
+
+        if (token.getType() != expectedType) {
+            throw new InvalidVerificationTokenException("Invalid or already-used token");
+        }
+        return token;
+    }
+
+    private void markUsed(VerificationToken token) {
+        token.setUsed(true);
+        token.setUsedAt(Instant.now());
+        verificationTokenRepository.save(token);
     }
 
     private void issueAndSendToken(User user, VerificationTokenType type, long ttlHours, java.util.function.Consumer<String> sendFn) {
