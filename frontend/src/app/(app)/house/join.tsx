@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
@@ -30,7 +30,7 @@ export default function JoinHouseScreen() {
   };
 
   return (
-    <BigCardShell title="Join House" color={JOIN_HOUSE_COLOR}>
+    <Module title="Join House" color={JOIN_HOUSE_COLOR}>
       <Text style={{ color: '#666' }}>Enter the invite code you were given.</Text>
 
       <TextInput
@@ -56,6 +56,6 @@ export default function JoinHouseScreen() {
           {isSubmitting ? 'Joining…' : 'Join house'}
         </Text>
       </Pressable>
-    </BigCardShell>
+    </Module>
   );
 }

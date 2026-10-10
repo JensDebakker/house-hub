@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle } from '@/lib/formStyles';
@@ -43,14 +43,14 @@ export default function LeaveHouseScreen() {
 
   if (!householdId) {
     return (
-      <BigCardShell title="Leave House" color={LEAVE_HOUSE_COLOR}>
+      <Module title="Leave House" color={LEAVE_HOUSE_COLOR}>
         <Text style={{ color: '#999' }}>You&apos;re not currently in a house.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
   return (
-    <BigCardShell title="Leave House" color={LEAVE_HOUSE_COLOR}>
+    <Module title="Leave House" color={LEAVE_HOUSE_COLOR}>
       <Text style={{ color: '#666' }}>
         You&apos;re a member of {householdName}. Leaving removes your access to its tasks, supplies,
         shopping lists, calendar, and files.
@@ -67,6 +67,6 @@ export default function LeaveHouseScreen() {
           {isSubmitting ? 'Leaving…' : 'Leave house'}
         </Text>
       </Pressable>
-    </BigCardShell>
+    </Module>
   );
 }

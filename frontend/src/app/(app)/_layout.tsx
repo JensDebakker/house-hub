@@ -1,7 +1,8 @@
 import { router, Slot, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
-import { BigCardShell, navigateBackFromCard } from '@/components/BigCardShell';
+import { Module, navigateBackFromCard } from '@/components/Module';
+import { OnlineBadge, useOnlinePresence } from '@/components/OnlineBadge';
 import { useAuth } from '@/contexts/AuthContext';
 
 const IDLE_REDIRECT_MS = 2 * 60 * 1000;
@@ -45,17 +46,22 @@ export default function AppStackLayout() {
   useIdleScreensaverRedirect();
   const pathname = usePathname();
   const collapsed = pathname !== '/dashboard';
+  // Subscribed here, not inside OnlineBadge itself - this component stays mounted for the
+  // whole (app) segment, so the count survives Dashboard's title bar swapping between its
+  // collapsed and open render trees, instead of resetting to null on every transition.
+  const onlineCount = useOnlinePresence();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#e5e7eb' }}>
-      <BigCardShell
+      <Module
         title="Dashboard"
         color={DASHBOARD_COLOR}
         collapsed={collapsed}
         onCollapsedPress={() => navigateBackFromCard(() => router.replace('/dashboard'))}
+        titleBarDisplays={<OnlineBadge count={onlineCount} />}
       >
         <Slot />
-      </BigCardShell>
+      </Module>
     </View>
   );
 }
