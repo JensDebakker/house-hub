@@ -85,6 +85,23 @@ the frontend side beyond Auth and Admin):
   folder, its files, and its subfolders. Requires being the household OWNER or the folder's
   creator.
 
+Feedback (bug reports / suggestions), not household-scoped — every endpoint below
+requires `Authorization: Bearer <accessToken>` and only ever exposes the caller's own
+tickets:
+- `POST /feedback` — multipart form: `type` (`BUG`/`SUGGESTION`), `description`
+  (required, max 2000 chars), optional `files` (multiple image files, max 5, each
+  validated as `image/*`) → 201 + `FeedbackTicketResponse`
+- `GET /feedback` — the caller's own tickets, newest first → `List<FeedbackTicketResponse>`
+- `GET /feedback/{id}` — single ticket; 404 (not 403) if it isn't the caller's, to avoid
+  leaking existence → `FeedbackTicketResponse`
+- `GET /feedback/{id}/attachments/{attachmentId}` — streams the image bytes, owner only
+
+`FeedbackTicketResponse`: `{ id, type, description, status, createdAt, updatedAt,
+attachments: [{ id, contentType, originalFilename }] }` — `status` is one of `OPEN`,
+`IN_PROGRESS`, `RESOLVED`, `CLOSED` (always `OPEN` on creation; only an admin can move
+it). Attachment bytes aren't inlined — build the image URL from the ticket id +
+attachment id against the endpoint above.
+
 All of the above (except `/auth/**`) require `Authorization: Bearer <accessToken>`.
 Registering a new user creates a new household for them (as the OWNER); additional
 memberships are granted either self-service (see above) or by an admin via the `/admin/**`
@@ -102,6 +119,15 @@ Admin (`ROLE_ADMIN` only):
 - `GET /admin/database/schema` — the live schema as JDBC metadata actually reports it
   (tables, columns, types, nullability, primary/foreign keys) rather than what the entities
   or Flyway migrations claim it should be; no row data
+- `GET /admin/feedback` — every user's feedback tickets, newest first, each including the
+  submitter's id/email/display name → `List<AdminFeedbackResponse>`
+- `GET /admin/feedback/{id}` — single ticket detail, any user's → `AdminFeedbackResponse`
+- `PATCH /admin/feedback/{id}` — `{ status }` only → updated `AdminFeedbackResponse`
+- `GET /admin/feedback/{id}/attachments/{attachmentId}` — streams image bytes for any
+  ticket (ownership bypassed)
+
+`AdminFeedbackResponse`: `{ id, type, description, status, createdAt, updatedAt, userId,
+userEmail, userDisplayName, attachments: [{ id, contentType, originalFilename }] }`.
 
 ## Notes
 

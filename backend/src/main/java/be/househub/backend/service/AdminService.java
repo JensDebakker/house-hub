@@ -3,6 +3,8 @@ package be.househub.backend.service;
 import be.househub.backend.dto.admin.AddMembershipRequest;
 import be.househub.backend.dto.admin.AdminCalendarEventResponse;
 import be.househub.backend.dto.admin.AdminCalendarEventUpdateRequest;
+import be.househub.backend.dto.admin.AdminFeedbackResponse;
+import be.househub.backend.dto.admin.AdminFeedbackUpdateRequest;
 import be.househub.backend.dto.admin.AdminShoppingListResponse;
 import be.househub.backend.dto.admin.AdminShoppingListUpdateRequest;
 import be.househub.backend.dto.admin.AdminSupplyResponse;
@@ -15,12 +17,14 @@ import be.househub.backend.dto.admin.HouseholdDetailResponse;
 import be.househub.backend.dto.admin.HouseholdMemberResponse;
 import be.househub.backend.dto.admin.UpdateMembershipRequest;
 import be.househub.backend.dto.admin.UserDetailResponse;
+import be.househub.backend.dto.feedback.FeedbackAttachmentResponse;
 import be.househub.backend.dto.household.HouseholdMembershipResponse;
 import be.househub.backend.dto.household.HouseholdResponse;
 import be.househub.backend.dto.household.HouseholdUpdateRequest;
 import be.househub.backend.dto.shopping.ShoppingListItemResponse;
 import be.househub.backend.dto.task.TaskResponse;
 import be.househub.backend.entity.CalendarEvent;
+import be.househub.backend.entity.FeedbackTicket;
 import be.househub.backend.entity.Household;
 import be.househub.backend.entity.HouseholdMembership;
 import be.househub.backend.entity.ShoppingList;
@@ -29,16 +33,20 @@ import be.househub.backend.entity.Task;
 import be.househub.backend.entity.User;
 import be.househub.backend.exception.ResourceNotFoundException;
 import be.househub.backend.repository.CalendarEventRepository;
+import be.househub.backend.repository.FeedbackAttachmentRepository;
+import be.househub.backend.repository.FeedbackTicketRepository;
 import be.househub.backend.repository.HouseholdMembershipRepository;
 import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.ShoppingListRepository;
 import be.househub.backend.repository.SupplyRepository;
 import be.househub.backend.repository.TaskRepository;
 import be.househub.backend.repository.UserRepository;
+import be.househub.backend.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,6 +68,9 @@ public class AdminService {
     private final ShoppingListService shoppingListService;
     private final CalendarEventService calendarEventService;
     private final HouseFileService houseFileService;
+    private final FeedbackTicketRepository feedbackTicketRepository;
+    private final FeedbackAttachmentRepository feedbackAttachmentRepository;
+    private final FileStorageService fileStorageService;
 
     public List<AdminUserResponse> listUsers() {
         return userRepository.findAll().stream()
@@ -249,6 +260,59 @@ public class AdminService {
         CalendarEvent event = calendarEventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourceNotFoundException("CalendarEvent", eventId));
         calendarEventRepository.delete(event);
+    }
+
+    public List<AdminFeedbackResponse> listFeedback() {
+        return feedbackTicketRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(this::toAdminFeedbackResponse)
+                .toList();
+    }
+
+    public AdminFeedbackResponse getFeedback(UUID ticketId) {
+        return toAdminFeedbackResponse(findFeedbackTicket(ticketId));
+    }
+
+    @Transactional
+    public AdminFeedbackResponse updateFeedback(UUID ticketId, AdminFeedbackUpdateRequest request) {
+        FeedbackTicket ticket = findFeedbackTicket(ticketId);
+        if (request.status() != null) {
+            ticket.setStatus(request.status());
+            ticket.setUpdatedAt(Instant.now());
+        }
+        return toAdminFeedbackResponse(feedbackTicketRepository.save(ticket));
+    }
+
+    public FeedbackAttachmentFile downloadFeedbackAttachment(UUID ticketId, UUID attachmentId) {
+        FeedbackTicket ticket = findFeedbackTicket(ticketId);
+        var attachment = feedbackAttachmentRepository.findByIdAndTicketId(attachmentId, ticket.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("FeedbackAttachment", attachmentId));
+        FileStorageService.StoredFile stored = fileStorageService.load(attachment.getStorageKey());
+        return new FeedbackAttachmentFile(stored, attachment.getContentType());
+    }
+
+    public record FeedbackAttachmentFile(FileStorageService.StoredFile file, String contentType) {
+    }
+
+    private FeedbackTicket findFeedbackTicket(UUID ticketId) {
+        return feedbackTicketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedbackTicket", ticketId));
+    }
+
+    private AdminFeedbackResponse toAdminFeedbackResponse(FeedbackTicket ticket) {
+        return new AdminFeedbackResponse(
+                ticket.getId(),
+                ticket.getType(),
+                ticket.getDescription(),
+                ticket.getStatus(),
+                ticket.getCreatedAt(),
+                ticket.getUpdatedAt(),
+                ticket.getUser().getId(),
+                ticket.getUser().getEmail(),
+                ticket.getUser().getDisplayName(),
+                ticket.getAttachments().stream()
+                        .map(a -> new FeedbackAttachmentResponse(a.getId(), a.getContentType(), a.getOriginalFilename()))
+                        .toList()
+        );
     }
 
     private AdminTaskResponse toAdminTaskResponse(Task task) {
