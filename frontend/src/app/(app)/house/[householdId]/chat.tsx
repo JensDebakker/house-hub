@@ -4,6 +4,7 @@ import { ActivityIndicator, Alert, FlatList, Platform, Pressable, Text, TextInpu
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { findHouseholdMembership } from '@/lib/households';
 import { useChatMessagesQuery, useDeleteChatMessage, useSendChatMessage } from '@/lib/useChatMessages';
 import type { ChatMessage } from '@/types';
 
@@ -21,7 +22,7 @@ export default function ChatScreen() {
   const sendChatMessage = useSendChatMessage(householdId);
   const deleteChatMessage = useDeleteChatMessage(householdId);
 
-  const myRole = user?.households.find((h) => h.householdId === householdId)?.role;
+  const myRole = findHouseholdMembership(user, householdId)?.role;
   const canDelete = (message: ChatMessage) =>
     message.senderId === user?.id || myRole === 'OWNER' || user?.role === 'ADMIN';
 

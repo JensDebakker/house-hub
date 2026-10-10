@@ -36,7 +36,7 @@ function DefaultHouseMarker({ isDefault, onPress, busy }: { isDefault: boolean; 
 // Level 0 of the card stack: one tile per house the user belongs to, plus a tile to join
 // another one (creating a brand new house is its own global flow, see house/create.tsx).
 export default function DashboardScreen() {
-  const { user, refreshUser } = useAuth();
+  const { user, setHouseholds } = useAuth();
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,8 +44,8 @@ export default function DashboardScreen() {
     setError(null);
     setSettingDefaultId(householdId);
     try {
-      await setDefaultHousehold(householdId);
-      await refreshUser();
+      const households = await setDefaultHousehold(householdId);
+      setHouseholds(households);
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to set default house.'));
     } finally {

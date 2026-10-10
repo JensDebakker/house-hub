@@ -6,6 +6,7 @@ import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } fro
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { findHouseholdMembership } from '@/lib/households';
 import { useAuthedImage } from '@/lib/useAuthedImage';
 import type { FolderContents, HouseFile, HouseFolder } from '@/types';
 
@@ -46,7 +47,7 @@ function FileThumbnail({ householdId, file }: { householdId: string; file: House
 export default function FilesScreen() {
   const { user } = useAuth();
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
-  const isOwner = user?.households.find((h) => h.householdId === householdId)?.role === 'OWNER';
+  const isOwner = findHouseholdMembership(user, householdId)?.role === 'OWNER';
 
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([{ id: null, name: 'Files' }]);
   const currentFolderId = breadcrumbs[breadcrumbs.length - 1]?.id ?? null;

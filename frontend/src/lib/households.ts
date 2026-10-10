@@ -2,14 +2,14 @@ import { api } from '@/lib/api';
 import type { HouseholdMembership, User } from '@/types';
 
 /**
- * Sets the caller's default household. The backend (`PATCH /households/{householdId}/default`,
- * landing on a separate branch in parallel with this one) returns a refreshed membership list,
- * but its exact shape wasn't settled yet as this was written - every call site here just
- * `refreshUser()`s afterward (re-fetching `/auth/me`) rather than trusting this response, so
- * it stays correct regardless of what that endpoint ends up returning.
+ * Sets the caller's default household. Returns the refreshed membership list the backend
+ * responds with (`PATCH /households/{householdId}/default`) - pass it straight to
+ * `useAuth().setHouseholds()` to update context state in place instead of a full
+ * `refreshUser()` round-trip to `/auth/me`.
  */
-export async function setDefaultHousehold(householdId: string): Promise<void> {
-  await api.patch(`/households/${householdId}/default`);
+export async function setDefaultHousehold(householdId: string): Promise<HouseholdMembership[]> {
+  const { data } = await api.patch<HouseholdMembership[]>(`/households/${householdId}/default`);
+  return data;
 }
 
 /** The household login/`/` should land a user in: whichever membership is flagged

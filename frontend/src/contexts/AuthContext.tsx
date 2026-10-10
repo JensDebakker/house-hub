@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, setOnAuthFailure } from '@/lib/api';
 import { clearTokens, loadTokens, saveTokens } from '@/lib/storage';
-import type { AuthTokens, User } from '@/types';
+import type { AuthTokens, HouseholdMembership, User } from '@/types';
 
 type LoginResponse = AuthTokens & { user: User };
 
@@ -19,6 +19,10 @@ type AuthContextValue = {
   /** Re-fetches the current user from the backend and updates context state - use after
    * anything that changes `user.households` server-side (create/join/leave a household). */
   refreshUser: () => Promise<User>;
+  /** Patches just `user.households` from an already-fetched membership list (e.g. the
+   * `PATCH .../default` response) instead of a full `refreshUser()` round-trip - a no-op
+   * if there's no signed-in user to patch. */
+  setHouseholds: (households: HouseholdMembership[]) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -90,6 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data;
   };
 
+  const setHouseholds = (households: HouseholdMembership[]) => {
+    setUser((prev) => (prev ? { ...prev, households } : prev));
+  };
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -103,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resetPassword,
       changePassword,
       refreshUser,
+      setHouseholds,
     }),
     [user, isLoading],
   );

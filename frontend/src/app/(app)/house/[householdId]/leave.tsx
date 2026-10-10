@@ -5,13 +5,14 @@ import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle } from '@/lib/formStyles';
+import { findHouseholdMembership } from '@/lib/households';
 
 const LEAVE_HOUSE_COLOR = '#e11d48';
 
 export default function LeaveHouseScreen() {
   const { user, refreshUser } = useAuth();
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
-  const householdName = user?.households.find((h) => h.householdId === householdId)?.householdName;
+  const householdName = findHouseholdMembership(user, householdId)?.householdName;
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
