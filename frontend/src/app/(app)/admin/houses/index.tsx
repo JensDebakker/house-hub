@@ -1,11 +1,13 @@
 import { Link } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Text, TextInput } from 'react-native';
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { BigCardShell } from '@/components/BigCardShell';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household } from '@/types';
+
+const HOUSES_COLOR = '#0f766e';
 
 const COLS = {
   name: 180,
@@ -31,6 +33,7 @@ export default function AdminHousesScreen() {
   const isAdmin = useRequireAdmin();
   const [households, setHouseholds] = useState<Household[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -44,18 +47,28 @@ export default function AdminHousesScreen() {
     })();
   }, [isAdmin]);
 
+  const filteredHouseholds = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return households;
+    return households.filter((h) => h.name.toLowerCase().includes(query));
+  }, [households, search]);
+
   if (!isAdmin) {
     return (
-      <ScreenContainer>
-        <Text style={{ fontSize: 24, fontWeight: '700' }}>Houses</Text>
+      <BigCardShell title="Houses" color={HOUSES_COLOR}>
         <Text>You don&apos;t have access to this page.</Text>
-      </ScreenContainer>
+      </BigCardShell>
     );
   }
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 24, fontWeight: '700' }}>Houses</Text>
+    <BigCardShell title="Houses" color={HOUSES_COLOR}>
+      <TextInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search by house name…"
+        style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, backgroundColor: 'white' }}
+      />
 
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
@@ -72,7 +85,7 @@ export default function AdminHousesScreen() {
           <HeaderCell width={COLS.created}>Created</HeaderCell>
         </HeaderRow>
 
-        {households.map((h, index) => (
+        {filteredHouseholds.map((h, index) => (
           <Row key={h.id} index={index}>
             <Cell width={COLS.name}>
               <Link href={`/admin/houses/${h.id}`} style={{ color: '#2563eb' }} numberOfLines={1}>
@@ -94,6 +107,6 @@ export default function AdminHousesScreen() {
           </Row>
         ))}
       </TableContainer>
-    </ScrollView>
+    </BigCardShell>
   );
 }

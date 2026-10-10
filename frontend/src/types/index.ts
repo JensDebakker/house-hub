@@ -211,15 +211,3 @@ export type ChatMessage = {
   text: string;
   createdAt: string;
 };
-
-export type AdminFile = {
-  id: string;
-  filename: string;
-  contentType: string;
-  sizeBytes: number;
-  householdId: string;
-  householdName: string;
-  uploadedById?: string;
-  uploadedByName?: string;
-  uploadedAt: string;
-};
