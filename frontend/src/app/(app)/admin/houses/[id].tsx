@@ -1,8 +1,8 @@
 import { Picker } from '@react-native-picker/picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { Module } from '@/components/Module';
 import { api, getErrorMessage } from '@/lib/api';
@@ -179,6 +179,32 @@ export default function AdminHouseDetailScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const deleteHousehold = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.delete(`/admin/households/${id}`);
+      router.replace('/admin/houses');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to delete house.'));
+      setBusy(false);
+    }
+  };
+
+  const confirmDeleteHousehold = () => {
+    const message = `Delete "${household.name}" and everything in it (tasks, supplies, shopping lists, calendar events, chat, files)? This cannot be undone.`;
+    if (Platform.OS === 'web') {
+      if (window.confirm(message)) {
+        deleteHousehold();
+      }
+      return;
+    }
+    Alert.alert('Delete house?', message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: deleteHousehold },
+    ]);
   };
 
   const addMember = async () => {
@@ -403,11 +429,14 @@ export default function AdminHouseDetailScreen() {
 
   return (
     <Module title={household.name} color={HOUSES_COLOR}>
-      <View>
-        <Text style={{ color: '#666' }}>Invite code: {household.inviteCode}</Text>
-        <Link href="/admin/houses" style={{ color: '#2563eb' }}>
-          ← Back to houses
-        </Link>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View>
+          <Text style={{ color: '#666' }}>Invite code: {household.inviteCode}</Text>
+          <Link href="/admin/houses" style={{ color: '#2563eb' }}>
+            ← Back to houses
+          </Link>
+        </View>
+        <AdminActionButton label="Delete house" variant="danger" onPress={confirmDeleteHousehold} disabled={busy} />
       </View>
 
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
