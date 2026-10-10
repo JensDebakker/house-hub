@@ -9,11 +9,16 @@ import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type {
   AdminCalendarEvent,
+  AdminShoppingList,
   AdminSupply,
   AdminTask,
   AdminUser,
+  CalendarEvent,
   HouseholdDetail,
   HouseholdRole,
+  ShoppingList,
+  Supply,
+  Task,
 } from '@/types';
 
 const HOUSES_COLOR = '#0f766e';
@@ -32,6 +37,27 @@ function formatBytes(bytes: number): string {
 function toLocalInput(iso?: string): string {
   if (!iso) return '';
   return iso.slice(0, 16);
+}
+
+// The /admin/{tasks,supplies,...} mutation endpoints return the Admin*Response shape
+// (which carries householdId/householdName for the now-removed flat admin tables).
+// These map that back onto the plain shape `detail` holds, so a save/delete can merge
+// the single changed row into local state instead of re-fetching the whole household
+// (which would wipe any other row's unsaved edit-in-progress).
+function fromAdminTask(t: AdminTask): Task {
+  return { id: t.id, title: t.title, done: t.done, assignedTo: t.assignedToId, dueDate: t.dueDate };
+}
+
+function fromAdminSupply(s: AdminSupply): Supply {
+  return { id: s.id, name: s.name, quantity: s.quantity, expiryDate: s.expiryDate };
+}
+
+function fromAdminShoppingList(l: AdminShoppingList): ShoppingList {
+  return { id: l.id, name: l.name, items: l.items };
+}
+
+function fromAdminCalendarEvent(e: AdminCalendarEvent): CalendarEvent {
+  return { id: e.id, title: e.title, start: e.start, end: e.end };
 }
 
 /** Pill tabs for switching between a house's "databases" (members/tasks/supplies/…)
@@ -222,12 +248,12 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     setRowBusyId(taskId);
     try {
-      await api.patch<AdminTask>(`/admin/tasks/${taskId}`, {
+      const { data } = await api.patch<AdminTask>(`/admin/tasks/${taskId}`, {
         title: edit.title,
         dueDate: edit.dueDate || null,
         assignedToId: edit.assignedToId || undefined,
       });
-      await load();
+      setDetail((prev) => prev && { ...prev, tasks: prev.tasks.map((t) => (t.id === taskId ? fromAdminTask(data) : t)) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update task.'));
     } finally {
@@ -239,8 +265,8 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     setRowBusyId(taskId);
     try {
-      await api.patch<AdminTask>(`/admin/tasks/${taskId}`, { done: !done });
-      await load();
+      const { data } = await api.patch<AdminTask>(`/admin/tasks/${taskId}`, { done: !done });
+      setDetail((prev) => prev && { ...prev, tasks: prev.tasks.map((t) => (t.id === taskId ? fromAdminTask(data) : t)) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update task.'));
     } finally {
@@ -253,7 +279,7 @@ export default function AdminHouseDetailScreen() {
     setRowBusyId(taskId);
     try {
       await api.delete(`/admin/tasks/${taskId}`);
-      await load();
+      setDetail((prev) => prev && { ...prev, tasks: prev.tasks.filter((t) => t.id !== taskId) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to delete task.'));
     } finally {
@@ -266,12 +292,12 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     setRowBusyId(supplyId);
     try {
-      await api.patch<AdminSupply>(`/admin/supplies/${supplyId}`, {
+      const { data } = await api.patch<AdminSupply>(`/admin/supplies/${supplyId}`, {
         name: edit.name,
         quantity: Number(edit.quantity) || 0,
         expiryDate: edit.expiryDate,
       });
-      await load();
+      setDetail((prev) => prev && { ...prev, supplies: prev.supplies.map((s) => (s.id === supplyId ? fromAdminSupply(data) : s)) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update supply.'));
     } finally {
@@ -284,7 +310,7 @@ export default function AdminHouseDetailScreen() {
     setRowBusyId(supplyId);
     try {
       await api.delete(`/admin/supplies/${supplyId}`);
-      await load();
+      setDetail((prev) => prev && { ...prev, supplies: prev.supplies.filter((s) => s.id !== supplyId) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to delete supply.'));
     } finally {
@@ -296,8 +322,8 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     setRowBusyId(listId);
     try {
-      await api.patch(`/admin/shopping-lists/${listId}`, { name: shoppingEdits[listId] });
-      await load();
+      const { data } = await api.patch<AdminShoppingList>(`/admin/shopping-lists/${listId}`, { name: shoppingEdits[listId] });
+      setDetail((prev) => prev && { ...prev, shoppingLists: prev.shoppingLists.map((l) => (l.id === listId ? fromAdminShoppingList(data) : l)) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update shopping list.'));
     } finally {
@@ -310,7 +336,7 @@ export default function AdminHouseDetailScreen() {
     setRowBusyId(listId);
     try {
       await api.delete(`/admin/shopping-lists/${listId}`);
-      await load();
+      setDetail((prev) => prev && { ...prev, shoppingLists: prev.shoppingLists.filter((l) => l.id !== listId) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to delete shopping list.'));
     } finally {
@@ -323,12 +349,12 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     setRowBusyId(eventId);
     try {
-      await api.patch<AdminCalendarEvent>(`/admin/calendar-events/${eventId}`, {
+      const { data } = await api.patch<AdminCalendarEvent>(`/admin/calendar-events/${eventId}`, {
         title: edit.title,
         start: edit.start ? new Date(edit.start).toISOString() : undefined,
         end: edit.end ? new Date(edit.end).toISOString() : undefined,
       });
-      await load();
+      setDetail((prev) => prev && { ...prev, calendarEvents: prev.calendarEvents.map((e) => (e.id === eventId ? fromAdminCalendarEvent(data) : e)) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update event.'));
     } finally {
@@ -341,7 +367,7 @@ export default function AdminHouseDetailScreen() {
     setRowBusyId(eventId);
     try {
       await api.delete(`/admin/calendar-events/${eventId}`);
-      await load();
+      setDetail((prev) => prev && { ...prev, calendarEvents: prev.calendarEvents.filter((e) => e.id !== eventId) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to delete event.'));
     } finally {
