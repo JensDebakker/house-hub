@@ -2,7 +2,10 @@ import { View } from 'react-native';
 import { SubCard } from '@/components/SubCard';
 import { useAuth } from '@/contexts/AuthContext';
 
-const TILE_WRAPPER = { flexBasis: '31%', flexGrow: 1 } as const;
+// flexGrow stays at the default 0 so tiles keep a fixed grid width - an incomplete last
+// row (e.g. 1 or 2 tiles left over) stays left-aligned with blank space after it, instead
+// of those tiles stretching to fill the row.
+const TILE_WRAPPER = { flexBasis: '31%' } as const;
 
 export default function DashboardScreen() {
   const { user } = useAuth();
