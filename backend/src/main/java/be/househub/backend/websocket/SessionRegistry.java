@@ -40,4 +40,15 @@ public class SessionRegistry {
                 .filter(info -> houseId.equals(info.houseId()))
                 .toList();
     }
+
+    /**
+     * Count of distinct users currently connected for {@code houseId} — a single user
+     * with multiple open sessions (e.g. two tabs/devices) still counts once.
+     */
+    public long distinctUserCount(UUID houseId) {
+        return inHouse(houseId).stream()
+                .map(SessionInfo::userId)
+                .distinct()
+                .count();
+    }
 }

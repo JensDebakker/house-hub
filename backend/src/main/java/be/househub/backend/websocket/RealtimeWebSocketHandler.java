@@ -13,6 +13,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.UUID;
 
@@ -43,11 +44,26 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
         UUID houseId = (UUID) session.getAttributes().get(JwtHandshakeInterceptor.ATTR_HOUSE_ID);
         sessionRegistry.register(session, userId, houseId);
         log.debug("Websocket session {} established for user {} (house {})", session.getId(), userId, houseId);
+        broadcastPresenceIfHouse(houseId);
     }
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
+        UUID houseId = (UUID) session.getAttributes().get(JwtHandshakeInterceptor.ATTR_HOUSE_ID);
         sessionRegistry.unregister(session);
+        broadcastPresenceIfHouse(houseId);
+    }
+
+    /** Broadcasts the current distinct-user count for {@code houseId}, if non-null. */
+    private void broadcastPresenceIfHouse(UUID houseId) {
+        if (houseId == null) {
+            return;
+        }
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("count", sessionRegistry.distinctUserCount(houseId));
+
+        MessageEnvelope envelope = MessageEnvelope.of(MessageEnvelope.CHANNEL_PRESENCE, houseId, payload);
+        broadcaster.broadcastToHouse(houseId, envelope, null);
     }
 
     @Override
