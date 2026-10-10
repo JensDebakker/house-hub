@@ -20,4 +20,6 @@ public interface HouseholdMembershipRepository extends JpaRepository<HouseholdMe
     long countByHouseholdId(UUID householdId);
 
     void deleteByUserIdAndHouseholdId(UUID userId, UUID householdId);
+
+    void deleteByHouseholdId(UUID householdId);
 }

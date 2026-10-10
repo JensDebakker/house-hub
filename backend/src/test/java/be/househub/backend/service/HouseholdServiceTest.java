@@ -3,18 +3,23 @@ package be.househub.backend.service;
 import be.househub.backend.dto.admin.HouseholdMemberResponse;
 import be.househub.backend.dto.household.HouseholdResponse;
 import be.househub.backend.entity.Household;
+import be.househub.backend.entity.HouseFile;
+import be.househub.backend.entity.HouseFolder;
 import be.househub.backend.entity.HouseholdMembership;
 import be.househub.backend.entity.HouseholdRole;
 import be.househub.backend.entity.User;
 import be.househub.backend.exception.ResourceNotFoundException;
 import be.househub.backend.repository.CalendarEventRepository;
+import be.househub.backend.repository.ChatMessageRepository;
 import be.househub.backend.repository.HouseFileRepository;
+import be.househub.backend.repository.HouseFolderRepository;
 import be.househub.backend.repository.HouseholdMembershipRepository;
 import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.ShoppingListRepository;
 import be.househub.backend.repository.SupplyRepository;
 import be.househub.backend.repository.TaskRepository;
 import be.househub.backend.repository.UserRepository;
+import be.househub.backend.service.storage.FileStorageService;
 import be.househub.backend.websocket.SessionRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +59,12 @@ class HouseholdServiceTest {
     @Mock
     private HouseFileRepository houseFileRepository;
     @Mock
+    private HouseFolderRepository houseFolderRepository;
+    @Mock
+    private ChatMessageRepository chatMessageRepository;
+    @Mock
+    private FileStorageService fileStorageService;
+    @Mock
     private SessionRegistry sessionRegistry;
 
     private HouseholdService householdService;
@@ -63,7 +74,7 @@ class HouseholdServiceTest {
         householdService = new HouseholdService(
                 householdRepository, membershipRepository, userRepository, taskRepository,
                 supplyRepository, shoppingListRepository, calendarEventRepository, houseFileRepository,
-                sessionRegistry);
+                houseFolderRepository, chatMessageRepository, fileStorageService, sessionRegistry);
     }
 
     private User userWithId() {
@@ -427,6 +438,65 @@ class HouseholdServiceTest {
         assertThat(members.get(0).displayName()).isEqualTo(user.getDisplayName());
         assertThat(members.get(0).email()).isEqualTo(user.getEmail());
         assertThat(members.get(0).role()).isEqualTo(HouseholdRole.OWNER);
+    }
+
+    @Test
+    void deleteHousehold_unknownId_throwsNotFound() {
+        UUID householdId = UUID.randomUUID();
+        when(householdRepository.findById(householdId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> householdService.deleteHousehold(householdId))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(householdRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteHousehold_deletesFileBlobsAndEveryDependentRowBeforeTheHouseholdItself() {
+        Household household = householdWithId();
+        UUID householdId = household.getId();
+        when(householdRepository.findById(householdId)).thenReturn(Optional.of(household));
+
+        HouseFile file = new HouseFile();
+        file.setId(UUID.randomUUID());
+        file.setStorageKey("key-1");
+        when(houseFileRepository.findByHouseholdId(householdId)).thenReturn(List.of(file));
+
+        when(houseFolderRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+        when(shoppingListRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+
+        householdService.deleteHousehold(householdId);
+
+        verify(fileStorageService).delete("key-1");
+        verify(houseFileRepository).deleteAll(List.of(file));
+        verify(taskRepository).deleteByHouseholdId(householdId);
+        verify(supplyRepository).deleteByHouseholdId(householdId);
+        verify(calendarEventRepository).deleteByHouseholdId(householdId);
+        verify(chatMessageRepository).deleteByHouseholdId(householdId);
+        verify(membershipRepository).deleteByHouseholdId(householdId);
+        verify(householdRepository).delete(household);
+    }
+
+    @Test
+    void deleteHousehold_nestedFolders_deletesChildrenBeforeParents() {
+        Household household = householdWithId();
+        UUID householdId = household.getId();
+        when(householdRepository.findById(householdId)).thenReturn(Optional.of(household));
+        when(houseFileRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+        when(shoppingListRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+
+        HouseFolder root = new HouseFolder();
+        root.setId(UUID.randomUUID());
+        HouseFolder child = new HouseFolder();
+        child.setId(UUID.randomUUID());
+        child.setParentFolder(root);
+        when(houseFolderRepository.findByHouseholdId(householdId)).thenReturn(List.of(root, child));
+
+        householdService.deleteHousehold(householdId);
+
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(houseFolderRepository);
+        order.verify(houseFolderRepository).deleteAll(List.of(child));
+        order.verify(houseFolderRepository).deleteAll(List.of(root));
     }
 
     private HouseholdMembership membership(User user, Household household, HouseholdRole role) {

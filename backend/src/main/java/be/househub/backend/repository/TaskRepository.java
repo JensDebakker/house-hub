@@ -16,4 +16,6 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
     List<Task> findByAssignedToId(UUID assignedToId);
 
     long countByHouseholdId(UUID householdId);
+
+    void deleteByHouseholdId(UUID householdId);
 }
