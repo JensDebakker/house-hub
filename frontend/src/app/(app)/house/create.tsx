@@ -4,6 +4,7 @@ import { Pressable, Text, TextInput } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { buttonStyle, inputStyle } from '@/lib/formStyles';
 import type { Household, HouseholdCreateRequest } from '@/types';
 
 const CREATE_HOUSE_COLOR = '#c026d3';
@@ -38,13 +39,13 @@ export default function CreateHouseScreen() {
 
         <Pressable
           onPress={() => router.replace('/house/view')}
-          style={({ pressed }) => [buttonStyle, pressed && { opacity: 0.8 }]}
+          style={({ pressed }) => [buttonStyle(CREATE_HOUSE_COLOR), pressed && { opacity: 0.8 }]}
         >
           <Text style={{ color: 'white', fontWeight: '600' }}>View house</Text>
         </Pressable>
         <Pressable
           onPress={() => router.replace('/house')}
-          style={({ pressed }) => [secondaryButtonStyle, pressed && { opacity: 0.8 }]}
+          style={({ pressed }) => [buttonStyle('#e5e7eb'), pressed && { opacity: 0.8 }]}
         >
           <Text style={{ color: '#111827', fontWeight: '600' }}>Back to house menu</Text>
         </Pressable>
@@ -68,7 +69,11 @@ export default function CreateHouseScreen() {
       <Pressable
         onPress={onSubmit}
         disabled={isSubmitting || !name.trim()}
-        style={({ pressed }) => [buttonStyle, (isSubmitting || !name.trim()) && { opacity: 0.6 }, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [
+          buttonStyle(CREATE_HOUSE_COLOR),
+          (isSubmitting || !name.trim()) && { opacity: 0.6 },
+          pressed && { opacity: 0.8 },
+        ]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
           {isSubmitting ? 'Creating…' : 'Create house'}
@@ -77,25 +82,3 @@ export default function CreateHouseScreen() {
     </BigCardShell>
   );
 }
-
-const inputStyle = {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 16,
-};
-
-const buttonStyle = {
-  backgroundColor: '#c026d3',
-  borderRadius: 8,
-  padding: 14,
-  alignItems: 'center' as const,
-};
-
-const secondaryButtonStyle = {
-  backgroundColor: '#e5e7eb',
-  borderRadius: 8,
-  padding: 14,
-  alignItems: 'center' as const,
-};
