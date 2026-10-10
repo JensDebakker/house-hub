@@ -1,6 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Pressable, Text } from 'react-native';
-import { Module } from '@/components/Module';
+import { Module, navigateToHref } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,13 +15,19 @@ export default function HouseDashboardScreen() {
   const { user } = useAuth();
   const screensaverHref = `/screensaver/${householdId}`;
 
-  // Shared by the tile's own tap-to-open and its "Start" title bar action, which does the
-  // exact same navigation - Start is just an explicit shortcut for what opening the module
-  // already does, not a second distinct behavior. Plain push (no cardX/Y/W/H origin) since
-  // the screensaver renders as a fullscreen module, which never plays an entrance animation
-  // that origin would feed anyway.
+  // Shared by the tile's own tap-to-open (which goes through Module's own onTilePress,
+  // not this function) and its "Start" title bar action, which does the exact same
+  // navigation - Start is just an explicit shortcut for what opening the module already
+  // does, not a second distinct behavior. No cardX/Y/W/H origin params, since the
+  // screensaver renders as a fullscreen module with no entrance animation for them to
+  // feed. Reuses Module's own `navigateToHref` (replace + same-frame-later follow-up
+  // replace) rather than a plain `router.replace` - this is the exact same kind of
+  // never-before-mounted dynamic-segment jump (house/[householdId] ->
+  // screensaver/[householdId], a different top-level Stack.Screen entirely) that a single
+  // replace doesn't reliably land on the full path for. See navigateToHref's own comment
+  // in Module.tsx for how that was confirmed.
   const openScreensaver = () => {
-    router.push(`${screensaverHref}/start` as never);
+    navigateToHref(`${screensaverHref}/start`);
   };
 
   return (

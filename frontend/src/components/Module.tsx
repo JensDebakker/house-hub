@@ -31,6 +31,35 @@ export function navigateBackFromCard(navigate: () => void) {
 }
 
 /**
+ * Navigates a tile to `href` (`router.replace`, not `push` - this app's own "go back" is
+ * always the collapsed frame tap, `navigateBackFromCard` below, itself `replace`-based, so
+ * nothing here depends on `push`'s extra browser-history entry), with a same-frame-later
+ * follow-up `replace` to the identical target.
+ *
+ * That follow-up isn't defensive paranoia - it's a confirmed-necessary workaround.
+ * Verified via Playwright across several different accounts/households: a *single*
+ * `replace` (or `push`) into a dynamic segment not already mounted anywhere (e.g. a
+ * Houses-overview tile opening `/house/[householdId]/...` for a household whose layout
+ * isn't currently active) reliably gets stuck resolving only as far as that segment's
+ * nearest static ancestor ("/house") - not a transient render that settles a tick later;
+ * `window.location.pathname` itself was still "/house" even 150ms out, so it's a genuine,
+ * final router state, not a timing fluke. Once stuck there, `house/index.tsx`'s own
+ * redirect (meant for a *genuinely* bare `/house` visit, e.g. an old bookmark) fires and
+ * silently sends the user to their *default* household instead of the one actually
+ * tapped - which only looks correct in casual testing when the two happen to be the same
+ * household. A second `replace` to the exact same target, issued one frame later,
+ * reliably resolves correctly where the first one didn't - cheap enough (and invisible
+ * enough, since it's `replace` not `push`) to always run rather than first trying to
+ * detect whether this particular href would have needed it.
+ */
+export function navigateToHref(href: string, params: Record<string, string> = {}) {
+  router.replace({ pathname: href as never, params });
+  requestAnimationFrame(() => {
+    router.replace({ pathname: href as never, params });
+  });
+}
+
+/**
  * A title-bar display or action slot. `transform: scale` (used to visually shrink this
  * alongside the title as a module collapses) never shrinks an element's own contribution to
  * its parent's layout - that's true in CSS and in React Native's Yoga layout engine alike,
@@ -342,10 +371,7 @@ export function Module({
     const onTilePress = () => {
       if (disabled || !href) return;
       containerRef.current?.measureInWindow((x, y, width, height) => {
-        router.push({
-          pathname: href as never,
-          params: { cardX: String(x), cardY: String(y), cardW: String(width), cardH: String(height) },
-        });
+        navigateToHref(href, { cardX: String(x), cardY: String(y), cardW: String(width), cardH: String(height) });
       });
     };
 
