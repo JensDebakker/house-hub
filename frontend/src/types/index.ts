@@ -223,10 +223,12 @@ export type FeedbackTicket = {
   attachments: FeedbackAttachment[];
 };
 
-// Kept as its own type (rather than inlining `submitter` on FeedbackTicket) so that if the
-// backend's exact submitter field names shift once it lands, only this one type needs to change.
+// Matches the flat userId/userEmail/userDisplayName fields on the backend's
+// AdminFeedbackResponse (same convention as its other Admin*Response DTOs).
 export type AdminFeedbackTicket = FeedbackTicket & {
-  submitter: { id: string; email: string; name?: string };
+  userId: string;
+  userEmail: string;
+  userDisplayName: string;
 };
 
 export type ChatMessage = {

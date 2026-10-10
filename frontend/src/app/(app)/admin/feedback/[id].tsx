@@ -50,7 +50,7 @@ export default function AdminFeedbackDetailScreen() {
 
       <View style={{ gap: 4 }}>
         <Text style={{ color: '#666' }}>
-          From {ticket.submitter.name ?? ticket.submitter.email} ({ticket.submitter.email})
+          From {ticket.userDisplayName || ticket.userEmail} ({ticket.userEmail})
         </Text>
         <Text style={{ color: '#999', fontSize: 12 }}>
           Submitted {new Date(ticket.createdAt).toLocaleString()} · Updated {new Date(ticket.updatedAt).toLocaleString()}

@@ -41,8 +41,8 @@ export default function AdminFeedbackListScreen() {
       if (!query) return true;
       return (
         t.description.toLowerCase().includes(query) ||
-        t.submitter.email.toLowerCase().includes(query) ||
-        (t.submitter.name ?? '').toLowerCase().includes(query)
+        t.userEmail.toLowerCase().includes(query) ||
+        t.userDisplayName.toLowerCase().includes(query)
       );
     });
   }, [feedbackQuery.data, search, statusFilter, typeFilter]);
@@ -101,7 +101,7 @@ export default function AdminFeedbackListScreen() {
             <Row key={t.id} index={index}>
               <Cell width={COLS.submitter}>
                 <Link href={`/admin/feedback/${t.id}`} style={{ color: '#2563eb' }} numberOfLines={1}>
-                  {t.submitter.name ?? t.submitter.email}
+                  {t.userDisplayName || t.userEmail}
                 </Link>
               </Cell>
               <Cell width={COLS.type}>
