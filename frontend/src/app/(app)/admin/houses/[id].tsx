@@ -4,7 +4,7 @@ import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type {
@@ -151,17 +151,17 @@ export default function AdminHouseDetailScreen() {
 
   if (!isAdmin) {
     return (
-      <BigCardShell title="House" color={HOUSES_COLOR}>
+      <Module title="House" color={HOUSES_COLOR}>
         <Text>You don&apos;t have access to this page.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
   if (!detail) {
     return (
-      <BigCardShell title="House" color={HOUSES_COLOR}>
+      <Module title="House" color={HOUSES_COLOR}>
         {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : <Text>Loading…</Text>}
-      </BigCardShell>
+      </Module>
     );
   }
 
@@ -402,7 +402,7 @@ export default function AdminHouseDetailScreen() {
   const addableUsers = allUsers.filter((u) => !memberIds.has(u.id));
 
   return (
-    <BigCardShell title={household.name} color={HOUSES_COLOR}>
+    <Module title={household.name} color={HOUSES_COLOR}>
       <View>
         <Text style={{ color: '#666' }}>Invite code: {household.inviteCode}</Text>
         <Link href="/admin/houses" style={{ color: '#2563eb' }}>
@@ -682,7 +682,7 @@ export default function AdminHouseDetailScreen() {
           />
         </View>
       ) : null}
-    </BigCardShell>
+    </Module>
   );
 }
 

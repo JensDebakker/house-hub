@@ -1,5 +1,5 @@
 import { router, Slot, usePathname } from 'expo-router';
-import { BigCardShell, navigateBackFromCard } from '@/components/BigCardShell';
+import { Module, navigateBackFromCard } from '@/components/Module';
 
 const ADMIN_COLOR = '#6b7280';
 
@@ -11,13 +11,13 @@ export default function AdminLayout() {
   const collapsed = pathname !== '/admin';
 
   return (
-    <BigCardShell
+    <Module
       title="Admin"
       color={ADMIN_COLOR}
       collapsed={collapsed}
       onCollapsedPress={() => navigateBackFromCard(() => router.replace('/admin'))}
     >
       <Slot />
-    </BigCardShell>
+    </Module>
   );
 }

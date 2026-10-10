@@ -2,7 +2,7 @@ import { Link } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, TextInput } from 'react-native';
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household } from '@/types';
@@ -55,14 +55,14 @@ export default function AdminHousesScreen() {
 
   if (!isAdmin) {
     return (
-      <BigCardShell title="Houses" color={HOUSES_COLOR}>
+      <Module title="Houses" color={HOUSES_COLOR}>
         <Text>You don&apos;t have access to this page.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
   return (
-    <BigCardShell title="Houses" color={HOUSES_COLOR}>
+    <Module title="Houses" color={HOUSES_COLOR}>
       <TextInput
         value={search}
         onChangeText={setSearch}
@@ -107,6 +107,6 @@ export default function AdminHousesScreen() {
           </Row>
         ))}
       </TableContainer>
-    </BigCardShell>
+    </Module>
   );
 }
