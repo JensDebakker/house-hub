@@ -18,6 +18,7 @@ public record MessageEnvelope(String channel, UUID houseId, JsonNode payload) {
 
     public static final String CHANNEL_VERSION = "version";
     public static final String CHANNEL_CHAT = "chat";
+    public static final String CHANNEL_PRESENCE = "presence";
 
     public static MessageEnvelope of(String channel, UUID houseId, JsonNode payload) {
         return new MessageEnvelope(channel, houseId, payload);
