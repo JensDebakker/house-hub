@@ -66,6 +66,9 @@ public class FeedbackService {
             if (contentType == null || !contentType.startsWith("image/")) {
                 throw new IllegalArgumentException("Feedback attachments must be image files");
             }
+            if (file.getOriginalFilename() == null || file.getOriginalFilename().isBlank()) {
+                throw new IllegalArgumentException("Feedback attachments must have a filename");
+            }
         }
 
         FeedbackTicket newTicket = new FeedbackTicket();

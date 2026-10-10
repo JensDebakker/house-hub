@@ -277,8 +277,8 @@ public class AdminService {
         FeedbackTicket ticket = findFeedbackTicket(ticketId);
         if (request.status() != null) {
             ticket.setStatus(request.status());
+            ticket.setUpdatedAt(Instant.now());
         }
-        ticket.setUpdatedAt(Instant.now());
         return toAdminFeedbackResponse(feedbackTicketRepository.save(ticket));
     }
 
