@@ -2,8 +2,8 @@ import { router, Slot, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { Module, navigateBackFromCard } from '@/components/Module';
-import { OnlineBadge, useOnlinePresence } from '@/components/OnlineBadge';
 import { useAuth } from '@/contexts/AuthContext';
+import { resolveDefaultHousehold } from '@/lib/households';
 import { loadScreensaverAutoStartPrefs } from '@/lib/storage';
 
 const DASHBOARD_COLOR = '#2563eb';
@@ -15,10 +15,15 @@ const DASHBOARD_COLOR = '#2563eb';
 // AutoStart submodule (frontend/src/app/screensaver/[householdId]/autostart.tsx) -
 // prefs are re-read every time this effect re-runs rather than cached, so a change made
 // there takes effect the next time the user navigates without needing a global event bus.
+//
+// Uses the user's default household, not a per-house route param - this hook lives at the
+// top of the whole (app) segment (including the Houses overview itself, which has no
+// household of its own), so it needs a household to redirect to regardless of which
+// screen is currently open.
 function useIdleScreensaverRedirect() {
   const { user } = useAuth();
   const pathname = usePathname();
-  const householdId = user?.households[0]?.householdId;
+  const householdId = resolveDefaultHousehold(user)?.householdId;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -57,15 +62,15 @@ function useIdleScreensaverRedirect() {
 
 // The Dashboard is the base of the card stack: it never unmounts while signed in, and
 // collapses into a pastel frame (title still visible) around whichever sub-route is open,
-// instead of being replaced by it. Tapping that frame returns straight to it.
+// instead of being replaced by it. Tapping that frame returns straight to it. It's now the
+// Houses overview (Level 0) rather than a single house's tile grid - the online-presence
+// badge that used to live here moved down to each house's own card
+// (house/[householdId]/_layout.tsx), since "online" is now a per-house count, not a
+// single global one.
 export default function AppStackLayout() {
   useIdleScreensaverRedirect();
   const pathname = usePathname();
   const collapsed = pathname !== '/dashboard';
-  // Subscribed here, not inside OnlineBadge itself - this component stays mounted for the
-  // whole (app) segment, so the count survives Dashboard's title bar swapping between its
-  // collapsed and open render trees, instead of resetting to null on every transition.
-  const onlineCount = useOnlinePresence();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#e5e7eb' }}>
@@ -74,7 +79,6 @@ export default function AppStackLayout() {
         color={DASHBOARD_COLOR}
         collapsed={collapsed}
         onCollapsedPress={() => navigateBackFromCard(() => router.replace('/dashboard'))}
-        titleBarDisplays={<OnlineBadge count={onlineCount} />}
       >
         <Slot />
       </Module>
