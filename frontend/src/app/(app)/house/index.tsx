@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { SubCard } from '@/components/SubCard';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 
 // flexGrow stays at the default 0 so tiles keep a fixed grid width - an incomplete last
@@ -14,7 +14,8 @@ export default function HouseIndexScreen() {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
       <View style={TILE_WRAPPER}>
-        <SubCard
+        <Module
+          tile
           title="View house"
           subtitle="Details & invite code"
           href={householdId ? '/house/view' : ''}
@@ -23,13 +24,14 @@ export default function HouseIndexScreen() {
         />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
+        <Module tile title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
+        <Module tile title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard
+        <Module
+          tile
           title="Manage house"
           subtitle="Members & roles"
           href={householdId ? '/house/manage' : ''}
@@ -38,7 +40,8 @@ export default function HouseIndexScreen() {
         />
       </View>
       <View style={TILE_WRAPPER}>
-        <SubCard
+        <Module
+          tile
           title="Leave house"
           subtitle="Remove yourself"
           href={householdId ? '/house/leave' : ''}

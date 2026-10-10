@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { InviteLinkButton } from '@/components/InviteLinkButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
@@ -33,7 +33,7 @@ export default function CreateHouseScreen() {
 
   if (created) {
     return (
-      <BigCardShell title="Create House" color={CREATE_HOUSE_COLOR}>
+      <Module title="Create House" color={CREATE_HOUSE_COLOR}>
         <Text style={{ fontSize: 20, fontWeight: '700' }}>{created.name} is ready!</Text>
         <Text style={{ color: '#666' }}>Share this invite code so others can join:</Text>
         <Text style={{ fontSize: 28, fontWeight: '700', letterSpacing: 2 }}>{created.inviteCode}</Text>
@@ -51,12 +51,12 @@ export default function CreateHouseScreen() {
         >
           <Text style={{ color: '#111827', fontWeight: '600' }}>Back to house menu</Text>
         </Pressable>
-      </BigCardShell>
+      </Module>
     );
   }
 
   return (
-    <BigCardShell title="Create House" color={CREATE_HOUSE_COLOR}>
+    <Module title="Create House" color={CREATE_HOUSE_COLOR}>
       <Text style={{ color: '#666' }}>Give your new house a name.</Text>
 
       <TextInput
@@ -81,6 +81,6 @@ export default function CreateHouseScreen() {
           {isSubmitting ? 'Creating…' : 'Create house'}
         </Text>
       </Pressable>
-    </BigCardShell>
+    </Module>
   );
 }
