@@ -97,6 +97,11 @@ Admin (`ROLE_ADMIN` only):
   storage limit)
 - `POST /admin/households/{id}/members`, `PATCH .../members/{userId}`, `DELETE .../members/{userId}`
   — add/change-role/remove a household membership
+- `GET /admin/database/health` — connectivity check (`SELECT 1` through the app's own
+  datasource) with response time
+- `GET /admin/database/schema` — the live schema as JDBC metadata actually reports it
+  (tables, columns, types, nullability, primary/foreign keys) rather than what the entities
+  or Flyway migrations claim it should be; no row data
 
 ## Notes
 

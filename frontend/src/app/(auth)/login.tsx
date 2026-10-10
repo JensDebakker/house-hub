@@ -4,9 +4,13 @@ import { Pressable, Text, TextInput } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { buttonStyle, inputStyle } from '@/lib/formStyles';
+import { joinPendingHousehold } from '@/lib/pendingInvite';
+
+const LOGIN_COLOR = '#2563eb';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +21,7 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     try {
       await login(email.trim(), password);
+      if (await joinPendingHousehold()) await refreshUser();
       router.replace('/dashboard');
     } catch (err) {
       setError(getErrorMessage(err, 'Login failed. Check your email and password.'));
@@ -55,7 +60,7 @@ export default function LoginScreen() {
       <Pressable
         onPress={onSubmit}
         disabled={isSubmitting || !email || !password}
-        style={({ pressed }) => [buttonStyle, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [buttonStyle(LOGIN_COLOR), pressed && { opacity: 0.8 }]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
           {isSubmitting ? 'Logging in…' : 'Log in'}
@@ -71,18 +76,3 @@ export default function LoginScreen() {
     </ScreenContainer>
   );
 }
-
-const inputStyle = {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 16,
-};
-
-const buttonStyle = {
-  backgroundColor: '#2563eb',
-  borderRadius: 8,
-  padding: 14,
-  alignItems: 'center' as const,
-};

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateSupplyMutation, useDeleteSupplyMutation, useSuppliesQuery } from '@/lib/useSupplies';
@@ -54,7 +54,7 @@ export default function SuppliesScreen() {
         : null;
 
   return (
-    <BigCardShell title="Medical Supplies" color={SUPPLIES_COLOR} scroll={false}>
+    <Module title="Medical Supplies" color={SUPPLIES_COLOR} scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
         Long-press an item to remove it. Yellow = expiring within {WARNING_WINDOW_DAYS} days, red = expired.
       </Text>
@@ -119,6 +119,6 @@ export default function SuppliesScreen() {
           )}
         />
       )}
-    </BigCardShell>
+    </Module>
   );
 }

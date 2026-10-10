@@ -1,9 +1,10 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { buttonStyle, inputStyle } from '@/lib/formStyles';
 import type { Household, HouseholdJoinRequest } from '@/types';
 
 const JOIN_HOUSE_COLOR = '#2563eb';
@@ -29,7 +30,7 @@ export default function JoinHouseScreen() {
   };
 
   return (
-    <BigCardShell title="Join House" color={JOIN_HOUSE_COLOR}>
+    <Module title="Join House" color={JOIN_HOUSE_COLOR}>
       <Text style={{ color: '#666' }}>Enter the invite code you were given.</Text>
 
       <TextInput
@@ -46,7 +47,7 @@ export default function JoinHouseScreen() {
         onPress={onSubmit}
         disabled={isSubmitting || !inviteCode.trim()}
         style={({ pressed }) => [
-          buttonStyle,
+          buttonStyle(JOIN_HOUSE_COLOR),
           (isSubmitting || !inviteCode.trim()) && { opacity: 0.6 },
           pressed && { opacity: 0.8 },
         ]}
@@ -55,21 +56,6 @@ export default function JoinHouseScreen() {
           {isSubmitting ? 'Joining…' : 'Join house'}
         </Text>
       </Pressable>
-    </BigCardShell>
+    </Module>
   );
 }
-
-const inputStyle = {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 16,
-};
-
-const buttonStyle = {
-  backgroundColor: '#2563eb',
-  borderRadius: 8,
-  padding: 14,
-  alignItems: 'center' as const,
-};

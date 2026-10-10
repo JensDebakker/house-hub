@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { HouseholdMember } from '@/types';
@@ -9,7 +9,7 @@ import type { HouseholdMember } from '@/types';
 const MANAGE_HOUSE_COLOR = '#0f766e';
 
 export default function ManageHouseScreen() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const householdId = user?.households[0]?.householdId;
   const myRole = user?.households.find((h) => h.householdId === householdId)?.role;
   const isOwner = myRole === 'OWNER';
@@ -17,7 +17,6 @@ export default function ManageHouseScreen() {
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
-  const [isLeaving, setIsLeaving] = useState(false);
 
   const loadMembers = useCallback(async () => {
     if (!householdId) return;
@@ -60,42 +59,16 @@ export default function ManageHouseScreen() {
     );
   };
 
-  const leave = async () => {
-    if (!householdId) return;
-    setError(null);
-    setIsLeaving(true);
-    try {
-      await api.post(`/households/${householdId}/leave`);
-      await refreshUser();
-      router.replace('/house');
-    } catch (err) {
-      setError(getErrorMessage(err, 'Failed to leave house.'));
-    } finally {
-      setIsLeaving(false);
-    }
-  };
-
-  const confirmLeave = () => {
-    Alert.alert(
-      'Leave house?',
-      "Are you sure you want to leave this house? You'll lose access to its tasks, supplies, and files.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Leave', style: 'destructive', onPress: leave },
-      ],
-    );
-  };
-
   if (!householdId) {
     return (
-      <BigCardShell title="Manage House" color={MANAGE_HOUSE_COLOR}>
+      <Module title="Manage House" color={MANAGE_HOUSE_COLOR}>
         <Text style={{ color: '#999' }}>You&apos;re not currently in a house.</Text>
-      </BigCardShell>
+      </Module>
     );
   }
 
   return (
-    <BigCardShell title="Manage House" color={MANAGE_HOUSE_COLOR}>
+    <Module title="Manage House" color={MANAGE_HOUSE_COLOR}>
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
       {members.length === 0 && !error ? <Text style={{ color: '#999' }}>Loading…</Text> : null}
@@ -157,16 +130,14 @@ export default function ManageHouseScreen() {
       })}
 
       <Pressable
-        onPress={confirmLeave}
-        disabled={isLeaving}
+        onPress={() => router.push('/house/leave')}
         style={({ pressed }) => [
           { backgroundColor: '#e11d48', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 16 },
-          isLeaving && { opacity: 0.6 },
           pressed && { opacity: 0.8 },
         ]}
       >
-        <Text style={{ color: 'white', fontWeight: '600' }}>{isLeaving ? 'Leaving…' : 'Leave house'}</Text>
+        <Text style={{ color: 'white', fontWeight: '600' }}>Leave house</Text>
       </Pressable>
-    </BigCardShell>
+    </Module>
   );
 }

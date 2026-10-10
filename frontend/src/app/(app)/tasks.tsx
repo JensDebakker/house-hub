@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateTaskMutation, useDeleteTaskMutation, useTasksQuery, useUpdateTaskMutation } from '@/lib/useTasks';
@@ -47,7 +47,7 @@ export default function TasksScreen() {
           : null;
 
   return (
-    <BigCardShell title="Routine Tasks" color={TASKS_COLOR} scroll={false}>
+    <Module title="Routine Tasks" color={TASKS_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -95,6 +95,6 @@ export default function TasksScreen() {
           )}
         />
       )}
-    </BigCardShell>
+    </Module>
   );
 }

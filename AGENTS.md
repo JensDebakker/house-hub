@@ -23,6 +23,29 @@ cd backend && ./mvnw spring-boot:run
 cd frontend && npm install && npm run web   # or android / ios
 ```
 
+## Checking live database state
+
+Before writing a migration, or when debugging anything that smells DB-related (a
+constraint violation, an unexpected 500 on an insert/update), check the database's
+*actual* current state rather than assuming it matches the entities or the Flyway
+migration files — those two things have already drifted apart in this repo once
+(see `V20261010142700__drop_legacy_user_household_columns.sql`: `ddl-auto=update`-era
+columns survived on the live table for months after their entity fields were removed,
+undetected by Hibernate validation or any test, and broke every registration).
+
+Two admin-only (`ROLE_ADMIN`) endpoints exist specifically for this, reusing the
+existing JWT auth — no separate DB credentials, MCP server, or SSH tunnel needed:
+
+- `GET /admin/database/health` — connectivity check with response time; `DOWN` + the
+  error message on failure instead of a generic 500.
+- `GET /admin/database/schema` — the live schema exactly as JDBC `DatabaseMetaData`
+  reports it (tables, columns, types, nullability, primary/foreign keys), independent
+  of what the entities or migrations claim. No row data, shape only.
+
+Call these (with an admin account's access token) before trusting that a migration
+file or an entity's mapping matches what's actually on disk — especially on `master`
+after a merge you didn't write, or before debugging a schema-shaped production error.
+
 ## Git discipline
 
 **Always work on its own feature branch, never directly on `master`.** This applies to
@@ -148,7 +171,10 @@ than one:
   timestamp has no "next" to coincide on, so this is a format fix, not a process one; it
   needs no coordination and no check against anyone else's branch. Flyway treats the digits
   before `__` purely numerically, so e.g. `V20261009224500__...` sorts correctly after the
-  existing low integer versions without renumbering anything already merged.
+  existing low integer versions without renumbering anything already merged. Before writing
+  a new one, check the live schema via `GET /admin/database/schema` (see "Checking live
+  database state" above) rather than assuming the existing migration files are a complete
+  picture of what's actually on the table you're changing.
 - **Docker/deploy changes (`docker/`, `.github/workflows/deploy.yml`) are their own lane.**
   They depend on env vars defined in `docker/docker-compose.yml` (DB_*, JWT_SECRET, SMTP_*,
   CORS_ALLOWED_ORIGINS, ADMIN_EMAILS) — an agent changing backend config properties that

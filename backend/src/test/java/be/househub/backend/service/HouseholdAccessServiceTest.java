@@ -178,4 +178,52 @@ class HouseholdAccessServiceTest {
 
         assertThat(householdAccessService.isOwner(user, householdId)).isFalse();
     }
+
+    @Test
+    void requireOwnerOrCreator_owner_allowedRegardlessOfCreator() {
+        UUID householdId = UUID.randomUUID();
+        Household household = household(householdId);
+        User owner = userWithRole(Role.USER);
+        HouseholdMembership membership = new HouseholdMembership();
+        membership.setRole(HouseholdRole.OWNER);
+        when(membershipRepository.findByUserIdAndHouseholdId(owner.getId(), householdId)).thenReturn(Optional.of(membership));
+
+        householdAccessService.requireOwnerOrCreator(owner, household, UUID.randomUUID(), "denied");
+        // no exception thrown
+    }
+
+    @Test
+    void requireOwnerOrCreator_creator_allowed() {
+        UUID householdId = UUID.randomUUID();
+        Household household = household(householdId);
+        User creator = userWithRole(Role.USER);
+        when(membershipRepository.findByUserIdAndHouseholdId(creator.getId(), householdId)).thenReturn(Optional.empty());
+
+        householdAccessService.requireOwnerOrCreator(creator, household, creator.getId(), "denied");
+        // no exception thrown
+    }
+
+    @Test
+    void requireOwnerOrCreator_otherMember_throwsForbiddenWithMessage() {
+        UUID householdId = UUID.randomUUID();
+        Household household = household(householdId);
+        User otherMember = userWithRole(Role.USER);
+        when(membershipRepository.findByUserIdAndHouseholdId(otherMember.getId(), householdId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> householdAccessService.requireOwnerOrCreator(otherMember, household, UUID.randomUUID(), "denied"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("denied");
+    }
+
+    @Test
+    void requireOwnerOrCreator_nullCreatorId_throwsForbidden() {
+        UUID householdId = UUID.randomUUID();
+        Household household = household(householdId);
+        User otherMember = userWithRole(Role.USER);
+        when(membershipRepository.findByUserIdAndHouseholdId(otherMember.getId(), householdId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> householdAccessService.requireOwnerOrCreator(otherMember, household, null, "denied"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("denied");
+    }
 }

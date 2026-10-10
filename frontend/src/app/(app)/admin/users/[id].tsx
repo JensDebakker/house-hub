@@ -1,17 +1,18 @@
 import { Picker } from '@react-native-picker/picker';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
-import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
+import { Module } from '@/components/Module';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household, HouseholdRole, UserDetail } from '@/types';
 
+const USERS_COLOR = '#2563eb';
 const HOUSEHOLD_ROLES: HouseholdRole[] = ['OWNER', 'MEMBER'];
 
 export default function AdminUserDetailScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<UserDetail | null>(null);
   const [allHouseholds, setAllHouseholds] = useState<Household[]>([]);
@@ -19,8 +20,6 @@ export default function AdminUserDetailScreen() {
   const [newHouseholdId, setNewHouseholdId] = useState('');
   const [newRole, setNewRole] = useState<HouseholdRole>('MEMBER');
   const [busy, setBusy] = useState(false);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   const load = useCallback(async () => {
     try {
@@ -44,17 +43,17 @@ export default function AdminUserDetailScreen() {
 
   if (!isAdmin) {
     return (
-      <ScreenContainer>
+      <Module title="User" color={USERS_COLOR}>
         <Text>You don&apos;t have access to this page.</Text>
-      </ScreenContainer>
+      </Module>
     );
   }
 
   if (!detail) {
     return (
-      <ScreenContainer>
+      <Module title="User" color={USERS_COLOR}>
         {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : <Text>Loading…</Text>}
-      </ScreenContainer>
+      </Module>
     );
   }
 
@@ -89,14 +88,13 @@ export default function AdminUserDetailScreen() {
   const joinableHouseholds = allHouseholds.filter((h) => !joinedIds.has(h.id));
 
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 20 }}>
+    <Module title={detail.displayName} color={USERS_COLOR}>
       <View>
-        <Text style={{ fontSize: 24, fontWeight: '700' }}>{detail.displayName}</Text>
         <Text style={{ color: '#666' }}>{detail.email} · {detail.role}</Text>
         <Text style={{ color: '#666' }}>
           Verified: {detail.emailVerified ? 'Yes' : 'No'} · Joined {new Date(detail.createdAt).toLocaleDateString()}
         </Text>
-        <Link href="/admin" style={{ color: '#2563eb' }}>
+        <Link href="/admin/users" style={{ color: '#2563eb' }}>
           ← Back to users
         </Link>
       </View>
@@ -159,6 +157,6 @@ export default function AdminUserDetailScreen() {
           ))}
         </TableContainer>
       </View>
-    </ScrollView>
+    </Module>
   );
 }

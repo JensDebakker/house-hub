@@ -3,7 +3,7 @@ import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { saveButtonStyle } from '@/components/AdminTable';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { useAuthedImage } from '@/lib/useAuthedImage';
@@ -120,7 +120,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <BigCardShell title="Account" color={ACCOUNT_COLOR}>
+    <Module title="Account" color={ACCOUNT_COLOR}>
       <View style={{ alignItems: 'center', gap: 10 }}>
         <ProfilePicture hasProfilePicture={Boolean(user?.hasProfilePicture)} version={pictureVersion} busy={pictureBusy} />
         <View style={{ flexDirection: 'row', gap: 16 }}>
@@ -189,6 +189,6 @@ export default function SettingsScreen() {
       {version ? (
         <Text style={{ color: '#999', fontSize: 12, textAlign: 'center' }}>App version: {version}</Text>
       ) : null}
-    </BigCardShell>
+    </Module>
   );
 }

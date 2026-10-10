@@ -3,7 +3,8 @@ package be.househub.backend.controller;
 import be.househub.backend.dto.admin.AddMembershipRequest;
 import be.househub.backend.dto.admin.AdminCalendarEventResponse;
 import be.househub.backend.dto.admin.AdminCalendarEventUpdateRequest;
-import be.househub.backend.dto.admin.AdminFileResponse;
+import be.househub.backend.dto.admin.AdminDatabaseHealthResponse;
+import be.househub.backend.dto.admin.AdminDatabaseTableResponse;
 import be.househub.backend.dto.admin.AdminShoppingListResponse;
 import be.househub.backend.dto.admin.AdminShoppingListUpdateRequest;
 import be.househub.backend.dto.admin.AdminSupplyResponse;
@@ -19,6 +20,7 @@ import be.househub.backend.dto.household.HouseholdMembershipResponse;
 import be.househub.backend.dto.household.HouseholdResponse;
 import be.househub.backend.dto.household.HouseholdUpdateRequest;
 import be.househub.backend.service.AdminService;
+import be.househub.backend.service.DatabaseDiagnosticsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -41,6 +43,7 @@ import java.util.UUID;
 public class AdminController {
 
     private final AdminService adminService;
+    private final DatabaseDiagnosticsService databaseDiagnosticsService;
 
     @GetMapping("/users")
     public List<AdminUserResponse> listUsers() {
@@ -90,11 +93,6 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/tasks")
-    public List<AdminTaskResponse> listTasks() {
-        return adminService.listTasks();
-    }
-
     @PatchMapping("/tasks/{taskId}")
     public AdminTaskResponse updateTask(@PathVariable UUID taskId, @RequestBody AdminTaskUpdateRequest request) {
         return adminService.updateTask(taskId, request);
@@ -104,11 +102,6 @@ public class AdminController {
     public ResponseEntity<Void> deleteTask(@PathVariable UUID taskId) {
         adminService.deleteTask(taskId);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/supplies")
-    public List<AdminSupplyResponse> listSupplies() {
-        return adminService.listSupplies();
     }
 
     @PatchMapping("/supplies/{supplyId}")
@@ -122,11 +115,6 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/shopping-lists")
-    public List<AdminShoppingListResponse> listShoppingLists() {
-        return adminService.listShoppingLists();
-    }
-
     @PatchMapping("/shopping-lists/{listId}")
     public AdminShoppingListResponse updateShoppingList(@PathVariable UUID listId, @RequestBody AdminShoppingListUpdateRequest request) {
         return adminService.updateShoppingList(listId, request);
@@ -136,11 +124,6 @@ public class AdminController {
     public ResponseEntity<Void> deleteShoppingList(@PathVariable UUID listId) {
         adminService.deleteShoppingList(listId);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/calendar-events")
-    public List<AdminCalendarEventResponse> listCalendarEvents() {
-        return adminService.listCalendarEvents();
     }
 
     @PatchMapping("/calendar-events/{eventId}")
@@ -154,8 +137,13 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/files")
-    public List<AdminFileResponse> listFiles() {
-        return adminService.listFiles();
+    @GetMapping("/database/health")
+    public AdminDatabaseHealthResponse databaseHealth() {
+        return databaseDiagnosticsService.checkHealth();
+    }
+
+    @GetMapping("/database/schema")
+    public List<AdminDatabaseTableResponse> databaseSchema() {
+        return databaseDiagnosticsService.describeSchema();
     }
 }

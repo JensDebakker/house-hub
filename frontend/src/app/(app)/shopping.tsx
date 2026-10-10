@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { BigCardShell } from '@/components/BigCardShell';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import {
@@ -66,7 +66,7 @@ export default function ShoppingScreen() {
   const isLoading = shoppingListsQuery.isLoading || (shoppingListsQuery.data?.length === 0 && createList.isPending);
 
   return (
-    <BigCardShell title="Shopping List" color={SHOPPING_COLOR} scroll={false}>
+    <Module title="Shopping List" color={SHOPPING_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -114,6 +114,6 @@ export default function ShoppingScreen() {
           )}
         />
       )}
-    </BigCardShell>
+    </Module>
   );
 }
