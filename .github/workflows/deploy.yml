@@ -1,7 +1,9 @@
 name: Deploy to VPS
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [master]
   workflow_dispatch: {}
 
@@ -11,6 +13,10 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Only deploy a commit that actually passed CI (see ci.yml) - a push to master whose
+    # CI run failed must not reach the VPS. workflow_dispatch (manual trigger) bypasses
+    # this, since there's no associated CI run to check.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
