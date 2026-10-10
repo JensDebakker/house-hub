@@ -2,16 +2,16 @@ import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
-
-// flexGrow stays at the default 0 so tiles keep a fixed grid width - an incomplete last
-// row (e.g. 1 or 2 tiles left over) stays left-aligned with blank space after it, instead
-// of those tiles stretching to fill the row.
-const TILE_WRAPPER = { flexBasis: '31%' } as const;
+import { useResponsiveColumns } from '@/lib/useResponsiveColumns';
 
 const SCREENSAVER_COLOR = '#7c3aed';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  // flexGrow stays at the default 0 so tiles keep a fixed grid width - an incomplete last
+  // row (e.g. 1 or 2 tiles left over) stays left-aligned with blank space after it, instead
+  // of those tiles stretching to fill the row.
+  const { tileWrapperStyle: TILE_WRAPPER } = useResponsiveColumns();
   const householdId = user?.households[0]?.householdId;
   const screensaverHref = householdId ? `/screensaver/${householdId}` : '';
 
