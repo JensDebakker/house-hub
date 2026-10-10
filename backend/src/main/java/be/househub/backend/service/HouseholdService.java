@@ -15,6 +15,8 @@ import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.ShoppingListRepository;
 import be.househub.backend.repository.SupplyRepository;
 import be.househub.backend.repository.TaskRepository;
+import be.househub.backend.repository.UserRepository;
+import be.househub.backend.websocket.SessionRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,16 +36,45 @@ public class HouseholdService {
 
     private final HouseholdRepository householdRepository;
     private final HouseholdMembershipRepository membershipRepository;
+    private final UserRepository userRepository;
     private final TaskRepository taskRepository;
     private final SupplyRepository supplyRepository;
     private final ShoppingListRepository shoppingListRepository;
     private final CalendarEventRepository calendarEventRepository;
     private final HouseFileRepository houseFileRepository;
+    private final SessionRegistry sessionRegistry;
 
     public List<HouseholdMembershipResponse> findMemberships(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        UUID defaultHouseholdId = user.getDefaultHousehold() != null ? user.getDefaultHousehold().getId() : null;
+
         return membershipRepository.findByUserId(userId).stream()
-                .map(m -> new HouseholdMembershipResponse(m.getHousehold().getId(), m.getHousehold().getName(), m.getRole()))
+                .map(m -> toMembershipResponse(m, defaultHouseholdId))
                 .toList();
+    }
+
+    /**
+     * Public overload for callers (e.g. admin endpoints) that have a single membership
+     * in hand and haven't already resolved the owning user's default household id.
+     */
+    public HouseholdMembershipResponse toMembershipResponse(HouseholdMembership membership) {
+        User user = userRepository.findById(membership.getUser().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User", membership.getUser().getId()));
+        UUID defaultHouseholdId = user.getDefaultHousehold() != null ? user.getDefaultHousehold().getId() : null;
+        return toMembershipResponse(membership, defaultHouseholdId);
+    }
+
+    private HouseholdMembershipResponse toMembershipResponse(HouseholdMembership m, UUID defaultHouseholdId) {
+        UUID householdId = m.getHousehold().getId();
+        return new HouseholdMembershipResponse(
+                householdId,
+                m.getHousehold().getName(),
+                m.getRole(),
+                membershipRepository.countByHouseholdId(householdId),
+                sessionRegistry.distinctUserCount(householdId),
+                householdId.equals(defaultHouseholdId)
+        );
     }
 
     public HouseholdResponse toResponse(Household household) {
@@ -94,6 +125,11 @@ public class HouseholdService {
         membership.setRole(HouseholdRole.OWNER);
         membershipRepository.save(membership);
 
+        if (owner.getDefaultHousehold() == null) {
+            owner.setDefaultHousehold(household);
+            userRepository.save(owner);
+        }
+
         return toResponse(household);
     }
 
@@ -112,6 +148,11 @@ public class HouseholdService {
         membership.setHousehold(household);
         membership.setRole(HouseholdRole.MEMBER);
         membershipRepository.save(membership);
+
+        if (user.getDefaultHousehold() == null) {
+            user.setDefaultHousehold(household);
+            userRepository.save(user);
+        }
 
         return toResponse(household);
     }
@@ -132,6 +173,28 @@ public class HouseholdService {
         }
 
         membershipRepository.deleteByUserIdAndHouseholdId(user.getId(), householdId);
+
+        boolean wasDefault = user.getDefaultHousehold() != null
+                && user.getDefaultHousehold().getId().equals(householdId);
+        if (wasDefault) {
+            List<HouseholdMembership> remaining = membershipRepository.findByUserId(user.getId());
+            Household newDefault = remaining.isEmpty() ? null : remaining.get(0).getHousehold();
+            user.setDefaultHousehold(newDefault);
+            userRepository.save(user);
+        }
+    }
+
+    /**
+     * Sets {@code householdId} as the user's default household — the one that opens
+     * automatically on login. The user must already be a member of it.
+     */
+    @Transactional
+    public void setDefaultHousehold(User user, UUID householdId) {
+        HouseholdMembership membership = membershipRepository.findByUserIdAndHouseholdId(user.getId(), householdId)
+                .orElseThrow(() -> new ResourceNotFoundException("HouseholdMembership", user.getId()));
+
+        user.setDefaultHousehold(membership.getHousehold());
+        userRepository.save(user);
     }
 
     @Transactional

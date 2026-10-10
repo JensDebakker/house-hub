@@ -14,6 +14,8 @@ import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.ShoppingListRepository;
 import be.househub.backend.repository.SupplyRepository;
 import be.househub.backend.repository.TaskRepository;
+import be.househub.backend.repository.UserRepository;
+import be.househub.backend.websocket.SessionRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,8 @@ class HouseholdServiceTest {
     @Mock
     private HouseholdMembershipRepository membershipRepository;
     @Mock
+    private UserRepository userRepository;
+    @Mock
     private TaskRepository taskRepository;
     @Mock
     private SupplyRepository supplyRepository;
@@ -49,14 +53,17 @@ class HouseholdServiceTest {
     private CalendarEventRepository calendarEventRepository;
     @Mock
     private HouseFileRepository houseFileRepository;
+    @Mock
+    private SessionRegistry sessionRegistry;
 
     private HouseholdService householdService;
 
     @BeforeEach
     void setUp() {
         householdService = new HouseholdService(
-                householdRepository, membershipRepository, taskRepository,
-                supplyRepository, shoppingListRepository, calendarEventRepository, houseFileRepository);
+                householdRepository, membershipRepository, userRepository, taskRepository,
+                supplyRepository, shoppingListRepository, calendarEventRepository, houseFileRepository,
+                sessionRegistry);
     }
 
     private User userWithId() {
@@ -229,6 +236,118 @@ class HouseholdServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
 
         verify(membershipRepository, never()).deleteByUserIdAndHouseholdId(any(), any());
+    }
+
+    @Test
+    void leaveHousehold_leavingDefaultHousehold_promotesAnotherMembershipToDefault() {
+        User user = userWithId();
+        Household household = householdWithId();
+        Household otherHousehold = householdWithId();
+        user.setDefaultHousehold(household);
+        HouseholdMembership membership = membership(user, household, HouseholdRole.MEMBER);
+        HouseholdMembership otherMembership = membership(user, otherHousehold, HouseholdRole.OWNER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(1L);
+        when(membershipRepository.findByUserId(user.getId())).thenReturn(List.of(otherMembership));
+
+        householdService.leaveHousehold(user, household.getId());
+
+        assertThat(user.getDefaultHousehold()).isEqualTo(otherHousehold);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void leaveHousehold_leavingDefaultHousehold_noOtherMemberships_clearsDefault() {
+        User user = userWithId();
+        Household household = householdWithId();
+        user.setDefaultHousehold(household);
+        HouseholdMembership membership = membership(user, household, HouseholdRole.OWNER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(1L);
+        when(membershipRepository.findByUserId(user.getId())).thenReturn(List.of());
+
+        householdService.leaveHousehold(user, household.getId());
+
+        assertThat(user.getDefaultHousehold()).isNull();
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void leaveHousehold_notTheDefaultHousehold_leavesDefaultUntouched() {
+        User user = userWithId();
+        Household household = householdWithId();
+        Household defaultHousehold = householdWithId();
+        user.setDefaultHousehold(defaultHousehold);
+        HouseholdMembership membership = membership(user, household, HouseholdRole.MEMBER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(2L);
+
+        householdService.leaveHousehold(user, household.getId());
+
+        assertThat(user.getDefaultHousehold()).isEqualTo(defaultHousehold);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void setDefaultHousehold_memberOfHousehold_setsAndSaves() {
+        User user = userWithId();
+        Household household = householdWithId();
+        HouseholdMembership membership = membership(user, household, HouseholdRole.MEMBER);
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
+                .thenReturn(Optional.of(membership));
+
+        householdService.setDefaultHousehold(user, household.getId());
+
+        assertThat(user.getDefaultHousehold()).isEqualTo(household);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void setDefaultHousehold_notAMember_throwsNotFound() {
+        User user = userWithId();
+        UUID householdId = UUID.randomUUID();
+        when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), householdId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> householdService.setDefaultHousehold(user, householdId))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void findMemberships_mapsCountsAndDefaultFlag() {
+        User user = userWithId();
+        Household household = householdWithId();
+        Household otherHousehold = householdWithId();
+        user.setDefaultHousehold(household);
+        HouseholdMembership membership = membership(user, household, HouseholdRole.OWNER);
+        HouseholdMembership otherMembership = membership(user, otherHousehold, HouseholdRole.MEMBER);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(membershipRepository.findByUserId(user.getId())).thenReturn(List.of(membership, otherMembership));
+        when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(3L);
+        when(membershipRepository.countByHouseholdId(otherHousehold.getId())).thenReturn(1L);
+        when(sessionRegistry.distinctUserCount(household.getId())).thenReturn(2L);
+        when(sessionRegistry.distinctUserCount(otherHousehold.getId())).thenReturn(0L);
+
+        List<be.househub.backend.dto.household.HouseholdMembershipResponse> result =
+                householdService.findMemberships(user.getId());
+
+        assertThat(result).hasSize(2);
+        be.househub.backend.dto.household.HouseholdMembershipResponse first = result.stream()
+                .filter(r -> r.householdId().equals(household.getId())).findFirst().orElseThrow();
+        assertThat(first.memberCount()).isEqualTo(3L);
+        assertThat(first.onlineCount()).isEqualTo(2L);
+        assertThat(first.isDefault()).isTrue();
+
+        be.househub.backend.dto.household.HouseholdMembershipResponse second = result.stream()
+                .filter(r -> r.householdId().equals(otherHousehold.getId())).findFirst().orElseThrow();
+        assertThat(second.memberCount()).isEqualTo(1L);
+        assertThat(second.onlineCount()).isEqualTo(0L);
+        assertThat(second.isDefault()).isFalse();
     }
 
     @Test
