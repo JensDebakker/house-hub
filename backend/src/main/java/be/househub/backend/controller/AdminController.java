@@ -5,6 +5,8 @@ import be.househub.backend.dto.admin.AdminCalendarEventResponse;
 import be.househub.backend.dto.admin.AdminCalendarEventUpdateRequest;
 import be.househub.backend.dto.admin.AdminDatabaseHealthResponse;
 import be.househub.backend.dto.admin.AdminDatabaseTableResponse;
+import be.househub.backend.dto.admin.AdminFeedbackResponse;
+import be.househub.backend.dto.admin.AdminFeedbackUpdateRequest;
 import be.househub.backend.dto.admin.AdminShoppingListResponse;
 import be.househub.backend.dto.admin.AdminShoppingListUpdateRequest;
 import be.househub.backend.dto.admin.AdminSupplyResponse;
@@ -23,7 +25,9 @@ import be.househub.backend.service.AdminService;
 import be.househub.backend.service.DatabaseDiagnosticsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -145,5 +149,29 @@ public class AdminController {
     @GetMapping("/database/schema")
     public List<AdminDatabaseTableResponse> databaseSchema() {
         return databaseDiagnosticsService.describeSchema();
+    }
+
+    @GetMapping("/feedback")
+    public List<AdminFeedbackResponse> listFeedback() {
+        return adminService.listFeedback();
+    }
+
+    @GetMapping("/feedback/{id}")
+    public AdminFeedbackResponse getFeedback(@PathVariable UUID id) {
+        return adminService.getFeedback(id);
+    }
+
+    @PatchMapping("/feedback/{id}")
+    public AdminFeedbackResponse updateFeedback(@PathVariable UUID id, @RequestBody AdminFeedbackUpdateRequest request) {
+        return adminService.updateFeedback(id, request);
+    }
+
+    @GetMapping("/feedback/{id}/attachments/{attachmentId}")
+    public ResponseEntity<InputStreamResource> downloadFeedbackAttachment(@PathVariable UUID id, @PathVariable UUID attachmentId) {
+        var file = adminService.downloadFeedbackAttachment(id, attachmentId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .contentLength(file.file().size())
+                .body(new InputStreamResource(file.file().data()));
     }
 }
