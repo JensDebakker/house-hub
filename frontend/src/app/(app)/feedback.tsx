@@ -4,12 +4,13 @@ import type { DocumentPickerAsset } from 'expo-document-picker';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, Text, TextInput, View } from 'react-native';
 import { FeedbackAttachmentThumbnail } from '@/components/FeedbackAttachmentThumbnail';
+import { FeedbackStatusBadge } from '@/components/FeedbackStatusBadge';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateFeedbackMutation, useFeedbackListQuery } from '@/lib/useFeedback';
 import { inputStyle } from '@/lib/formStyles';
-import type { FeedbackStatus, FeedbackTicket, FeedbackType } from '@/types';
+import type { FeedbackTicket, FeedbackType } from '@/types';
 
 const FEEDBACK_COLOR = '#f97316';
 const MAX_ATTACHMENTS = 5;
@@ -19,28 +20,12 @@ const TYPE_OPTIONS: { value: FeedbackType; label: string }[] = [
   { value: 'SUGGESTION', label: 'Suggestion' },
 ];
 
-const STATUS_COLORS: Record<FeedbackStatus, { bg: string; fg: string }> = {
-  OPEN: { bg: '#dbeafe', fg: '#1d4ed8' },
-  IN_PROGRESS: { bg: '#fef3c7', fg: '#b45309' },
-  RESOLVED: { bg: '#dcfce7', fg: '#15803d' },
-  CLOSED: { bg: '#e5e7eb', fg: '#374151' },
-};
-
-function StatusBadge({ status }: { status: FeedbackStatus }) {
-  const { bg, fg } = STATUS_COLORS[status];
-  return (
-    <View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-      <Text style={{ color: fg, fontSize: 11, fontWeight: '700' }}>{status.replace('_', ' ')}</Text>
-    </View>
-  );
-}
-
 function TicketRow({ ticket }: { ticket: FeedbackTicket }) {
   return (
     <View style={{ gap: 6, padding: 12, borderRadius: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee' }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text style={{ fontWeight: '700' }}>{ticket.type === 'BUG' ? 'Bug report' : 'Suggestion'}</Text>
-        <StatusBadge status={ticket.status} />
+        <FeedbackStatusBadge status={ticket.status} />
       </View>
       <Text style={{ color: '#374151' }}>{ticket.description}</Text>
       {ticket.attachments.length > 0 ? (

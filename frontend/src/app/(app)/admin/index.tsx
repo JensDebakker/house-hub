@@ -12,6 +12,9 @@ export default function AdminIndexScreen() {
       <View style={TILE_WRAPPER}>
         <Module tile title="Houses" subtitle="Households & data" href="/admin/houses" color="#0f766e" />
       </View>
+      <View style={TILE_WRAPPER}>
+        <Module tile title="Feedback" subtitle="Triage bug reports & ideas" href="/admin/feedback" color="#9333ea" />
+      </View>
     </View>
   );
 }
