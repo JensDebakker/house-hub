@@ -1,5 +1,6 @@
 package be.househub.backend.service;
 
+import be.househub.backend.config.AdminEmailRegistry;
 import be.househub.backend.dto.MessageResponse;
 import be.househub.backend.dto.auth.AuthResponse;
 import be.househub.backend.dto.auth.ChangePasswordRequest;
@@ -31,7 +32,6 @@ import be.househub.backend.security.JwtService;
 import be.househub.backend.service.storage.FileStorageService;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,7 +46,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -66,9 +65,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final MailService mailService;
     private final FileStorageService fileStorageService;
-
-    @Value("#{'${app.admin-emails:}'.split(',')}")
-    private List<String> adminEmails;
+    private final AdminEmailRegistry adminEmailRegistry;
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -241,12 +238,7 @@ public class AuthService {
     }
 
     private boolean isConfiguredAdminEmail(String email) {
-        Set<String> configured = adminEmails.stream()
-                .map(raw -> raw.trim())
-                .filter(s -> !s.isEmpty())
-                .map(this::normalizeEmail)
-                .collect(java.util.stream.Collectors.toSet());
-        return configured.contains(email);
+        return adminEmailRegistry.isAdmin(email);
     }
 
     private String normalizeEmail(String email) {

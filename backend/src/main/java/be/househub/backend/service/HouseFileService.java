@@ -12,7 +12,6 @@ import be.househub.backend.repository.HouseFolderRepository;
 import be.househub.backend.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -93,10 +92,9 @@ public class HouseFileService {
     public void delete(Household household, User currentUser, UUID fileId) {
         HouseFile houseFile = findOwned(household, fileId);
 
-        if (!householdAccessService.isOwner(currentUser, household.getId())
-                && (houseFile.getUploadedBy() == null || !houseFile.getUploadedBy().getId().equals(currentUser.getId()))) {
-            throw new AccessDeniedException("Only the household owner or the original uploader can delete this file");
-        }
+        UUID uploaderId = houseFile.getUploadedBy() != null ? houseFile.getUploadedBy().getId() : null;
+        householdAccessService.requireOwnerOrCreator(currentUser, household, uploaderId,
+                "Only the household owner or the original uploader can delete this file");
 
         fileStorageService.delete(houseFile.getStorageKey());
         houseFileRepository.delete(houseFile);

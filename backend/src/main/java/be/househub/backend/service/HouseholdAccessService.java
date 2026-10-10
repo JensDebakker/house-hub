@@ -65,4 +65,15 @@ public class HouseholdAccessService {
                 .map(membership -> membership.getRole() == HouseholdRole.OWNER)
                 .orElse(false);
     }
+
+    /**
+     * Requires that the current user is either the household owner or the given creator/
+     * uploader, throwing {@link AccessDeniedException} with the supplied message otherwise.
+     */
+    public void requireOwnerOrCreator(User currentUser, Household household, UUID creatorId, String message) {
+        if (!isOwner(currentUser, household.getId())
+                && (creatorId == null || !creatorId.equals(currentUser.getId()))) {
+            throw new AccessDeniedException(message);
+        }
+    }
 }

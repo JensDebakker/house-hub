@@ -24,6 +24,7 @@ import org.springframework.security.access.AccessDeniedException;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -85,7 +86,7 @@ class HouseFolderServiceTest {
         User creator = user();
         HouseFolder target = folder(household, creator);
         when(houseFolderRepository.findByIdAndHouseholdId(target.getId(), household.getId())).thenReturn(Optional.of(target));
-        when(householdAccessService.isOwner(creator, household.getId())).thenReturn(false);
+        // householdAccessService.requireOwnerOrCreator is mocked to no-op (creator allowed)
         when(houseFolderRepository.findChildren(household.getId(), target.getId())).thenReturn(List.of());
         when(houseFileRepository.findChildren(household.getId(), target.getId())).thenReturn(List.of());
 
@@ -101,7 +102,10 @@ class HouseFolderServiceTest {
         User otherMember = user();
         HouseFolder target = folder(household, creator);
         when(houseFolderRepository.findByIdAndHouseholdId(target.getId(), household.getId())).thenReturn(Optional.of(target));
-        when(householdAccessService.isOwner(otherMember, household.getId())).thenReturn(false);
+        doThrow(new AccessDeniedException("Only the household owner or the folder's creator can delete this folder"))
+                .when(householdAccessService)
+                .requireOwnerOrCreator(otherMember, household, creator.getId(),
+                        "Only the household owner or the folder's creator can delete this folder");
 
         assertThatThrownBy(() -> houseFolderService.deleteFolder(household, otherMember, target.getId()))
                 .isInstanceOf(AccessDeniedException.class);
@@ -125,7 +129,7 @@ class HouseFolderServiceTest {
         childFile.setStorageKey("child-key");
 
         when(houseFolderRepository.findByIdAndHouseholdId(root.getId(), household.getId())).thenReturn(Optional.of(root));
-        when(householdAccessService.isOwner(owner, household.getId())).thenReturn(true);
+        // householdAccessService.requireOwnerOrCreator is mocked to no-op (owner allowed)
 
         // subtree traversal: root's children = [child], child's children = []
         when(houseFolderRepository.findChildren(household.getId(), root.getId())).thenReturn(List.of(child));
