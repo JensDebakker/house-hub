@@ -5,22 +5,30 @@ import be.househub.backend.service.ChatMessageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +59,9 @@ class RealtimeWebSocketHandlerTest {
 
     private final UUID houseA = UUID.randomUUID();
     private final UUID houseB = UUID.randomUUID();
+    private final UUID userIdA1 = UUID.randomUUID();
+    private final UUID userIdA2 = UUID.randomUUID();
+    private final UUID userIdB1 = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -61,9 +72,9 @@ class RealtimeWebSocketHandlerTest {
         versionBroadcastListener = new VersionBroadcastListener(broadcaster, objectMapper);
         ReflectionTestUtils.setField(versionBroadcastListener, "version", "110");
 
-        mockSession(sessionA1, "session-a1", UUID.randomUUID(), houseA);
-        mockSession(sessionA2, "session-a2", UUID.randomUUID(), houseA);
-        mockSession(sessionB1, "session-b1", UUID.randomUUID(), houseB);
+        mockSession(sessionA1, "session-a1", userIdA1, houseA);
+        mockSession(sessionA2, "session-a2", userIdA2, houseA);
+        mockSession(sessionB1, "session-b1", userIdB1, houseB);
     }
 
     private void mockSession(WebSocketSession session, String id, UUID userId, UUID houseId) {
@@ -81,6 +92,7 @@ class RealtimeWebSocketHandlerTest {
     void versionBroadcast_reachesEveryConnectedSession() throws Exception {
         handler.afterConnectionEstablished(sessionA1);
         handler.afterConnectionEstablished(sessionB1);
+        clearInvocations(sessionA1, sessionB1); // drop the connect-time presence broadcasts
 
         versionBroadcastListener.onApplicationReady();
 
@@ -99,6 +111,7 @@ class RealtimeWebSocketHandlerTest {
         handler.afterConnectionEstablished(sessionA1);
         handler.afterConnectionEstablished(sessionA2);
         handler.afterConnectionEstablished(sessionB1);
+        clearInvocations(sessionA1, sessionA2, sessionB1); // drop the connect-time presence broadcasts
 
         String chatJson = """
                 {"channel":"chat","houseId":"%s","payload":{"text":"hello"}}
@@ -116,6 +129,7 @@ class RealtimeWebSocketHandlerTest {
     void chatMessage_withMismatchedHouseId_isDropped() throws Exception {
         handler.afterConnectionEstablished(sessionA1);
         handler.afterConnectionEstablished(sessionA2);
+        clearInvocations(sessionA1, sessionA2); // drop the connect-time presence broadcasts
 
         String chatJson = """
                 {"channel":"chat","houseId":"%s","payload":{"text":"should be dropped"}}
@@ -132,8 +146,76 @@ class RealtimeWebSocketHandlerTest {
         handler.afterConnectionEstablished(sessionA1);
         assertThat(sessionRegistry.all()).hasSize(1);
 
-        handler.afterConnectionClosed(sessionA1, org.springframework.web.socket.CloseStatus.NORMAL);
+        handler.afterConnectionClosed(sessionA1, CloseStatus.NORMAL);
 
         assertThat(sessionRegistry.all()).isEmpty();
+    }
+
+    @Test
+    void connecting_broadcastsPresenceCountReflectingNewTotalToWholeHouse() throws Exception {
+        handler.afterConnectionEstablished(sessionA1);
+
+        MessageEnvelope first = lastEnvelopeSentTo(sessionA1);
+        assertThat(first.channel()).isEqualTo(MessageEnvelope.CHANNEL_PRESENCE);
+        assertThat(first.houseId()).isEqualTo(houseA);
+        assertThat(first.payload().path("count").asInt()).isEqualTo(1);
+
+        handler.afterConnectionEstablished(sessionA2);
+
+        // the second connect's broadcast reaches every session in house A, including A1.
+        assertThat(lastEnvelopeSentTo(sessionA1).payload().path("count").asInt()).isEqualTo(2);
+        assertThat(lastEnvelopeSentTo(sessionA2).payload().path("count").asInt()).isEqualTo(2);
+
+        // house B is unaffected by house A's presence changes.
+        verify(sessionB1, never()).sendMessage(any(TextMessage.class));
+    }
+
+    @Test
+    void disconnecting_broadcastsPresenceCountReflectingReducedTotal() {
+        handler.afterConnectionEstablished(sessionA1);
+        handler.afterConnectionEstablished(sessionA2);
+        clearInvocations(sessionA1, sessionA2);
+
+        handler.afterConnectionClosed(sessionA2, CloseStatus.NORMAL);
+
+        MessageEnvelope envelope = lastEnvelopeSentTo(sessionA1);
+        assertThat(envelope.channel()).isEqualTo(MessageEnvelope.CHANNEL_PRESENCE);
+        assertThat(envelope.payload().path("count").asInt()).isEqualTo(1);
+    }
+
+    @Test
+    void sessionWithNoHouseId_neitherConnectNorDisconnectTriggersPresenceBroadcast() throws Exception {
+        WebSocketSession houseless = mock(WebSocketSession.class);
+        mockSession(houseless, "session-houseless", UUID.randomUUID(), null);
+
+        handler.afterConnectionEstablished(houseless);
+        verify(houseless, never()).sendMessage(any(TextMessage.class));
+
+        handler.afterConnectionClosed(houseless, CloseStatus.NORMAL);
+        verify(houseless, never()).sendMessage(any(TextMessage.class));
+    }
+
+    @Test
+    void sameUserWithTwoSessionsInSameHouse_countsAsOneDistinctUser() {
+        WebSocketSession sessionA1SecondDevice = mock(WebSocketSession.class);
+        mockSession(sessionA1SecondDevice, "session-a1-second-device", userIdA1, houseA);
+
+        handler.afterConnectionEstablished(sessionA1);
+        handler.afterConnectionEstablished(sessionA1SecondDevice);
+
+        MessageEnvelope envelope = lastEnvelopeSentTo(sessionA1SecondDevice);
+        assertThat(envelope.payload().path("count").asInt()).isEqualTo(1);
+    }
+
+    /** Decodes the most recent {@link TextMessage} sent to {@code session} as a {@link MessageEnvelope}. */
+    private MessageEnvelope lastEnvelopeSentTo(WebSocketSession session) {
+        try {
+            ArgumentCaptor<TextMessage> captor = ArgumentCaptor.forClass(TextMessage.class);
+            verify(session, atLeastOnce()).sendMessage(captor.capture());
+            List<TextMessage> sent = captor.getAllValues();
+            return objectMapper.readValue(sent.get(sent.size() - 1).getPayload(), MessageEnvelope.class);
+        } catch (IOException | JacksonException ex) {
+            throw new AssertionError("Failed to decode envelope sent to session", ex);
+        }
     }
 }
