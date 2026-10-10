@@ -13,7 +13,6 @@ import be.househub.backend.repository.HouseFileRepository;
 import be.househub.backend.repository.HouseFolderRepository;
 import be.househub.backend.service.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,10 +70,9 @@ public class HouseFolderService {
     public void deleteFolder(Household household, User currentUser, UUID folderId) {
         HouseFolder folder = findOwned(household, folderId);
 
-        if (!householdAccessService.isOwner(currentUser, household.getId())
-                && (folder.getCreatedBy() == null || !folder.getCreatedBy().getId().equals(currentUser.getId()))) {
-            throw new AccessDeniedException("Only the household owner or the folder's creator can delete this folder");
-        }
+        UUID creatorId = folder.getCreatedBy() != null ? folder.getCreatedBy().getId() : null;
+        householdAccessService.requireOwnerOrCreator(currentUser, household, creatorId,
+                "Only the household owner or the folder's creator can delete this folder");
 
         List<UUID> subtreeFolderIds = collectSubtreeFolderIds(household.getId(), folderId);
 

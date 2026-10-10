@@ -18,6 +18,7 @@ import java.util.UUID;
 import org.springframework.security.access.AccessDeniedException;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,7 +73,7 @@ class HouseFileServiceTest {
         User uploader = user();
         HouseFile file = fileUploadedBy(household, uploader);
         when(houseFileRepository.findByIdAndHouseholdId(file.getId(), household.getId())).thenReturn(Optional.of(file));
-        when(householdAccessService.isOwner(owner, household.getId())).thenReturn(true);
+        // householdAccessService.requireOwnerOrCreator is mocked to no-op (owner allowed)
 
         assertThatCode(() -> houseFileService.delete(household, owner, file.getId())).doesNotThrowAnyException();
 
@@ -86,7 +87,7 @@ class HouseFileServiceTest {
         User uploader = user();
         HouseFile file = fileUploadedBy(household, uploader);
         when(houseFileRepository.findByIdAndHouseholdId(file.getId(), household.getId())).thenReturn(Optional.of(file));
-        when(householdAccessService.isOwner(uploader, household.getId())).thenReturn(false);
+        // householdAccessService.requireOwnerOrCreator is mocked to no-op (uploader allowed)
 
         assertThatCode(() -> houseFileService.delete(household, uploader, file.getId())).doesNotThrowAnyException();
 
@@ -100,7 +101,10 @@ class HouseFileServiceTest {
         User otherMember = user();
         HouseFile file = fileUploadedBy(household, uploader);
         when(houseFileRepository.findByIdAndHouseholdId(file.getId(), household.getId())).thenReturn(Optional.of(file));
-        when(householdAccessService.isOwner(otherMember, household.getId())).thenReturn(false);
+        doThrow(new AccessDeniedException("Only the household owner or the original uploader can delete this file"))
+                .when(householdAccessService)
+                .requireOwnerOrCreator(otherMember, household, uploader.getId(),
+                        "Only the household owner or the original uploader can delete this file");
 
         assertThatThrownBy(() -> houseFileService.delete(household, otherMember, file.getId()))
                 .isInstanceOf(AccessDeniedException.class);
