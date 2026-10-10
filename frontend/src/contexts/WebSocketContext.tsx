@@ -1,18 +1,33 @@
-import { usePathname } from 'expo-router';
+import { usePathname, useSegments } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getValidAccessToken } from '@/lib/api';
 import { getWebSocketUrl } from '@/lib/ws';
 
-// Matches "/house/<id>/..." but not the two literal, non-household siblings of the
-// dynamic segment ("/house/create", "/house/join") or the bare "/house" redirect itself.
-const HOUSE_ROUTE_PATTERN = /^\/house\/(?!create$|join$)([^/]+)/;
+/** The household whose route is currently open, if any. `useSegments()` gives the
+ * *literal* matched file segments (e.g. `["(app)", "house", "[householdId]", "chat"]` -
+ * the dynamic segment's placeholder name, not its value), so checking that the segment
+ * right after "house" is literally "[householdId]" tells us structurally whether we're
+ * actually inside that dynamic route - true for any house feature screen, false for a
+ * static sibling under the same "house/" prefix (house/create, house/join, or any future
+ * one) *and* for every other top-level route (settings, admin, feedback, ...), without
+ * having to hand-maintain a blocklist of every non-household sibling that needs excluding
+ * as more get added. Once that's confirmed, the actual id is read off the pathname at the
+ * same position - segments don't carry resolved param values, only the placeholder name. */
+function useActiveHouseholdId(): string | undefined {
+  // Cast away expo-router's typed-routes segment-tuple typing: we're reading this
+  // structurally (is "house" followed by "[householdId]" anywhere in here), not using it
+  // as a navigation target, so the precise literal-tuple type isn't useful here and only
+  // gets in the way of a plain .indexOf/index lookup.
+  const segments = useSegments() as string[];
+  const pathname = usePathname();
 
-/** The household whose route is currently open, if any - "" and "/dashboard" (the Houses
- * overview), "/house/create", and "/house/join" all have no household of their own. */
-function householdIdFromPathname(pathname: string): string | undefined {
-  return HOUSE_ROUTE_PATTERN.exec(pathname)?.[1];
+  const houseIndex = segments.indexOf('house');
+  const isHouseholdRoute = houseIndex !== -1 && segments[houseIndex + 1] === '[householdId]';
+  if (!isHouseholdRoute) return undefined;
+
+  return /^\/house\/([^/]+)/.exec(pathname)?.[1];
 }
 
 /** 'chat' and 'presence' are household-scoped - the socket connection itself must be
@@ -48,10 +63,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   // whichever house is actually being viewed right now - derived from the route, not a
   // fixed "household 0" convention, now that the Houses overview lets a user be on no
   // house's route at all (and multiple houses exist to switch between). No socket is
-  // held open while on that overview (or house/create, house/join): see the early return
-  // below.
-  const pathname = usePathname();
-  const householdId = householdIdFromPathname(pathname);
+  // held open while on that overview, house/create, house/join, or any other top-level
+  // route outside a specific house (settings, admin, feedback, ...): see the early
+  // return below.
+  const householdId = useActiveHouseholdId();
 
   const socketRef = useRef<WebSocket | null>(null);
   const listenersRef = useRef<Map<WebSocketChannelName, Set<ChannelHandler>>>(new Map());

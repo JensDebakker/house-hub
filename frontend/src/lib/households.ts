@@ -19,3 +19,15 @@ export async function setDefaultHousehold(householdId: string): Promise<void> {
 export function resolveDefaultHousehold(user: User | null | undefined): HouseholdMembership | undefined {
   return user?.households.find((h) => h.isDefault) ?? user?.households[0];
 }
+
+/** The current user's own membership in a specific household (by id) - e.g. to read
+ * their role there, or that membership's own copy of the household's name. Shared by
+ * every house/[householdId] screen that needs "my membership in *this* house" rather
+ * than the user's households list as a whole, instead of each re-running the same
+ * `.find()` against the route param. */
+export function findHouseholdMembership(
+  user: User | null | undefined,
+  householdId: string | undefined,
+): HouseholdMembership | undefined {
+  return user?.households.find((h) => h.householdId === householdId);
+}
