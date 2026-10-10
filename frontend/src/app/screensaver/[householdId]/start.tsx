@@ -1,9 +1,17 @@
 import { Link, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Platform, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Module } from '@/components/Module';
 import { api } from '@/lib/api';
+import {
+  loadScreensaverLayoutPrefs,
+  type ScreensaverCorner,
+  type ScreensaverElementId,
+  type ScreensaverLayoutPrefs,
+} from '@/lib/storage';
+import { useCalendarEventsQuery } from '@/lib/useCalendarEvents';
+import { useChatMessagesQuery } from '@/lib/useChatMessages';
 import type { HouseFile } from '@/types';
 
 const SLIDE_DURATION_MS = 6000;
@@ -11,14 +19,116 @@ const IDLE_TIMEOUT_MS = 10000;
 const FALLBACK_BACKGROUND = '#111827';
 const SCREENSAVER_COLOR = '#7c3aed';
 
-export default function ScreensaverScreen() {
+const CORNER_STYLE: Record<ScreensaverCorner, { position: 'absolute'; top?: number; bottom?: number; left?: number; right?: number }> = {
+  'top-left': { position: 'absolute', top: 32, left: 32 },
+  'top-right': { position: 'absolute', top: 32, right: 32 },
+  'bottom-left': { position: 'absolute', bottom: 32, left: 32 },
+  'bottom-right': { position: 'absolute', bottom: 32, right: 32 },
+};
+
+// Order elements sharing a corner stack in - time above date is the only pairing that
+// matters today (it reproduces the old single clock block), the rest just keeps output
+// stable.
+const ELEMENT_ORDER: ScreensaverElementId[] = ['time', 'date', 'calendar', 'chat'];
+
+function OverlayCard({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={{ backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 16, padding: 16, maxWidth: 320 }}>
+      {children}
+    </View>
+  );
+}
+
+function TimeWidget({ now }: { now: Date }) {
+  return (
+    <Text style={{ color: 'white', fontSize: 48, fontWeight: '700' }}>
+      {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </Text>
+  );
+}
+
+function DateWidget({ now }: { now: Date }) {
+  return (
+    <Text style={{ color: 'white', fontSize: 18 }}>
+      {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+    </Text>
+  );
+}
+
+function CalendarWidget({ householdId, now }: { householdId: string | undefined; now: Date }) {
+  const { data: events } = useCalendarEventsQuery(householdId);
+
+  const upcoming = useMemo(() => {
+    // Compare by calendar day, not exact instant - events are created from a plain
+    // YYYY-MM-DD picker (see MonthGrid's `parseDateKey`) and stored at local midnight, so
+    // an exact-timestamp comparison would wrongly drop "today"'s events as soon as the
+    // clock ticks past midnight, even though they're still what a "today & next few days"
+    // overlay should show for the rest of the day.
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return (events ?? [])
+      .filter((e) => new Date(e.start).getTime() >= startOfToday)
+      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+      .slice(0, 4);
+  }, [events, now]);
+
+  if (upcoming.length === 0) return null;
+
+  return (
+    <OverlayCard>
+      <Text style={{ color: 'white', fontWeight: '700', fontSize: 14, marginBottom: 6 }}>Upcoming</Text>
+      {upcoming.map((e) => (
+        <Text key={e.id} style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13 }} numberOfLines={1}>
+          {new Date(e.start).toLocaleDateString([], { month: 'short', day: 'numeric' })} · {e.title}
+        </Text>
+      ))}
+    </OverlayCard>
+  );
+}
+
+function ChatWidget({ householdId }: { householdId: string | undefined }) {
+  const { data: messages } = useChatMessagesQuery(householdId);
+  const recent = (messages ?? []).slice(0, 4);
+
+  if (recent.length === 0) return null;
+
+  return (
+    <OverlayCard>
+      <Text style={{ color: 'white', fontWeight: '700', fontSize: 14, marginBottom: 6 }}>House Chat</Text>
+      {recent.map((m) => (
+        <Text key={m.id} style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13 }} numberOfLines={1}>
+          {m.senderDisplayName}: {m.text}
+        </Text>
+      ))}
+    </OverlayCard>
+  );
+}
+
+function renderElement(id: ScreensaverElementId, now: Date, householdId: string | undefined) {
+  switch (id) {
+    case 'time':
+      return <TimeWidget now={now} />;
+    case 'date':
+      return <DateWidget now={now} />;
+    case 'calendar':
+      return <CalendarWidget householdId={householdId} now={now} />;
+    case 'chat':
+      return <ChatWidget householdId={householdId} />;
+  }
+}
+
+export default function ScreensaverStartScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const [slideUrls, setSlideUrls] = useState<string[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [now, setNow] = useState(new Date());
   const [controlsVisible, setControlsVisible] = useState(true);
   const [cardAnim] = useState(() => new Animated.Value(1));
+  const [layoutPrefs, setLayoutPrefs] = useState<ScreensaverLayoutPrefs | null>(null);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    loadScreensaverLayoutPrefs().then(setLayoutPrefs);
+  }, []);
 
   // Images uploaded to the house's Files panel double as screensaver slides - loaded as
   // blob URLs since a plain <img src> can't carry the Authorization header the file
@@ -102,6 +212,23 @@ export default function ScreensaverScreen() {
 
   const currentSlideUrl = slideUrls[slideIndex];
 
+  // Group enabled elements by their configured corner, in a stable order, so elements
+  // sharing a corner stack vertically instead of overlapping.
+  const cornerGroups = useMemo(() => {
+    const groups: Record<ScreensaverCorner, ScreensaverElementId[]> = {
+      'top-left': [],
+      'top-right': [],
+      'bottom-left': [],
+      'bottom-right': [],
+    };
+    if (!layoutPrefs) return groups;
+    for (const id of ELEMENT_ORDER) {
+      const config = layoutPrefs.elements[id];
+      if (config?.enabled) groups[config.corner].push(id);
+    }
+    return groups;
+  }, [layoutPrefs]);
+
   return (
     <Module fullscreen title="Screensaver" color={SCREENSAVER_COLOR}>
       <Pressable style={{ flex: 1, backgroundColor: FALLBACK_BACKGROUND }} onPress={wake}>
@@ -116,14 +243,17 @@ export default function ScreensaverScreen() {
           />
         ) : null}
 
-        <View style={{ position: 'absolute', top: 32, left: 32 }}>
-          <Text style={{ color: 'white', fontSize: 48, fontWeight: '700' }}>
-            {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-          <Text style={{ color: 'white', fontSize: 18 }}>
-            {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-          </Text>
-        </View>
+        {(Object.keys(cornerGroups) as ScreensaverCorner[]).map((corner) => {
+          const ids = cornerGroups[corner];
+          if (ids.length === 0) return null;
+          return (
+            <View key={corner} style={{ ...CORNER_STYLE[corner], gap: 8 }}>
+              {ids.map((id) => (
+                <View key={id}>{renderElement(id, now, householdId)}</View>
+              ))}
+            </View>
+          );
+        })}
 
         <Animated.View
           pointerEvents={controlsVisible ? 'auto' : 'none'}
