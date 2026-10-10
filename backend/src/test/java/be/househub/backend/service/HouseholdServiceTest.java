@@ -478,6 +478,51 @@ class HouseholdServiceTest {
     }
 
     @Test
+    void deleteHousehold_memberHadThisAsDefault_promotesAnotherMembership() {
+        Household household = householdWithId();
+        UUID householdId = household.getId();
+        Household otherHousehold = householdWithId();
+        User user = userWithId();
+        user.setDefaultHousehold(household);
+
+        when(householdRepository.findById(householdId)).thenReturn(Optional.of(household));
+        when(houseFileRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+        when(houseFolderRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+        when(shoppingListRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+        when(membershipRepository.findByHouseholdId(householdId))
+                .thenReturn(List.of(membership(user, household, HouseholdRole.OWNER)));
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(membershipRepository.findByUserId(user.getId()))
+                .thenReturn(List.of(membership(user, otherHousehold, HouseholdRole.MEMBER)));
+
+        householdService.deleteHousehold(householdId);
+
+        assertThat(user.getDefaultHousehold()).isEqualTo(otherHousehold);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void deleteHousehold_folderParentCycle_throwsIllegalStateInsteadOfLoopingForever() {
+        Household household = householdWithId();
+        UUID householdId = household.getId();
+        when(householdRepository.findById(householdId)).thenReturn(Optional.of(household));
+        when(houseFileRepository.findByHouseholdId(householdId)).thenReturn(List.of());
+
+        HouseFolder a = new HouseFolder();
+        a.setId(UUID.randomUUID());
+        HouseFolder b = new HouseFolder();
+        b.setId(UUID.randomUUID());
+        a.setParentFolder(b);
+        b.setParentFolder(a);
+        when(houseFolderRepository.findByHouseholdId(householdId)).thenReturn(List.of(a, b));
+
+        assertThatThrownBy(() -> householdService.deleteHousehold(householdId))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(householdRepository, never()).delete(any());
+    }
+
+    @Test
     void deleteHousehold_nestedFolders_deletesChildrenBeforeParents() {
         Household household = householdWithId();
         UUID householdId = household.getId();

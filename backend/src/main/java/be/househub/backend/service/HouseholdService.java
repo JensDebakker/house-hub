@@ -250,16 +250,29 @@ public class HouseholdService {
      * Permanently deletes a household and everything in it (admin-only - there's no
      * self-service equivalent). None of the household_id foreign keys below cascade at
      * the DB level (only users.default_household_id does, via ON DELETE SET NULL), so
-     * each dependent table is emptied explicitly, files/folders first since those two
-     * reference each other and nothing else does.
+     * each dependent table is emptied explicitly. Members who had this household as
+     * their default are re-promoted to one of their remaining memberships (or null)
+     * the same way {@link #clearDefaultIfLeavingHousehold} does for every other path
+     * that removes a membership - otherwise they'd keep that invariant violated (DB
+     * nulls the FK, but nothing picks a replacement) until they manually pick one.
+     * Disk blobs have no FK to respect, so their deletion is deferred until the very
+     * end (right before the household row itself) to keep the window where a later
+     * failure rolls back the DB but can't undo an already-deleted blob as small as
+     * possible - but the house_files *rows* still have to go before house_folders
+     * (file.folder_id -> folder.id) and before the household row, same as every other
+     * dependent table.
      */
     @Transactional
     public void deleteHousehold(UUID householdId) {
         Household household = householdRepository.findById(householdId)
                 .orElseThrow(() -> new ResourceNotFoundException("Household", householdId));
 
+        List<UUID> memberUserIds = membershipRepository.findByHouseholdId(householdId).stream()
+                .map(m -> m.getUser().getId())
+                .distinct()
+                .toList();
+
         List<HouseFile> files = houseFileRepository.findByHouseholdId(householdId);
-        files.forEach(file -> fileStorageService.delete(file.getStorageKey()));
         houseFileRepository.deleteAll(files);
 
         deleteFoldersDeepestFirst(householdId);
@@ -270,7 +283,9 @@ public class HouseholdService {
         calendarEventRepository.deleteByHouseholdId(householdId);
         chatMessageRepository.deleteByHouseholdId(householdId);
         membershipRepository.deleteByHouseholdId(householdId);
+        memberUserIds.forEach(userId -> clearDefaultIfLeavingHousehold(userId, householdId));
 
+        files.forEach(file -> fileStorageService.delete(file.getStorageKey()));
         householdRepository.delete(household);
     }
 
@@ -278,7 +293,10 @@ public class HouseholdService {
      * house_folders is self-referential (parent_folder_id -> house_folders.id) with no
      * cascade, so children must go before their parents. Repeatedly deletes whichever
      * remaining folders aren't currently any other remaining folder's parent, i.e. the
-     * current leaves of what's left of the tree.
+     * current leaves of what's left of the tree. A well-formed tree always empties this
+     * way; the no-progress check only guards against a parent-cycle that shouldn't be
+     * reachable through the app's own folder-creation code, so it fails loudly instead
+     * of hanging the request (and its DB connection) forever.
      */
     private void deleteFoldersDeepestFirst(UUID householdId) {
         List<HouseFolder> remaining = new ArrayList<>(houseFolderRepository.findByHouseholdId(householdId));
@@ -293,6 +311,10 @@ public class HouseholdService {
             List<HouseFolder> leaves = remaining.stream()
                     .filter(folder -> !parentIds.contains(folder.getId()))
                     .toList();
+            if (leaves.isEmpty()) {
+                throw new IllegalStateException(
+                        "house_folders for household " + householdId + " contains a parent cycle - refusing to loop forever");
+            }
             houseFolderRepository.deleteAll(leaves);
             remaining.removeAll(leaves);
         }
