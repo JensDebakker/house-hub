@@ -61,6 +61,15 @@ public class HouseholdService {
     public HouseholdMembershipResponse toMembershipResponse(HouseholdMembership membership) {
         User user = userRepository.findById(membership.getUser().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("User", membership.getUser().getId()));
+        return toMembershipResponse(membership, user);
+    }
+
+    /**
+     * Same as {@link #toMembershipResponse(HouseholdMembership)} but for callers that
+     * already have the owning {@link User} loaded (e.g. right after creating/updating
+     * their membership), skipping the redundant lookup.
+     */
+    public HouseholdMembershipResponse toMembershipResponse(HouseholdMembership membership, User user) {
         UUID defaultHouseholdId = user.getDefaultHousehold() != null ? user.getDefaultHousehold().getId() : null;
         return toMembershipResponse(membership, defaultHouseholdId);
     }
@@ -173,15 +182,31 @@ public class HouseholdService {
         }
 
         membershipRepository.deleteByUserIdAndHouseholdId(user.getId(), householdId);
+        clearDefaultIfLeavingHousehold(user.getId(), householdId);
+    }
+
+    /**
+     * Shared by every path that removes a user's membership in a household
+     * ({@link #leaveHousehold}, {@link #removeMember}, and {@code AdminService}'s
+     * removal path via {@link #removeMember}): if the household the user just lost
+     * membership in was their default, clears it and auto-promotes one of their
+     * remaining memberships (if any) to be the new default — never leaves a user's
+     * {@code defaultHousehold} pointing at a household they're no longer a member of.
+     */
+    private void clearDefaultIfLeavingHousehold(UUID userId, UUID householdId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
         boolean wasDefault = user.getDefaultHousehold() != null
                 && user.getDefaultHousehold().getId().equals(householdId);
-        if (wasDefault) {
-            List<HouseholdMembership> remaining = membershipRepository.findByUserId(user.getId());
-            Household newDefault = remaining.isEmpty() ? null : remaining.get(0).getHousehold();
-            user.setDefaultHousehold(newDefault);
-            userRepository.save(user);
+        if (!wasDefault) {
+            return;
         }
+
+        List<HouseholdMembership> remaining = membershipRepository.findByUserId(userId);
+        Household newDefault = remaining.isEmpty() ? null : remaining.get(0).getHousehold();
+        user.setDefaultHousehold(newDefault);
+        userRepository.save(user);
     }
 
     /**
@@ -203,6 +228,7 @@ public class HouseholdService {
             throw new ResourceNotFoundException("HouseholdMembership", userId);
         }
         membershipRepository.deleteByUserIdAndHouseholdId(userId, householdId);
+        clearDefaultIfLeavingHousehold(userId, householdId);
     }
 
     public List<HouseholdMemberResponse> findMembers(UUID householdId) {

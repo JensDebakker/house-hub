@@ -160,6 +160,7 @@ class HouseholdServiceTest {
         when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
                 .thenReturn(Optional.of(membership));
         when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(1L);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
 
         householdService.leaveHousehold(user, household.getId());
 
@@ -174,6 +175,7 @@ class HouseholdServiceTest {
         when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
                 .thenReturn(Optional.of(membership));
         when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(3L);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
 
         householdService.leaveHousehold(user, household.getId());
 
@@ -191,6 +193,7 @@ class HouseholdServiceTest {
                 .thenReturn(Optional.of(membership));
         when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(2L);
         when(membershipRepository.findByHouseholdId(household.getId())).thenReturn(List.of(membership, otherOwner));
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
 
         householdService.leaveHousehold(user, household.getId());
 
@@ -218,12 +221,48 @@ class HouseholdServiceTest {
     @Test
     void removeMember_existingMember_deletes() {
         UUID householdId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        User user = userWithId();
+        UUID userId = user.getId();
         when(membershipRepository.existsByUserIdAndHouseholdId(userId, householdId)).thenReturn(true);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         householdService.removeMember(householdId, userId);
 
         verify(membershipRepository).deleteByUserIdAndHouseholdId(userId, householdId);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void removeMember_removedFromDefaultHousehold_promotesAnotherMembership() {
+        User user = userWithId();
+        Household household = householdWithId();
+        Household otherHousehold = householdWithId();
+        user.setDefaultHousehold(household);
+        when(membershipRepository.existsByUserIdAndHouseholdId(user.getId(), household.getId())).thenReturn(true);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(membershipRepository.findByUserId(user.getId()))
+                .thenReturn(List.of(membership(user, otherHousehold, HouseholdRole.MEMBER)));
+
+        householdService.removeMember(household.getId(), user.getId());
+
+        verify(membershipRepository).deleteByUserIdAndHouseholdId(user.getId(), household.getId());
+        assertThat(user.getDefaultHousehold()).isEqualTo(otherHousehold);
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void removeMember_removedFromNonDefaultHousehold_leavesDefaultUntouched() {
+        User user = userWithId();
+        Household household = householdWithId();
+        Household defaultHousehold = householdWithId();
+        user.setDefaultHousehold(defaultHousehold);
+        when(membershipRepository.existsByUserIdAndHouseholdId(user.getId(), household.getId())).thenReturn(true);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+
+        householdService.removeMember(household.getId(), user.getId());
+
+        assertThat(user.getDefaultHousehold()).isEqualTo(defaultHousehold);
+        verify(userRepository, never()).save(any());
     }
 
     @Test
@@ -250,6 +289,7 @@ class HouseholdServiceTest {
                 .thenReturn(Optional.of(membership));
         when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(1L);
         when(membershipRepository.findByUserId(user.getId())).thenReturn(List.of(otherMembership));
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
 
         householdService.leaveHousehold(user, household.getId());
 
@@ -267,6 +307,7 @@ class HouseholdServiceTest {
                 .thenReturn(Optional.of(membership));
         when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(1L);
         when(membershipRepository.findByUserId(user.getId())).thenReturn(List.of());
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
 
         householdService.leaveHousehold(user, household.getId());
 
@@ -284,6 +325,7 @@ class HouseholdServiceTest {
         when(membershipRepository.findByUserIdAndHouseholdId(user.getId(), household.getId()))
                 .thenReturn(Optional.of(membership));
         when(membershipRepository.countByHouseholdId(household.getId())).thenReturn(2L);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
 
         householdService.leaveHousehold(user, household.getId());
 
