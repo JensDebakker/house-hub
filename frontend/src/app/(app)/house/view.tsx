@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
+import { InviteLinkButton } from '@/components/InviteLinkButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { Household } from '@/types';
@@ -31,6 +32,7 @@ export default function ViewHouseScreen() {
           <Text style={{ color: '#666' }}>
             {household.memberCount} member{household.memberCount === 1 ? '' : 's'}
           </Text>
+          <InviteLinkButton inviteCode={household.inviteCode} color={VIEW_HOUSE_COLOR} />
         </>
       ) : !error ? (
         <Text style={{ color: '#999' }}>Loading…</Text>

@@ -5,11 +5,12 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
+import { joinPendingHousehold } from '@/lib/pendingInvite';
 
 const LOGIN_COLOR = '#2563eb';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, refreshUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +21,7 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     try {
       await login(email.trim(), password);
+      if (await joinPendingHousehold()) await refreshUser();
       router.replace('/dashboard');
     } catch (err) {
       setError(getErrorMessage(err, 'Login failed. Check your email and password.'));
