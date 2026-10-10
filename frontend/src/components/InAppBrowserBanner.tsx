@@ -2,43 +2,65 @@ import { useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { isInAppBrowser } from '@/lib/inAppBrowser';
 
+type Status = 'idle' | 'copied';
+
 /** There's no reliable way to force an escape from Facebook/Instagram's in-app browser via
- * JS - custom-scheme tricks are inconsistently blocked by it. Its own "Open in
- * Safari"/"Open in Chrome" option (behind the ••• menu) is the one dependable way out, so
- * this just points people at it instead of pretending to fix it for them. */
+ * JS - custom-scheme tricks are inconsistently blocked by it. `navigator.share()` triggers
+ * the OS's own native share sheet though, which on both iOS and Android includes an "Open
+ * in Safari/Chrome" style option directly - a real button the user can tap, rather than
+ * instructions to go hunt for the browser's own ••• menu. Falls back to a copy-link button
+ * on browsers/WebViews where the Share API isn't available (or the user dismisses it). */
 export function InAppBrowserBanner() {
   const [visible, setVisible] = useState(() => Platform.OS === 'web' && isInAppBrowser());
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<Status>('idle');
 
   if (!visible) return null;
 
-  const onCopyLink = async () => {
+  const onOpenInBrowser = async () => {
+    const share = (navigator as Navigator & { share?: (data: ShareData) => Promise<void> }).share;
+    if (share) {
+      try {
+        await share({ url: window.location.href });
+        return;
+      } catch {
+        // Cancelled, or the Share API isn't actually usable here - fall through to copy.
+      }
+    }
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
+      setStatus('copied');
     } catch {
-      // Nothing more we can do - the instructions below still stand on their own.
+      // Nothing more we can do - dismiss is still available.
     }
   };
 
   return (
-    <View style={{ backgroundColor: '#fef3c7', padding: 10, gap: 6 }}>
-      <Text style={{ color: '#92400e', textAlign: 'center' }}>
-        You&apos;re viewing this inside Facebook/Instagram&apos;s built-in browser, which can
-        cause pages like invite links to get stuck. Tap the ••• menu and choose &quot;Open in
-        Safari&quot;/&quot;Open in Chrome&quot;, or copy the link below and paste it into your
-        own browser.
-      </Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
-        <Pressable onPress={onCopyLink}>
-          <Text style={{ color: '#92400e', fontWeight: '600' }}>
-            {copied ? 'Link copied!' : 'Copy this link'}
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => setVisible(false)}>
-          <Text style={{ color: '#92400e', fontWeight: '600' }}>Dismiss</Text>
-        </Pressable>
-      </View>
+    <View
+      style={{
+        backgroundColor: '#fef3c7',
+        padding: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <Text style={{ color: '#92400e', flex: 1 }}>This page can get stuck loading in here.</Text>
+      <Pressable
+        onPress={onOpenInBrowser}
+        style={{
+          backgroundColor: '#92400e',
+          borderRadius: 8,
+          paddingVertical: 8,
+          paddingHorizontal: 14,
+        }}
+      >
+        <Text style={{ color: 'white', fontWeight: '700' }}>
+          {status === 'copied' ? 'Link copied!' : 'Open in browser'}
+        </Text>
+      </Pressable>
+      <Pressable onPress={() => setVisible(false)} hitSlop={8}>
+        <Text style={{ color: '#92400e', fontWeight: '700', fontSize: 16 }}>✕</Text>
+      </Pressable>
     </View>
   );
 }
