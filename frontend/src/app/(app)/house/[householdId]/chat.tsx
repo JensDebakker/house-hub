@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
@@ -14,7 +15,7 @@ function formatTime(iso: string): string {
 
 export default function ChatScreen() {
   const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
 
   const messagesQuery = useChatMessagesQuery(householdId);
   const sendChatMessage = useSendChatMessage(householdId);

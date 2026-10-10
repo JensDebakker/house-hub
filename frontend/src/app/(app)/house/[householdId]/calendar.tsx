@@ -1,8 +1,8 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { dateKey, MonthGrid, parseDateKey } from '@/components/MonthGrid';
 import { Module } from '@/components/Module';
-import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCalendarEventsQuery, useCreateCalendarEventMutation, useDeleteCalendarEventMutation } from '@/lib/useCalendarEvents';
 import type { CalendarEvent } from '@/types';
@@ -17,8 +17,7 @@ function startOfMonth(date: Date): Date {
 }
 
 export default function CalendarScreen() {
-  const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
 
   const calendarEventsQuery = useCalendarEventsQuery(householdId);
   const createEvent = useCreateCalendarEventMutation(householdId);

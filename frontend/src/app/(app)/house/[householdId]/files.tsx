@@ -1,4 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } from '@/components/AdminTable';
@@ -44,8 +45,8 @@ function FileThumbnail({ householdId, file }: { householdId: string; file: House
 
 export default function FilesScreen() {
   const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
-  const isOwner = user?.households[0]?.role === 'OWNER';
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const isOwner = user?.households.find((h) => h.householdId === householdId)?.role === 'OWNER';
 
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([{ id: null, name: 'Files' }]);
   const currentFolderId = breadcrumbs[breadcrumbs.length - 1]?.id ?? null;

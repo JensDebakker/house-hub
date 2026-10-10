@@ -1,7 +1,7 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
-import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateTaskMutation, useDeleteTaskMutation, useTasksQuery, useUpdateTaskMutation } from '@/lib/useTasks';
 import type { Task } from '@/types';
@@ -9,8 +9,7 @@ import type { Task } from '@/types';
 const TASKS_COLOR = '#dc2626';
 
 export default function TasksScreen() {
-  const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
 
   const tasksQuery = useTasksQuery(householdId);
   const createTask = useCreateTaskMutation(householdId);
