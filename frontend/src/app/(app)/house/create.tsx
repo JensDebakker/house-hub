@@ -40,16 +40,16 @@ export default function CreateHouseScreen() {
         <InviteLinkButton inviteCode={created.inviteCode} color={CREATE_HOUSE_COLOR} />
 
         <Pressable
-          onPress={() => router.replace('/house/view')}
+          onPress={() => router.replace(`/house/${created.id}/view`)}
           style={({ pressed }) => [buttonStyle(CREATE_HOUSE_COLOR), pressed && { opacity: 0.8 }]}
         >
           <Text style={{ color: 'white', fontWeight: '600' }}>View house</Text>
         </Pressable>
         <Pressable
-          onPress={() => router.replace('/house')}
+          onPress={() => router.replace('/dashboard')}
           style={({ pressed }) => [buttonStyle('#e5e7eb'), pressed && { opacity: 0.8 }]}
         >
-          <Text style={{ color: '#111827', fontWeight: '600' }}>Back to house menu</Text>
+          <Text style={{ color: '#111827', fontWeight: '600' }}>Back to houses overview</Text>
         </Pressable>
       </Module>
     );

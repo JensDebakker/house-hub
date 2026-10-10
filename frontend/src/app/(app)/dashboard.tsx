@@ -1,64 +1,84 @@
-import { router } from 'expo-router';
-import { Pressable, Text } from 'react-native';
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { HouseStatusBadges } from '@/components/HouseStatusBadges';
 import { Module } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
+import { getErrorMessage } from '@/lib/api';
+import { setDefaultHousehold } from '@/lib/households';
 
-const SCREENSAVER_COLOR = '#7c3aed';
+const DEFAULT_MARKER_COLOR = 'rgba(0,0,0,0.55)';
 
+/** The default-house marker in a house tile's top-right corner: a filled star (not
+ * tappable) if this already is the user's default, an outline star (tappable, sets it as
+ * default) otherwise. Lives in `titleBarActions`, which `Module`'s tile mode already
+ * swallows taps on separately from the tile's own tap-to-open - same idiom the
+ * Screensaver tile's "Start" shortcut already uses. */
+function DefaultHouseMarker({ isDefault, onPress, busy }: { isDefault: boolean; onPress: () => void; busy: boolean }) {
+  if (isDefault) {
+    return (
+      <View style={{ backgroundColor: DEFAULT_MARKER_COLOR, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+        <Text style={{ color: 'white', fontSize: 13 }}>★</Text>
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={busy}
+      style={{ backgroundColor: DEFAULT_MARKER_COLOR, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, opacity: busy ? 0.6 : 1 }}
+    >
+      <Text style={{ color: 'white', fontSize: 13 }}>☆</Text>
+    </Pressable>
+  );
+}
+
+// Level 0 of the card stack: one tile per house the user belongs to, plus a tile to join
+// another one (creating a brand new house is its own global flow, see house/create.tsx).
 export default function DashboardScreen() {
-  const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
-  const screensaverHref = householdId ? `/screensaver/${householdId}` : '';
+  const { user, refreshUser } = useAuth();
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Shared by the tile's own tap-to-open and its "Start" title bar action, which does the
-  // exact same navigation - Start is just an explicit shortcut for what opening the module
-  // already does, not a second distinct behavior. Plain push (no cardX/Y/W/H origin) since
-  // the screensaver renders as a fullscreen module, which never plays an entrance animation
-  // that origin would feed anyway.
-  const openScreensaver = () => {
-    if (householdId) router.push(`${screensaverHref}/start` as never);
+  const makeDefault = async (householdId: string) => {
+    setError(null);
+    setSettingDefaultId(householdId);
+    try {
+      await setDefaultHousehold(householdId);
+      await refreshUser();
+    } catch (err) {
+      setError(getErrorMessage(err, 'Failed to set default house.'));
+    } finally {
+      setSettingDefaultId(null);
+    }
   };
 
   return (
-    <TileGrid>
-      <Module
-        tile
-        title="Screensaver"
-        subtitle="Kiosk slideshow"
-        href={screensaverHref}
-        color={SCREENSAVER_COLOR}
-        disabled={!householdId}
-        titleBarActions={
-          householdId ? (
-            <Pressable
-              onPress={openScreensaver}
-              style={{
-                backgroundColor: 'rgba(0,0,0,0.55)',
-                borderRadius: 999,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
-              }}
-            >
-              <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>Start</Text>
-            </Pressable>
-          ) : undefined
-        }
-      />
-      <Module tile title="Files" subtitle="Shared uploads" href="/files" color="#ca8a04" />
-      <Module tile title="Chat" subtitle="Household messages" href="/chat" color="#db2777" />
-      <Module tile title="House" subtitle="View, leave, or create" href="/house" color="#dc2626" />
-      <Module tile title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
-      <Module tile title="Feedback" subtitle="Report a bug or idea" href="/feedback" color="#f97316" />
-      {user?.role === 'ADMIN' ? (
-        <Module tile title="Admin" subtitle="Manage everything" href="/admin" color="#6b7280" />
-      ) : null}
-
-      {/* Coming soon - kept behind the implemented cards above. */}
-      <Module tile title="Tasks" subtitle="Routine chores" href="/tasks" color="#dc2626" disabled />
-      <Module tile title="Shopping" subtitle="Lists" href="/shopping" color="#059669" disabled />
-      <Module tile title="Supplies" subtitle="Medical & stock" href="/supplies" color="#0891b2" disabled />
-      <Module tile title="Calendar" subtitle="House events" href="/calendar" color="#4f46e5" disabled />
-    </TileGrid>
+    <>
+      {error ? <Text style={{ color: '#c62828', paddingHorizontal: 4 }}>{error}</Text> : null}
+      <TileGrid>
+        {(user?.households ?? []).map((household) => (
+          <Module
+            key={household.householdId}
+            tile
+            title={household.householdName}
+            href={`/house/${household.householdId}/dashboard`}
+            color="#2563eb"
+            titleBarDisplays={
+              <HouseStatusBadges memberCount={household.memberCount ?? 0} onlineCount={household.onlineCount ?? 0} />
+            }
+            titleBarActions={
+              <DefaultHouseMarker
+                isDefault={Boolean(household.isDefault)}
+                busy={settingDefaultId === household.householdId}
+                onPress={() => makeDefault(household.householdId)}
+              />
+            }
+          />
+        ))}
+        <Module tile title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
+        <Module tile title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
+      </TileGrid>
+    </>
   );
 }

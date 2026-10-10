@@ -1,39 +1,13 @@
-import { Module } from '@/components/Module';
-import { TileGrid } from '@/components/TileGrid';
+import { Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { resolveDefaultHousehold } from '@/lib/households';
 
-export default function HouseIndexScreen() {
+// Bare "/house" has no screen of its own anymore - the per-house tile grid that used to
+// live here moved to house/[householdId]/house.tsx. Kept as a redirect (instead of
+// removing the route outright) so old links/deep links to "/house" still land somewhere
+// useful instead of 404ing.
+export default function HouseIndexRedirect() {
   const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
-
-  return (
-    <TileGrid>
-      <Module
-        tile
-        title="View house"
-        subtitle="Details & invite code"
-        href={householdId ? '/house/view' : ''}
-        color="#db2777"
-        disabled={!householdId}
-      />
-      <Module tile title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
-      <Module tile title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
-      <Module
-        tile
-        title="Manage house"
-        subtitle="Members & roles"
-        href={householdId ? '/house/manage' : ''}
-        color="#0f766e"
-        disabled={!householdId}
-      />
-      <Module
-        tile
-        title="Leave house"
-        subtitle="Remove yourself"
-        href={householdId ? '/house/leave' : ''}
-        color="#e11d48"
-        disabled={!householdId}
-      />
-    </TileGrid>
-  );
+  const defaultHousehold = resolveDefaultHousehold(user);
+  return <Redirect href={defaultHousehold ? `/house/${defaultHousehold.householdId}/dashboard` : '/dashboard'} />;
 }

@@ -19,9 +19,11 @@ export default function JoinHouseScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await api.post<Household>('/households/join', { inviteCode: inviteCode.trim() } satisfies HouseholdJoinRequest);
+      const { data } = await api.post<Household>('/households/join', {
+        inviteCode: inviteCode.trim(),
+      } satisfies HouseholdJoinRequest);
       await refreshUser();
-      router.replace('/house/view');
+      router.replace(`/house/${data.id}/view`);
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to join house. Check the invite code and try again.'));
     } finally {
