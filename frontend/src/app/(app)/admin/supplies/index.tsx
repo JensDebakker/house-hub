@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { AdminSupply } from '@/types';
 
 const COLS = {
@@ -19,13 +19,11 @@ const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 type Edits = { name: string; quantity: string; expiryDate: string };
 
 export default function AdminSuppliesScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const [supplies, setSupplies] = useState<AdminSupply[]>([]);
   const [edits, setEdits] = useState<Record<string, Edits>>({});
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     if (!isAdmin) return;

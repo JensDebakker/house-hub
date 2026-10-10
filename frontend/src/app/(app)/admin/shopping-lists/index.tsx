@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { AdminShoppingList } from '@/types';
 
 const COLS = {
@@ -16,13 +16,11 @@ const COLS = {
 const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
 export default function AdminShoppingListsScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const [lists, setLists] = useState<AdminShoppingList[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     if (!isAdmin) return;

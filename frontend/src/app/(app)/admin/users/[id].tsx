@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household, HouseholdRole, UserDetail } from '@/types';
 
 const HOUSEHOLD_ROLES: HouseholdRole[] = ['OWNER', 'MEMBER'];
 
 export default function AdminUserDetailScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<UserDetail | null>(null);
   const [allHouseholds, setAllHouseholds] = useState<Household[]>([]);
@@ -19,8 +19,6 @@ export default function AdminUserDetailScreen() {
   const [newHouseholdId, setNewHouseholdId] = useState('');
   const [newRole, setNewRole] = useState<HouseholdRole>('MEMBER');
   const [busy, setBusy] = useState(false);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   const load = useCallback(async () => {
     try {

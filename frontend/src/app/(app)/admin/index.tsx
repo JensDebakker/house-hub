@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { AdminUser, Role } from '@/types';
 
 const ROLES: Role[] = ['ADMIN', 'USER', 'GUEST'];
@@ -21,13 +21,11 @@ const COLS = {
 const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
 export default function AdminUsersScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [edits, setEdits] = useState<Record<string, Role>>({});
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     if (!isAdmin) return;

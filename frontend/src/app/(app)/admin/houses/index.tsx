@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text } from 'react-native';
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household } from '@/types';
 
 const COLS = {
@@ -28,11 +28,9 @@ function formatBytes(bytes: number): string {
 }
 
 export default function AdminHousesScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const [households, setHouseholds] = useState<Household[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     if (!isAdmin) return;

@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type {
   AdminUser,
   HouseholdDetail,
@@ -23,7 +23,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function AdminHouseDetailScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<HouseholdDetail | null>(null);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
@@ -32,8 +32,6 @@ export default function AdminHouseDetailScreen() {
   const [newMemberId, setNewMemberId] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<HouseholdRole>('MEMBER');
   const [busy, setBusy] = useState(false);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   const load = useCallback(async () => {
     try {
