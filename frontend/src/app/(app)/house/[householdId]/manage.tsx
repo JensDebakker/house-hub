@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Module } from '@/components/Module';
@@ -10,7 +10,7 @@ const MANAGE_HOUSE_COLOR = '#0f766e';
 
 export default function ManageHouseScreen() {
   const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const myRole = user?.households.find((h) => h.householdId === householdId)?.role;
   const isOwner = myRole === 'OWNER';
 
@@ -130,7 +130,7 @@ export default function ManageHouseScreen() {
       })}
 
       <Pressable
-        onPress={() => router.push('/house/leave')}
+        onPress={() => router.push(`/house/${householdId}/leave`)}
         style={({ pressed }) => [
           { backgroundColor: '#e11d48', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 16 },
           pressed && { opacity: 0.8 },

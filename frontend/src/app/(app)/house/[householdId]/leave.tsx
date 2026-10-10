@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text } from 'react-native';
 import { Module } from '@/components/Module';
@@ -10,8 +10,8 @@ const LEAVE_HOUSE_COLOR = '#e11d48';
 
 export default function LeaveHouseScreen() {
   const { user, refreshUser } = useAuth();
-  const householdId = user?.households[0]?.householdId;
-  const householdName = user?.households[0]?.householdName;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const householdName = user?.households.find((h) => h.householdId === householdId)?.householdName;
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -22,7 +22,9 @@ export default function LeaveHouseScreen() {
     try {
       await api.post(`/households/${householdId}/leave`);
       await refreshUser();
-      router.replace('/house');
+      // Back to the Houses overview, not just one level up - this house no longer has a
+      // card of its own to collapse back into once the user has left it.
+      router.replace('/dashboard');
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to leave house.'));
     } finally {

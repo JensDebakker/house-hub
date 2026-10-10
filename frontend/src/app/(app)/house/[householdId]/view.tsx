@@ -1,16 +1,15 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { Module } from '@/components/Module';
 import { InviteLinkButton } from '@/components/InviteLinkButton';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import type { Household } from '@/types';
 
 const VIEW_HOUSE_COLOR = '#db2777';
 
 export default function ViewHouseScreen() {
-  const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const [household, setHousehold] = useState<Household | null>(null);
   const [error, setError] = useState<string | null>(null);
 
