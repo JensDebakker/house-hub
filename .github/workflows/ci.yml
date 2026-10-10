@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+  push:
+    branches: [master]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: househub
+          POSTGRES_USER: househub
+          POSTGRES_PASSWORD: ci-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U househub -d househub"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # SPRING_PROFILES_ACTIVE=docker points the app at the same Postgres+Flyway path
+      # production uses, instead of the dev profile's H2. A fresh H2 database would
+      # pass just as cleanly even when two migrations share a version, or a migration
+      # has a syntax error, or an entity stops matching what Flyway actually produces -
+      # none of that depends on H2 vs Postgres, but it only gets *exercised* by running
+      # the real migration chain against a real engine. deploy.yml only runs once this
+      # workflow succeeds (see its `workflow_run` trigger), so a failure here blocks the
+      # deploy, not just flags it.
+      - name: Run backend test suite against Postgres
+        working-directory: backend
+        env:
+          SPRING_PROFILES_ACTIVE: docker
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: househub
+          DB_USER: househub
+          DB_PASSWORD: ci-test-password
+        run: ./mvnw -B test
