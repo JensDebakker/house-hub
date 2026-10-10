@@ -136,13 +136,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse verifyEmail(String rawToken) {
-        VerificationToken token = verificationTokenRepository.findByToken(rawToken)
-                .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
-
-        if (token.getType() != VerificationTokenType.EMAIL_VERIFY) {
-            throw new InvalidVerificationTokenException("Invalid or already-used token");
-        }
-
+        VerificationToken token = lookupToken(rawToken, VerificationTokenType.EMAIL_VERIFY);
         User user = token.getUser();
 
         // A used email-verify token whose user is already verified means this exact
@@ -164,9 +158,7 @@ public class AuthService {
             throw new InvalidVerificationTokenException("Token has expired");
         }
 
-        token.setUsed(true);
-        token.setUsedAt(Instant.now());
-        verificationTokenRepository.save(token);
+        markUsed(token);
 
         user.setEmailVerified(true);
         userRepository.save(user);
@@ -244,20 +236,33 @@ public class AuthService {
     }
 
     private VerificationToken consumeToken(String rawToken, VerificationTokenType expectedType) {
-        VerificationToken token = verificationTokenRepository.findByToken(rawToken)
-                .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
+        VerificationToken token = lookupToken(rawToken, expectedType);
 
-        if (token.isUsed() || token.getType() != expectedType) {
+        if (token.isUsed()) {
             throw new InvalidVerificationTokenException("Invalid or already-used token");
         }
         if (token.isExpired()) {
             throw new InvalidVerificationTokenException("Token has expired");
         }
 
+        markUsed(token);
+        return token;
+    }
+
+    private VerificationToken lookupToken(String rawToken, VerificationTokenType expectedType) {
+        VerificationToken token = verificationTokenRepository.findByToken(rawToken)
+                .orElseThrow(() -> new InvalidVerificationTokenException("Invalid or already-used token"));
+
+        if (token.getType() != expectedType) {
+            throw new InvalidVerificationTokenException("Invalid or already-used token");
+        }
+        return token;
+    }
+
+    private void markUsed(VerificationToken token) {
         token.setUsed(true);
         token.setUsedAt(Instant.now());
         verificationTokenRepository.save(token);
-        return token;
     }
 
     private void issueAndSendToken(User user, VerificationTokenType type, long ttlHours, java.util.function.Consumer<String> sendFn) {
