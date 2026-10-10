@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
-import { useChatMessagesQuery, useSendChatMessage } from '@/lib/useChatMessages';
+import { useChatMessagesQuery, useDeleteChatMessage, useSendChatMessage } from '@/lib/useChatMessages';
 import type { ChatMessage } from '@/types';
 
 const CHAT_COLOR = '#db2777';
@@ -18,6 +18,11 @@ export default function ChatScreen() {
 
   const messagesQuery = useChatMessagesQuery(householdId);
   const sendChatMessage = useSendChatMessage(householdId);
+  const deleteChatMessage = useDeleteChatMessage(householdId);
+
+  const myRole = user?.households.find((h) => h.householdId === householdId)?.role;
+  const canDelete = (message: ChatMessage) =>
+    message.senderId === user?.id || myRole === 'OWNER' || user?.role === 'ADMIN';
 
   const [text, setText] = useState('');
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -36,6 +41,32 @@ export default function ChatScreen() {
     if (!text.trim()) return;
     sendChatMessage(text);
     setText('');
+  };
+
+  const deleteMessage = (message: ChatMessage) => {
+    deleteChatMessage.mutate(message.id, {
+      onError: (err) => {
+        const errorMessage = getErrorMessage(err, 'Failed to delete message.');
+        if (Platform.OS === 'web') {
+          window.alert(errorMessage);
+        } else {
+          Alert.alert('Delete failed', errorMessage);
+        }
+      },
+    });
+  };
+
+  const confirmDelete = (message: ChatMessage) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Delete this message?')) {
+        deleteMessage(message);
+      }
+      return;
+    }
+    Alert.alert('Delete message?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteMessage(message) },
+    ]);
   };
 
   const errorMessage = messagesQuery.isError
@@ -71,7 +102,14 @@ export default function ChatScreen() {
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                   <Text style={{ fontWeight: '700', fontSize: 12, color: '#555' }}>{item.senderDisplayName}</Text>
-                  <Text style={{ fontSize: 11, color: '#999' }}>{formatTime(item.createdAt)}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 11, color: '#999' }}>{formatTime(item.createdAt)}</Text>
+                    {canDelete(item) ? (
+                      <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={{ padding: 2 }}>
+                        <Text style={{ fontSize: 14, color: '#999', fontWeight: '700' }}>⋯</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
                 </View>
                 <Text style={{ marginTop: 2 }}>{item.text}</Text>
               </View>
