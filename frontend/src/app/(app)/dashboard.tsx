@@ -21,7 +21,7 @@ export default function DashboardScreen() {
   // the screensaver renders as a fullscreen module, which never plays an entrance animation
   // that origin would feed anyway.
   const openScreensaver = () => {
-    if (householdId) router.push(screensaverHref as never);
+    if (householdId) router.push(`${screensaverHref}/start` as never);
   };
 
   return (

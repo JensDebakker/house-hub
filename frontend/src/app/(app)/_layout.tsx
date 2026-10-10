@@ -4,13 +4,17 @@ import { Platform, View } from 'react-native';
 import { Module, navigateBackFromCard } from '@/components/Module';
 import { OnlineBadge, useOnlinePresence } from '@/components/OnlineBadge';
 import { useAuth } from '@/contexts/AuthContext';
+import { loadScreensaverAutoStartPrefs } from '@/lib/storage';
 
-const IDLE_REDIRECT_MS = 2 * 60 * 1000;
 const DASHBOARD_COLOR = '#2563eb';
 
-// After a couple of minutes of no input anywhere in the app, hand off to the
-// screensaver - mirrors how the smart screen is meant to behave when left alone.
-// Web only: this is the same event set the screensaver itself uses to detect activity.
+// After a period of no input anywhere in the app, hand off to the screensaver - mirrors
+// how the smart screen is meant to behave when left alone. Web only: this is the same
+// event set the screensaver itself uses to detect activity. Whether this is enabled at
+// all, and how long "idle" means, are both user-configurable via the screensaver's
+// AutoStart submodule (frontend/src/app/screensaver/[householdId]/autostart.tsx) -
+// prefs are re-read every time this effect re-runs rather than cached, so a change made
+// there takes effect the next time the user navigates without needing a global event bus.
 function useIdleScreensaverRedirect() {
   const { user } = useAuth();
   const pathname = usePathname();
@@ -19,22 +23,34 @@ function useIdleScreensaverRedirect() {
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !householdId || pathname.startsWith('/screensaver')) return;
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
 
-    const schedule = () => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => router.replace(`/screensaver/${householdId}`), IDLE_REDIRECT_MS);
-    };
+    loadScreensaverAutoStartPrefs().then((prefs) => {
+      if (cancelled || !prefs.enabled) return;
+      const idleMs = prefs.idleTimeoutMinutes * 60 * 1000;
 
-    schedule();
-    window.addEventListener('mousemove', schedule);
-    window.addEventListener('keydown', schedule);
-    window.addEventListener('touchstart', schedule);
+      const schedule = () => {
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(() => router.replace(`/screensaver/${householdId}/start`), idleMs);
+      };
+
+      schedule();
+      window.addEventListener('mousemove', schedule);
+      window.addEventListener('keydown', schedule);
+      window.addEventListener('touchstart', schedule);
+
+      cleanup = () => {
+        if (timer.current) clearTimeout(timer.current);
+        window.removeEventListener('mousemove', schedule);
+        window.removeEventListener('keydown', schedule);
+        window.removeEventListener('touchstart', schedule);
+      };
+    });
 
     return () => {
-      if (timer.current) clearTimeout(timer.current);
-      window.removeEventListener('mousemove', schedule);
-      window.removeEventListener('keydown', schedule);
-      window.removeEventListener('touchstart', schedule);
+      cancelled = true;
+      cleanup?.();
     };
   }, [householdId, pathname]);
 }
