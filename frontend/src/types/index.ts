@@ -203,6 +203,32 @@ export type AdminCalendarEvent = {
   householdName: string;
 };
 
+export type FeedbackType = 'BUG' | 'SUGGESTION';
+
+export type FeedbackStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+
+export type FeedbackAttachment = {
+  id: string;
+  contentType: string;
+  originalFilename: string;
+};
+
+export type FeedbackTicket = {
+  id: string;
+  type: FeedbackType;
+  description: string;
+  status: FeedbackStatus;
+  createdAt: string;
+  updatedAt: string;
+  attachments: FeedbackAttachment[];
+};
+
+// Kept as its own type (rather than inlining `submitter` on FeedbackTicket) so that if the
+// backend's exact submitter field names shift once it lands, only this one type needs to change.
+export type AdminFeedbackTicket = FeedbackTicket & {
+  submitter: { id: string; email: string; name?: string };
+};
+
 export type ChatMessage = {
   id: string;
   householdId: string;

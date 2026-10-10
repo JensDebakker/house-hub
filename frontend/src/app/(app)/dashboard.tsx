@@ -63,6 +63,9 @@ export default function DashboardScreen() {
       <View style={TILE_WRAPPER}>
         <Module tile title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
       </View>
+      <View style={TILE_WRAPPER}>
+        <Module tile title="Feedback" subtitle="Report a bug or idea" href="/feedback" color="#f97316" />
+      </View>
       {user?.role === 'ADMIN' ? (
         <View style={TILE_WRAPPER}>
           <Module tile title="Admin" subtitle="Manage everything" href="/admin" color="#6b7280" />
