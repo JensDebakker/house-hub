@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Pressable, ScrollView, View } from 'react-native';
 import { oppositeCorners, pastelize } from '@/lib/color';
 
-const COLLAPSED_MARGIN = 8;
 const CARD_MARGIN = 10;
 
 // A colored card gets a pastel fill with the accent as its border - the same treatment
@@ -146,11 +145,6 @@ export function BigCardShell({
       })
     : 0;
 
-  // No top margin here: the title's own padding/font shrink (below) already frees up
-  // space above the nested card as it collapses, and the nested card contributes its own
-  // CARD_MARGIN on top regardless - stacking a top margin here on top of that would leave
-  // the nested card's border sitting further down than the shrunk title actually requires.
-  const contentMarginSides = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [0, COLLAPSED_MARGIN] });
   const fg = textColor ?? (color === 'white' ? '#111827' : color);
   const transform = [{ translateX }, { translateY }, { scaleX }, { scaleY }];
 
@@ -191,22 +185,17 @@ export function BigCardShell({
         >
           <Pressable onPress={onCollapsedPress} style={{ flex: 1 }}>
             {header}
-            <Animated.View
-              style={{
-                flex: 1,
-                marginTop: 0,
-                marginBottom: contentMarginSides,
-                marginHorizontal: contentMarginSides,
-                ...oppositeCorners(20),
-                overflow: 'hidden',
-              }}
-            >
+            {/* No margin here - the nested card (children) is itself a BigCardShell, which
+                already carries its own CARD_MARGIN on every side. Adding a second margin
+                layer on top of that would double up the gap between this frame's border and
+                the nested card's border, well past what the shrunk title actually frees up. */}
+            <View style={{ flex: 1, ...oppositeCorners(20), overflow: 'hidden' }}>
               {/* Swallows taps anywhere inside the nested card so they don't fall through
                   to the backdrop Pressable above and bounce back out to this level. */}
               <Pressable style={{ flex: 1 }} onPress={() => {}}>
                 {children}
               </Pressable>
-            </Animated.View>
+            </View>
           </Pressable>
         </Animated.View>
       </View>
