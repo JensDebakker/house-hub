@@ -4,6 +4,9 @@ import { Pressable, Text, TextInput } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { buttonStyle, inputStyle } from '@/lib/formStyles';
+
+const REGISTER_COLOR = '#2563eb';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -63,7 +66,7 @@ export default function RegisterScreen() {
       <Pressable
         onPress={onSubmit}
         disabled={isSubmitting || !email || !password || !displayName}
-        style={({ pressed }) => [buttonStyle, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [buttonStyle(REGISTER_COLOR), pressed && { opacity: 0.8 }]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
           {isSubmitting ? 'Creating…' : 'Create account'}
@@ -76,18 +79,3 @@ export default function RegisterScreen() {
     </ScreenContainer>
   );
 }
-
-const inputStyle = {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 16,
-};
-
-const buttonStyle = {
-  backgroundColor: '#2563eb',
-  borderRadius: 8,
-  padding: 14,
-  alignItems: 'center' as const,
-};

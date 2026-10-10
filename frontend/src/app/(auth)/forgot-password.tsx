@@ -4,6 +4,9 @@ import { Pressable, Text, TextInput } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { buttonStyle, inputStyle } from '@/lib/formStyles';
+
+const FORGOT_PASSWORD_COLOR = '#2563eb';
 
 export default function ForgotPasswordScreen() {
   const { forgotPassword } = useAuth();
@@ -48,7 +51,7 @@ export default function ForgotPasswordScreen() {
       <Pressable
         onPress={onSubmit}
         disabled={isSubmitting || !email}
-        style={({ pressed }) => [buttonStyle, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [buttonStyle(FORGOT_PASSWORD_COLOR), pressed && { opacity: 0.8 }]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
           {isSubmitting ? 'Sending…' : 'Send reset link'}
@@ -61,18 +64,3 @@ export default function ForgotPasswordScreen() {
     </ScreenContainer>
   );
 }
-
-const inputStyle = {
-  borderWidth: 1,
-  borderColor: '#ccc',
-  borderRadius: 8,
-  padding: 12,
-  fontSize: 16,
-};
-
-const buttonStyle = {
-  backgroundColor: '#2563eb',
-  borderRadius: 8,
-  padding: 14,
-  alignItems: 'center' as const,
-};

@@ -9,7 +9,7 @@ import type { HouseholdMember } from '@/types';
 const MANAGE_HOUSE_COLOR = '#0f766e';
 
 export default function ManageHouseScreen() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const householdId = user?.households[0]?.householdId;
   const myRole = user?.households.find((h) => h.householdId === householdId)?.role;
   const isOwner = myRole === 'OWNER';
@@ -17,7 +17,6 @@ export default function ManageHouseScreen() {
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
-  const [isLeaving, setIsLeaving] = useState(false);
 
   const loadMembers = useCallback(async () => {
     if (!householdId) return;
@@ -56,32 +55,6 @@ export default function ManageHouseScreen() {
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Remove', style: 'destructive', onPress: () => removeMember(member.userId) },
-      ],
-    );
-  };
-
-  const leave = async () => {
-    if (!householdId) return;
-    setError(null);
-    setIsLeaving(true);
-    try {
-      await api.post(`/households/${householdId}/leave`);
-      await refreshUser();
-      router.replace('/house');
-    } catch (err) {
-      setError(getErrorMessage(err, 'Failed to leave house.'));
-    } finally {
-      setIsLeaving(false);
-    }
-  };
-
-  const confirmLeave = () => {
-    Alert.alert(
-      'Leave house?',
-      "Are you sure you want to leave this house? You'll lose access to its tasks, supplies, and files.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Leave', style: 'destructive', onPress: leave },
       ],
     );
   };
@@ -157,15 +130,13 @@ export default function ManageHouseScreen() {
       })}
 
       <Pressable
-        onPress={confirmLeave}
-        disabled={isLeaving}
+        onPress={() => router.push('/house/leave')}
         style={({ pressed }) => [
           { backgroundColor: '#e11d48', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 16 },
-          isLeaving && { opacity: 0.6 },
           pressed && { opacity: 0.8 },
         ]}
       >
-        <Text style={{ color: 'white', fontWeight: '600' }}>{isLeaving ? 'Leaving…' : 'Leave house'}</Text>
+        <Text style={{ color: 'white', fontWeight: '600' }}>Leave house</Text>
       </Pressable>
     </BigCardShell>
   );

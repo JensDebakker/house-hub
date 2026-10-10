@@ -37,6 +37,9 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# generated API types (run `npm run gen:api-types` to regenerate)
+src/types/api-generated.ts
+
 # generated native folders
 /ios
 /android

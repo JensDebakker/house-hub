@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { ScreenContainer } from '@/components/ScreenContainer';
-import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { AdminFile } from '@/types';
 
 const COLS = {
@@ -37,12 +37,10 @@ async function downloadFile(householdId: string, fileId: string, filename: strin
 }
 
 export default function AdminFilesScreen() {
-  const { user } = useAuth();
+  const isAdmin = useRequireAdmin();
   const [files, setFiles] = useState<AdminFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   const load = useCallback(async () => {
     try {

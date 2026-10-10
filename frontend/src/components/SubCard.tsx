@@ -12,13 +12,13 @@ export function SubCard({
   title,
   subtitle,
   href,
-  color = '#2563eb',
+  color,
   disabled = false,
 }: {
   title: string;
   subtitle?: string;
   href: string;
-  color?: string;
+  color: string;
   /** Renders a dimmed, non-navigating tile with a "Coming soon" overlay for features not wired up yet. */
   disabled?: boolean;
 }) {

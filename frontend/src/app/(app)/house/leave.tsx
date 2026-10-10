@@ -4,6 +4,7 @@ import { Alert, Pressable, Text } from 'react-native';
 import { BigCardShell } from '@/components/BigCardShell';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
+import { buttonStyle } from '@/lib/formStyles';
 
 const LEAVE_HOUSE_COLOR = '#e11d48';
 
@@ -60,7 +61,7 @@ export default function LeaveHouseScreen() {
       <Pressable
         onPress={confirmLeave}
         disabled={isSubmitting}
-        style={({ pressed }) => [buttonStyle, isSubmitting && { opacity: 0.6 }, pressed && { opacity: 0.8 }]}
+        style={({ pressed }) => [buttonStyle(LEAVE_HOUSE_COLOR), isSubmitting && { opacity: 0.6 }, pressed && { opacity: 0.8 }]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
           {isSubmitting ? 'Leaving…' : 'Leave house'}
@@ -69,10 +70,3 @@ export default function LeaveHouseScreen() {
     </BigCardShell>
   );
 }
-
-const buttonStyle = {
-  backgroundColor: '#e11d48',
-  borderRadius: 8,
-  padding: 14,
-  alignItems: 'center' as const,
-};
