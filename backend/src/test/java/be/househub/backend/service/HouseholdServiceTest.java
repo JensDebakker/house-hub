@@ -251,6 +251,27 @@ class HouseholdServiceTest {
     }
 
     @Test
+    void removeMember_removedFromDefaultHousehold_withMultipleRemaining_prefersOwnerOverEarlierJoinedMember() {
+        User user = userWithId();
+        Household household = householdWithId();
+        Household earlierMemberHousehold = householdWithId();
+        Household laterOwnerHousehold = householdWithId();
+        user.setDefaultHousehold(household);
+        when(membershipRepository.existsByUserIdAndHouseholdId(user.getId(), household.getId())).thenReturn(true);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+
+        HouseholdMembership earlierMember = membership(user, earlierMemberHousehold, HouseholdRole.MEMBER);
+        earlierMember.setJoinedAt(java.time.Instant.parse("2020-01-01T00:00:00Z"));
+        HouseholdMembership laterOwner = membership(user, laterOwnerHousehold, HouseholdRole.OWNER);
+        laterOwner.setJoinedAt(java.time.Instant.parse("2021-01-01T00:00:00Z"));
+        when(membershipRepository.findByUserId(user.getId())).thenReturn(List.of(earlierMember, laterOwner));
+
+        householdService.removeMember(household.getId(), user.getId());
+
+        assertThat(user.getDefaultHousehold()).isEqualTo(laterOwnerHousehold);
+    }
+
+    @Test
     void removeMember_removedFromNonDefaultHousehold_leavesDefaultUntouched() {
         User user = userWithId();
         Household household = householdWithId();

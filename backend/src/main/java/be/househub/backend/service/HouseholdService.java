@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -55,19 +56,9 @@ public class HouseholdService {
     }
 
     /**
-     * Public overload for callers (e.g. admin endpoints) that have a single membership
-     * in hand and haven't already resolved the owning user's default household id.
-     */
-    public HouseholdMembershipResponse toMembershipResponse(HouseholdMembership membership) {
-        User user = userRepository.findById(membership.getUser().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User", membership.getUser().getId()));
-        return toMembershipResponse(membership, user);
-    }
-
-    /**
-     * Same as {@link #toMembershipResponse(HouseholdMembership)} but for callers that
-     * already have the owning {@link User} loaded (e.g. right after creating/updating
-     * their membership), skipping the redundant lookup.
+     * For callers (e.g. admin endpoints) that already have the owning {@link User}
+     * loaded (e.g. right after creating/updating their membership), so they can skip
+     * a redundant lookup.
      */
     public HouseholdMembershipResponse toMembershipResponse(HouseholdMembership membership, User user) {
         UUID defaultHouseholdId = user.getDefaultHousehold() != null ? user.getDefaultHousehold().getId() : null;
@@ -192,6 +183,8 @@ public class HouseholdService {
      * membership in was their default, clears it and auto-promotes one of their
      * remaining memberships (if any) to be the new default — never leaves a user's
      * {@code defaultHousehold} pointing at a household they're no longer a member of.
+     * Picks the same "natural default" the backfill migration uses for the same
+     * situation: a membership they OWN, tiebroken by earliest {@code joinedAt}.
      */
     private void clearDefaultIfLeavingHousehold(UUID userId, UUID householdId) {
         User user = userRepository.findById(userId)
@@ -204,7 +197,12 @@ public class HouseholdService {
         }
 
         List<HouseholdMembership> remaining = membershipRepository.findByUserId(userId);
-        Household newDefault = remaining.isEmpty() ? null : remaining.get(0).getHousehold();
+        Household newDefault = remaining.stream()
+                .min(Comparator
+                        .comparing((HouseholdMembership m) -> m.getRole() == HouseholdRole.OWNER ? 0 : 1)
+                        .thenComparing(HouseholdMembership::getJoinedAt))
+                .map(HouseholdMembership::getHousehold)
+                .orElse(null);
         user.setDefaultHousehold(newDefault);
         userRepository.save(user);
     }
