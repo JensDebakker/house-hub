@@ -14,6 +14,8 @@ import type {
   AdminTask,
   AdminUser,
   CalendarEvent,
+  Household,
+  HouseFile,
   HouseholdDetail,
   HouseholdRole,
   ShoppingList,
@@ -170,8 +172,8 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     try {
       const bytes = Math.round(parseFloat(limitGb || '0') * 1024 ** 3);
-      await api.patch(`/admin/households/${id}`, { storageLimitBytes: bytes });
-      await load();
+      const { data } = await api.patch<Household>(`/admin/households/${id}`, { storageLimitBytes: bytes });
+      setDetail((prev) => prev && { ...prev, household: data });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to update storage limit.'));
     } finally {
@@ -181,11 +183,18 @@ export default function AdminHouseDetailScreen() {
 
   const addMember = async () => {
     if (!newMemberId) return;
+    const user = allUsers.find((u) => u.id === newMemberId);
     setBusy(true);
     setError(null);
     try {
       await api.post(`/admin/households/${id}/members`, { userId: newMemberId, role: newMemberRole });
-      await load();
+      if (user) {
+        setDetail((prev) => prev && {
+          ...prev,
+          members: [...prev.members, { userId: user.id, displayName: user.displayName, email: user.email, role: newMemberRole }],
+        });
+      }
+      setNewMemberId('');
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to add member.'));
     } finally {
@@ -198,7 +207,7 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     try {
       await api.delete(`/admin/households/${id}/members/${userId}`);
-      await load();
+      setDetail((prev) => prev && { ...prev, members: prev.members.filter((m) => m.userId !== userId) });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to remove member.'));
     } finally {
@@ -221,8 +230,12 @@ export default function AdminHouseDetailScreen() {
       } else {
         formData.append('file', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'application/octet-stream' } as unknown as Blob);
       }
-      await api.post(`/households/${id}/files`, formData);
-      await load();
+      const { data } = await api.post<HouseFile>(`/households/${id}/files`, formData);
+      setDetail((prev) => prev && {
+        ...prev,
+        files: [...prev.files, data],
+        household: { ...prev.household, storageUsedBytes: prev.household.storageUsedBytes + data.sizeBytes, fileCount: prev.household.fileCount + 1 },
+      });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to upload file.'));
     } finally {
@@ -235,7 +248,17 @@ export default function AdminHouseDetailScreen() {
     setError(null);
     try {
       await api.delete(`/households/${id}/files/${fileId}`);
-      await load();
+      setDetail((prev) => {
+        if (!prev) return prev;
+        const removed = prev.files.find((f) => f.id === fileId);
+        return {
+          ...prev,
+          files: prev.files.filter((f) => f.id !== fileId),
+          household: removed
+            ? { ...prev.household, storageUsedBytes: prev.household.storageUsedBytes - removed.sizeBytes, fileCount: prev.household.fileCount - 1 }
+            : prev.household,
+        };
+      });
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to delete file.'));
     } finally {
