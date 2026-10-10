@@ -27,7 +27,11 @@ export default function JoinLinkScreen() {
       } catch {
         // Best effort - still navigate below so the user isn't stuck on this screen.
       } finally {
-        router.replace(isAuthenticated ? '/house/view' : '/');
+        // Bare '/' is ambiguous between (app)/index.tsx and (auth)/index.tsx - router.replace
+        // resolves that against the full static route table regardless of which group's guard
+        // is actually active, and silently no-ops instead of erroring, which left this screen
+        // stuck forever for a logged-out user. Naming the group directly sidesteps that.
+        router.replace(isAuthenticated ? '/house/view' : '/(auth)');
       }
     })();
   }, [code, isAuthenticated, refreshUser]);
