@@ -20,15 +20,15 @@ export default function JoinLinkScreen() {
     handled.current = true;
 
     (async () => {
-      await savePendingInviteCode(code);
-
-      if (!isAuthenticated) {
-        router.replace('/');
-        return;
+      try {
+        await savePendingInviteCode(code);
+        if (!isAuthenticated) return;
+        if (await joinPendingHousehold()) await refreshUser();
+      } catch {
+        // Best effort - still navigate below so the user isn't stuck on this screen.
+      } finally {
+        router.replace(isAuthenticated ? '/house/view' : '/');
       }
-
-      if (await joinPendingHousehold()) await refreshUser();
-      router.replace('/house/view');
     })();
   }, [code, isAuthenticated, refreshUser]);
 
