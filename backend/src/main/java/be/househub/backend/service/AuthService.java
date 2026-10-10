@@ -12,9 +12,6 @@ import be.househub.backend.dto.auth.ResetPasswordRequest;
 import be.househub.backend.dto.auth.TokenResponse;
 import be.househub.backend.dto.auth.UserResponse;
 import be.househub.backend.dto.household.HouseholdMembershipResponse;
-import be.househub.backend.entity.Household;
-import be.househub.backend.entity.HouseholdMembership;
-import be.househub.backend.entity.HouseholdRole;
 import be.househub.backend.entity.Role;
 import be.househub.backend.entity.User;
 import be.househub.backend.entity.VerificationToken;
@@ -24,8 +21,6 @@ import be.househub.backend.exception.EmailNotVerifiedException;
 import be.househub.backend.exception.InvalidTokenException;
 import be.househub.backend.exception.InvalidVerificationTokenException;
 import be.househub.backend.exception.ResourceNotFoundException;
-import be.househub.backend.repository.HouseholdMembershipRepository;
-import be.househub.backend.repository.HouseholdRepository;
 import be.househub.backend.repository.UserRepository;
 import be.househub.backend.repository.VerificationTokenRepository;
 import be.househub.backend.security.JwtService;
@@ -58,8 +53,6 @@ public class AuthService {
     private static final long EMAIL_VERIFY_REPLAY_WINDOW_HOURS = 1;
 
     private final UserRepository userRepository;
-    private final HouseholdRepository householdRepository;
-    private final HouseholdMembershipRepository membershipRepository;
     private final HouseholdService householdService;
     private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -76,26 +69,12 @@ public class AuthService {
             throw new DuplicateEmailException(email);
         }
 
-        Household household = new Household();
-        household.setName(request.displayName() + "'s household");
-        household.setInviteCode(householdService.generateInviteCode());
-        household = householdRepository.save(household);
-
         User user = new User();
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setDisplayName(request.displayName());
         user.setRole(isConfiguredAdminEmail(email) ? Role.ADMIN : Role.USER);
         final User savedUser = userRepository.save(user);
-
-        HouseholdMembership membership = new HouseholdMembership();
-        membership.setUser(savedUser);
-        membership.setHousehold(household);
-        membership.setRole(HouseholdRole.OWNER);
-        membershipRepository.save(membership);
-
-        savedUser.setDefaultHousehold(household);
-        userRepository.save(savedUser);
 
         issueAndSendToken(savedUser, VerificationTokenType.EMAIL_VERIFY, EMAIL_VERIFY_TTL_HOURS,
                 token -> mailService.sendVerificationEmail(savedUser.getEmail(), token));

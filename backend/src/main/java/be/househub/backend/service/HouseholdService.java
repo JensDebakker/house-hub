@@ -96,8 +96,7 @@ public class HouseholdService {
     }
 
     /**
-     * Generates an invite code unique across all households. Shared by self-service
-     * household creation and the auto-created household on registration.
+     * Generates an invite code unique across all households.
      */
     public String generateInviteCode() {
         String code;

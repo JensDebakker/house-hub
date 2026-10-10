@@ -4,7 +4,6 @@ import be.househub.backend.dto.auth.AuthResponse;
 import be.househub.backend.dto.auth.RegisterRequest;
 import be.househub.backend.dto.auth.RegisterResponse;
 import be.househub.backend.entity.HouseholdMembership;
-import be.househub.backend.entity.HouseholdRole;
 import be.househub.backend.entity.User;
 import be.househub.backend.entity.VerificationToken;
 import be.househub.backend.entity.VerificationTokenType;
@@ -46,7 +45,7 @@ class AuthServiceIntegrationTest {
     private VerificationTokenRepository verificationTokenRepository;
 
     @Test
-    void register_validRequest_persistsUserAndOwnerMembership() {
+    void register_validRequest_persistsUserWithNoHousehold() {
         RegisterRequest request = new RegisterRequest("new.user@example.com", "a-valid-password", "New User");
 
         RegisterResponse response = authService.register(request);
@@ -56,10 +55,10 @@ class AuthServiceIntegrationTest {
         User saved = userRepository.findByEmail("new.user@example.com").orElseThrow();
         assertThat(saved.getDisplayName()).isEqualTo("New User");
         assertThat(saved.isEmailVerified()).isFalse();
+        assertThat(saved.getDefaultHousehold()).isNull();
 
         List<HouseholdMembership> memberships = membershipRepository.findByUserId(saved.getId());
-        assertThat(memberships).hasSize(1);
-        assertThat(memberships.get(0).getRole()).isEqualTo(HouseholdRole.OWNER);
+        assertThat(memberships).isEmpty();
     }
 
     @Test
