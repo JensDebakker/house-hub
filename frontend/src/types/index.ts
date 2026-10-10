@@ -211,3 +211,8 @@ export type ChatMessage = {
   text: string;
   createdAt: string;
 };
+
+export type ChatMessageDeletedEvent = {
+  deletedId: string;
+  householdId: string;
+};
