@@ -4,10 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { loadTokens } from '@/lib/storage';
 import { getWebSocketUrl } from '@/lib/ws';
 
-/** 'chat' is household-scoped - the socket connection itself must be opened with the
- * current household's id (see `connect` below) for the backend's chat relay to deliver
- * anything on this channel. */
-export type WebSocketChannelName = 'version' | 'chat';
+/** 'chat' and 'presence' are household-scoped - the socket connection itself must be
+ * opened with the current household's id (see `connect` below) for the backend's chat
+ * relay / presence tracker to deliver anything on these channels. That's the default for
+ * every session in this app (see `householdId` below), so no extra wiring is needed. */
+export type WebSocketChannelName = 'version' | 'chat' | 'presence';
 
 export type WebSocketEnvelope<TPayload = unknown> = {
   channel: WebSocketChannelName;
