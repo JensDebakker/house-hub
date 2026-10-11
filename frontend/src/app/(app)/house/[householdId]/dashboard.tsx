@@ -1,8 +1,9 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Pressable, Text } from 'react-native';
-import { Module, navigateToHref } from '@/components/Module';
+import { Module } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
+import { navigateToHref } from '@/lib/navigation';
 
 const SCREENSAVER_COLOR = '#7c3aed';
 
@@ -20,12 +21,12 @@ export default function HouseDashboardScreen() {
   // navigation - Start is just an explicit shortcut for what opening the module already
   // does, not a second distinct behavior. No cardX/Y/W/H origin params, since the
   // screensaver renders as a fullscreen module with no entrance animation for them to
-  // feed. Reuses Module's own `navigateToHref` (replace + same-frame-later follow-up
-  // replace) rather than a plain `router.replace` - this is the exact same kind of
+  // feed. Uses the shared `navigateToHref` (replace + same-frame-later follow-up replace)
+  // rather than a plain `router.replace` - this is the exact same kind of
   // never-before-mounted dynamic-segment jump (house/[householdId] ->
   // screensaver/[householdId], a different top-level Stack.Screen entirely) that a single
-  // replace doesn't reliably land on the full path for. See navigateToHref's own comment
-  // in Module.tsx for how that was confirmed.
+  // replace doesn't reliably land on the full path for. See lib/navigation.ts for how
+  // that was confirmed.
   const openScreensaver = () => {
     navigateToHref(`${screensaverHref}/start`);
   };

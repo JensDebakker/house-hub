@@ -1,7 +1,8 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, usePathname, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Pressable, ScrollView, Text, View } from 'react-native';
 import { oppositeCorners, pastelize } from '@/lib/color';
+import { navigateToHref } from '@/lib/navigation';
 
 const CARD_MARGIN = 6;
 
@@ -30,33 +31,27 @@ export function navigateBackFromCard(navigate: () => void) {
   exit().then(navigate);
 }
 
+// Matches "/house/<id>/..." or "/screensaver/<id>/..." - the two dynamic segments a tile's
+// href can point into. Group 1: which one ("house" or "screensaver"). Group 2: the id.
+const DYNAMIC_SEGMENT_PATTERN = /^\/(house|screensaver)\/([^/]+)/;
+
 /**
- * Navigates a tile to `href` (`router.replace`, not `push` - this app's own "go back" is
- * always the collapsed frame tap, `navigateBackFromCard` below, itself `replace`-based, so
- * nothing here depends on `push`'s extra browser-history entry), with a same-frame-later
- * follow-up `replace` to the identical target.
- *
- * That follow-up isn't defensive paranoia - it's a confirmed-necessary workaround.
- * Verified via Playwright across several different accounts/households: a *single*
- * `replace` (or `push`) into a dynamic segment not already mounted anywhere (e.g. a
- * Houses-overview tile opening `/house/[householdId]/...` for a household whose layout
- * isn't currently active) reliably gets stuck resolving only as far as that segment's
- * nearest static ancestor ("/house") - not a transient render that settles a tick later;
- * `window.location.pathname` itself was still "/house" even 150ms out, so it's a genuine,
- * final router state, not a timing fluke. Once stuck there, `house/index.tsx`'s own
- * redirect (meant for a *genuinely* bare `/house` visit, e.g. an old bookmark) fires and
- * silently sends the user to their *default* household instead of the one actually
- * tapped - which only looks correct in casual testing when the two happen to be the same
- * household. A second `replace` to the exact same target, issued one frame later,
- * reliably resolves correctly where the first one didn't - cheap enough (and invisible
- * enough, since it's `replace` not `push`) to always run rather than first trying to
- * detect whether this particular href would have needed it.
- */
-export function navigateToHref(href: string, params: Record<string, string> = {}) {
-  router.replace({ pathname: href as never, params });
-  requestAnimationFrame(() => {
-    router.replace({ pathname: href as never, params });
-  });
+ * True when navigating to `href` from `currentPathname` would be the *first* client-side
+ * entry into its dynamic segment value - a different household/screensaver id than
+ * whatever's currently active, or entering that group from somewhere outside it entirely.
+ * That's the one case `navigateToHref` (see lib/navigation.ts) is actually needed for;
+ * every other tile (moving between leaves *within* the same already-active household -
+ * e.g. that household's own dashboard to its Chat - or any tile whose href has no dynamic
+ * segment at all, e.g. Settings/Admin/Feedback) navigates with a plain `router.push`
+ * instead, same as before this was ever an issue, so the normal browser back-history entry
+ * a tile tap has always produced isn't silently lost app-wide just to fix this one
+ * narrow case. */
+function entersFreshDynamicSegment(currentPathname: string, href: string): boolean {
+  const hrefMatch = DYNAMIC_SEGMENT_PATTERN.exec(href);
+  if (!hrefMatch) return false;
+  const currentMatch = DYNAMIC_SEGMENT_PATTERN.exec(currentPathname);
+  if (!currentMatch) return true;
+  return currentMatch[1] !== hrefMatch[1] || currentMatch[2] !== hrefMatch[2];
 }
 
 /**
@@ -253,6 +248,9 @@ export function Module({
   const isCardMode = !tile && !fullscreen;
 
   const params = useLocalSearchParams<{ cardX?: string; cardY?: string; cardW?: string; cardH?: string }>();
+  // Only actually read in tile mode (see onTilePress below), but called unconditionally -
+  // same as every other hook here - to satisfy the rules of hooks regardless of mode.
+  const pathname = usePathname();
   const containerRef = useRef<View>(null);
   const [dest, setDest] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [progress] = useState(() => new Animated.Value(0));
@@ -371,7 +369,12 @@ export function Module({
     const onTilePress = () => {
       if (disabled || !href) return;
       containerRef.current?.measureInWindow((x, y, width, height) => {
-        navigateToHref(href, { cardX: String(x), cardY: String(y), cardW: String(width), cardH: String(height) });
+        const cardParams = { cardX: String(x), cardY: String(y), cardW: String(width), cardH: String(height) };
+        if (entersFreshDynamicSegment(pathname, href)) {
+          navigateToHref(href, cardParams);
+        } else {
+          router.push({ pathname: href as never, params: cardParams });
+        }
       });
     };
 
