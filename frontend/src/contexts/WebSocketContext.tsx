@@ -5,29 +5,37 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getValidAccessToken } from '@/lib/api';
 import { getWebSocketUrl } from '@/lib/ws';
 
+/** Route segment groups that carry a household-scoped `[householdId]` dynamic segment -
+ * both need a live socket connection: "house" for chat/presence, and "screensaver" too,
+ * since the always-on kiosk display still needs 'version' (backend-redeploy auto-reload)
+ * and presence live, not just while a house's own feature screens are open. */
+const HOUSEHOLD_ROUTE_GROUPS = ['house', 'screensaver'];
+
 /** The household whose route is currently open, if any. `useSegments()` gives the
  * *literal* matched file segments (e.g. `["(app)", "house", "[householdId]", "chat"]` -
  * the dynamic segment's placeholder name, not its value), so checking that the segment
- * right after "house" is literally "[householdId]" tells us structurally whether we're
- * actually inside that dynamic route - true for any house feature screen, false for a
- * static sibling under the same "house/" prefix (house/create, house/join, or any future
- * one) *and* for every other top-level route (settings, admin, feedback, ...), without
- * having to hand-maintain a blocklist of every non-household sibling that needs excluding
- * as more get added. Once that's confirmed, the actual id is read off the pathname at the
- * same position - segments don't carry resolved param values, only the placeholder name. */
+ * right after "house" or "screensaver" is literally "[householdId]" tells us structurally
+ * whether we're actually inside one of those dynamic routes - true for any house feature
+ * screen or any screensaver screen, false for a static sibling under the same "house/"
+ * prefix (house/create, house/join, or any future one) *and* for every other top-level
+ * route (settings, admin, feedback, ...), without having to hand-maintain a blocklist of
+ * every non-household sibling that needs excluding as more get added. Once that's
+ * confirmed, the actual id is read off the pathname at the same position - segments don't
+ * carry resolved param values, only the placeholder name. */
 function useActiveHouseholdId(): string | undefined {
   // Cast away expo-router's typed-routes segment-tuple typing: we're reading this
-  // structurally (is "house" followed by "[householdId]" anywhere in here), not using it
-  // as a navigation target, so the precise literal-tuple type isn't useful here and only
-  // gets in the way of a plain .indexOf/index lookup.
+  // structurally (is "house"/"screensaver" followed by "[householdId]" anywhere in here),
+  // not using it as a navigation target, so the precise literal-tuple type isn't useful
+  // here and only gets in the way of a plain .findIndex/index lookup.
   const segments = useSegments() as string[];
   const pathname = usePathname();
 
-  const houseIndex = segments.indexOf('house');
-  const isHouseholdRoute = houseIndex !== -1 && segments[houseIndex + 1] === '[householdId]';
+  const groupIndex = segments.findIndex((segment) => HOUSEHOLD_ROUTE_GROUPS.includes(segment));
+  const group = groupIndex !== -1 ? segments[groupIndex] : undefined;
+  const isHouseholdRoute = group !== undefined && segments[groupIndex + 1] === '[householdId]';
   if (!isHouseholdRoute) return undefined;
 
-  return /^\/house\/([^/]+)/.exec(pathname)?.[1];
+  return new RegExp(`^/${group}/([^/]+)`).exec(pathname)?.[1];
 }
 
 /** 'chat' and 'presence' are household-scoped - the socket connection itself must be
