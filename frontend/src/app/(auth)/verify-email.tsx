@@ -20,13 +20,18 @@ export default function VerifyEmailScreen() {
 
     verifyEmail(token)
       .then(async (initialUser) => {
-        const currentUser = (await joinPendingHousehold()) ? await refreshUser() : initialUser;
-        const defaultHousehold = resolveDefaultHousehold(currentUser);
+        const joinedHouseholdId = await joinPendingHousehold();
+        const currentUser = joinedHouseholdId ? await refreshUser() : initialUser;
+        // A pending invite takes priority over the default household - same reasoning as
+        // login.tsx (verifying email after following a join link while unverified
+        // shouldn't strand the user on their own default household instead of the one
+        // they actually followed the link for).
+        const targetHouseholdId = joinedHouseholdId ?? resolveDefaultHousehold(currentUser)?.householdId;
         // navigateToHref, not a plain router.replace - same reasoning as login.tsx: this
         // is a fresh mount of the household's dynamic segment, which a single replace
         // doesn't reliably land on the full path for (see lib/navigation.ts).
-        if (defaultHousehold) {
-          navigateToHref(`/house/${defaultHousehold.householdId}/dashboard`);
+        if (targetHouseholdId) {
+          navigateToHref(`/house/${targetHouseholdId}/dashboard`);
         } else {
           router.replace('/dashboard');
         }

@@ -62,14 +62,19 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     try {
       let currentUser = await login(email.trim(), password);
-      if (await joinPendingHousehold()) currentUser = await refreshUser();
-      const defaultHousehold = resolveDefaultHousehold(currentUser);
+      const joinedHouseholdId = await joinPendingHousehold();
+      if (joinedHouseholdId) currentUser = await refreshUser();
+      // A pending invite (e.g. an existing user with House A as their default following a
+      // House B invite link) takes priority over the default household - otherwise they'd
+      // land back on House A instead of the House B they just joined, same bug join.tsx's
+      // own direct invite-link flow already had to avoid.
+      const targetHouseholdId = joinedHouseholdId ?? resolveDefaultHousehold(currentUser)?.householdId;
       // navigateToHref, not a plain router.replace - login is a fresh mount from the
       // (auth) stack every time, i.e. exactly the "dynamic segment not already mounted
       // anywhere" case a single replace doesn't reliably land on the full path for (see
       // lib/navigation.ts).
-      if (defaultHousehold) {
-        navigateToHref(`/house/${defaultHousehold.householdId}/dashboard`);
+      if (targetHouseholdId) {
+        navigateToHref(`/house/${targetHouseholdId}/dashboard`);
       } else {
         router.replace('/dashboard');
       }
