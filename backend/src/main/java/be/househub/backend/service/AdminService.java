@@ -130,6 +130,11 @@ public class AdminService {
     }
 
     @Transactional
+    public void deleteHousehold(UUID householdId) {
+        householdService.deleteHousehold(householdId);
+    }
+
+    @Transactional
     public HouseholdResponse updateHousehold(UUID householdId, HouseholdUpdateRequest request) {
         Household household = findHousehold(householdId);
         if (request.name() != null) {

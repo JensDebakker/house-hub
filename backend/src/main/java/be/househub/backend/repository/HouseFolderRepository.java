@@ -11,6 +11,8 @@ import java.util.UUID;
 
 public interface HouseFolderRepository extends JpaRepository<HouseFolder, UUID> {
 
+    List<HouseFolder> findByHouseholdId(UUID householdId);
+
     Optional<HouseFolder> findByIdAndHouseholdId(UUID id, UUID householdId);
 
     @Query("select f from HouseFolder f where f.household.id = :householdId and " +

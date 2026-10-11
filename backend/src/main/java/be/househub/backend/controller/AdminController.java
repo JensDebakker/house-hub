@@ -79,6 +79,12 @@ public class AdminController {
         return adminService.updateHousehold(householdId, request);
     }
 
+    @DeleteMapping("/households/{householdId}")
+    public ResponseEntity<Void> deleteHousehold(@PathVariable UUID householdId) {
+        adminService.deleteHousehold(householdId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/households/{householdId}/members")
     public ResponseEntity<HouseholdMembershipResponse> addMember(@PathVariable UUID householdId,
                                                                    @Valid @RequestBody AddMembershipRequest request) {

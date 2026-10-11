@@ -17,4 +17,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             UUID householdId, Instant before, Pageable pageable);
 
     Optional<ChatMessage> findByIdAndHouseholdId(UUID id, UUID householdId);
+
+    void deleteByHouseholdId(UUID householdId);
 }

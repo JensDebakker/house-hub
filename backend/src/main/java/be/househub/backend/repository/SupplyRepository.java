@@ -14,4 +14,6 @@ public interface SupplyRepository extends JpaRepository<Supply, UUID> {
     Optional<Supply> findByIdAndHouseholdId(UUID id, UUID householdId);
 
     long countByHouseholdId(UUID householdId);
+
+    void deleteByHouseholdId(UUID householdId);
 }
