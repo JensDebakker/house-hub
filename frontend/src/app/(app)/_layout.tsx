@@ -4,6 +4,7 @@ import { Platform, View } from 'react-native';
 import { Module, navigateBackFromCard } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { resolveDefaultHousehold } from '@/lib/households';
+import { navigateToHref } from '@/lib/navigation';
 import { loadScreensaverAutoStartPrefs } from '@/lib/storage';
 
 const DASHBOARD_COLOR = '#2563eb';
@@ -37,7 +38,12 @@ function useIdleScreensaverRedirect() {
 
       const schedule = () => {
         if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => router.replace(`/screensaver/${householdId}/start`), idleMs);
+        // navigateToHref, not a plain router.replace - this is a fresh entry into
+        // screensaver/[householdId]/..., the same "dynamic segment not already mounted
+        // anywhere" case lib/navigation.ts's own comment calls out. Unlike /house, there's
+        // no screensaver/index.tsx fallback to catch a stuck redirect here - it would just
+        // silently fail to open the screensaver at all.
+        timer.current = setTimeout(() => navigateToHref(`/screensaver/${householdId}/start`), idleMs);
       };
 
       schedule();
