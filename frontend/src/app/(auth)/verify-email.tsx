@@ -5,6 +5,7 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { resolveDefaultHousehold } from '@/lib/households';
+import { navigateToHref } from '@/lib/navigation';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 
 export default function VerifyEmailScreen() {
@@ -21,7 +22,14 @@ export default function VerifyEmailScreen() {
       .then(async (initialUser) => {
         const currentUser = (await joinPendingHousehold()) ? await refreshUser() : initialUser;
         const defaultHousehold = resolveDefaultHousehold(currentUser);
-        router.replace(defaultHousehold ? `/house/${defaultHousehold.householdId}/dashboard` : '/dashboard');
+        // navigateToHref, not a plain router.replace - same reasoning as login.tsx: this
+        // is a fresh mount of the household's dynamic segment, which a single replace
+        // doesn't reliably land on the full path for (see lib/navigation.ts).
+        if (defaultHousehold) {
+          navigateToHref(`/house/${defaultHousehold.householdId}/dashboard`);
+        } else {
+          router.replace('/dashboard');
+        }
       })
       .catch((err) => {
         setVerifyError(getErrorMessage(err, 'This verification link is invalid or has expired.'));

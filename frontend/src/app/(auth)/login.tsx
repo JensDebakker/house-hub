@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
 import { resolveDefaultHousehold } from '@/lib/households';
+import { navigateToHref } from '@/lib/navigation';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 
 const LOGIN_COLOR = '#2563eb';
@@ -63,7 +64,15 @@ export default function LoginScreen() {
       let currentUser = await login(email.trim(), password);
       if (await joinPendingHousehold()) currentUser = await refreshUser();
       const defaultHousehold = resolveDefaultHousehold(currentUser);
-      router.replace(defaultHousehold ? `/house/${defaultHousehold.householdId}/dashboard` : '/dashboard');
+      // navigateToHref, not a plain router.replace - login is a fresh mount from the
+      // (auth) stack every time, i.e. exactly the "dynamic segment not already mounted
+      // anywhere" case a single replace doesn't reliably land on the full path for (see
+      // lib/navigation.ts).
+      if (defaultHousehold) {
+        navigateToHref(`/house/${defaultHousehold.householdId}/dashboard`);
+      } else {
+        router.replace('/dashboard');
+      }
     } catch (err) {
       setError(getErrorMessage(err, 'Login failed. Check your email and password.'));
     } finally {

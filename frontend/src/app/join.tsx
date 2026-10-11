@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
+import { navigateToHref } from '@/lib/navigation';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 import { savePendingInviteCode } from '@/lib/storage';
 
@@ -36,7 +37,9 @@ export default function JoinLinkScreen() {
         if (!isAuthenticated) {
           router.replace('/(auth)');
         } else if (joinedHouseholdId) {
-          router.replace(`/house/${joinedHouseholdId}/view`);
+          // navigateToHref, not a plain router.replace - fresh mount of the joined
+          // household's dynamic segment (see lib/navigation.ts).
+          navigateToHref(`/house/${joinedHouseholdId}/view`);
         } else {
           // Already a member, invalid/expired code, etc. - nothing new to view, back to
           // the Houses overview instead of a specific (possibly nonexistent) house.
