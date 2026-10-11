@@ -1,10 +1,10 @@
-import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
+import { navigateToHref } from '@/lib/navigation';
 import type { Household, HouseholdJoinRequest } from '@/types';
 
 const JOIN_HOUSE_COLOR = '#2563eb';
@@ -19,9 +19,13 @@ export default function JoinHouseScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await api.post<Household>('/households/join', { inviteCode: inviteCode.trim() } satisfies HouseholdJoinRequest);
+      const { data } = await api.post<Household>('/households/join', {
+        inviteCode: inviteCode.trim(),
+      } satisfies HouseholdJoinRequest);
       await refreshUser();
-      router.replace('/house/view');
+      // navigateToHref, not a plain router.replace - fresh mount of the joined
+      // household's dynamic segment (see lib/navigation.ts).
+      navigateToHref(`/house/${data.id}/view`);
     } catch (err) {
       setError(getErrorMessage(err, 'Failed to join house. Check the invite code and try again.'));
     } finally {

@@ -1,7 +1,7 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
-import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import {
   useAddShoppingListItemMutation,
@@ -15,8 +15,7 @@ const DEFAULT_LIST_NAME = 'Shopping List';
 const SHOPPING_COLOR = '#059669';
 
 export default function ShoppingScreen() {
-  const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
 
   const shoppingListsQuery = useShoppingListsQuery(householdId);
   const createList = useCreateShoppingListMutation(householdId);

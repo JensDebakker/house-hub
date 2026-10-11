@@ -6,6 +6,9 @@ export type HouseholdMembership = {
   householdId: string;
   householdName: string;
   role: HouseholdRole;
+  memberCount: number;
+  onlineCount: number;
+  isDefault: boolean;
 };
 
 export type User = {

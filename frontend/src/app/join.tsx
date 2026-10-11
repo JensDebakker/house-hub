@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
+import { navigateToHref } from '@/lib/navigation';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 import { savePendingInviteCode } from '@/lib/storage';
 
@@ -19,11 +20,13 @@ export default function JoinLinkScreen() {
     if (!code || handled.current) return;
     handled.current = true;
 
+    let joinedHouseholdId: string | null = null;
     (async () => {
       try {
         await savePendingInviteCode(code);
         if (!isAuthenticated) return;
-        if (await joinPendingHousehold()) await refreshUser();
+        joinedHouseholdId = await joinPendingHousehold();
+        if (joinedHouseholdId) await refreshUser();
       } catch {
         // Best effort - still navigate below so the user isn't stuck on this screen.
       } finally {
@@ -31,7 +34,17 @@ export default function JoinLinkScreen() {
         // resolves that against the full static route table regardless of which group's guard
         // is actually active, and silently no-ops instead of erroring, which left this screen
         // stuck forever for a logged-out user. Naming the group directly sidesteps that.
-        router.replace(isAuthenticated ? '/house/view' : '/(auth)');
+        if (!isAuthenticated) {
+          router.replace('/(auth)');
+        } else if (joinedHouseholdId) {
+          // navigateToHref, not a plain router.replace - fresh mount of the joined
+          // household's dynamic segment (see lib/navigation.ts).
+          navigateToHref(`/house/${joinedHouseholdId}/view`);
+        } else {
+          // Already a member, invalid/expired code, etc. - nothing new to view, back to
+          // the Houses overview instead of a specific (possibly nonexistent) house.
+          router.replace('/dashboard');
+        }
       }
     })();
   }, [code, isAuthenticated, refreshUser]);

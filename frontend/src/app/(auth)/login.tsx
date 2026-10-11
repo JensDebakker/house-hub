@@ -5,6 +5,8 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
+import { resolveDefaultHousehold } from '@/lib/households';
+import { navigateToHref } from '@/lib/navigation';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 
 const LOGIN_COLOR = '#2563eb';
@@ -59,9 +61,23 @@ export default function LoginScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      await login(email.trim(), password);
-      if (await joinPendingHousehold()) await refreshUser();
-      router.replace('/dashboard');
+      let currentUser = await login(email.trim(), password);
+      const joinedHouseholdId = await joinPendingHousehold();
+      if (joinedHouseholdId) currentUser = await refreshUser();
+      // A pending invite (e.g. an existing user with House A as their default following a
+      // House B invite link) takes priority over the default household - otherwise they'd
+      // land back on House A instead of the House B they just joined, same bug join.tsx's
+      // own direct invite-link flow already had to avoid.
+      const targetHouseholdId = joinedHouseholdId ?? resolveDefaultHousehold(currentUser)?.householdId;
+      // navigateToHref, not a plain router.replace - login is a fresh mount from the
+      // (auth) stack every time, i.e. exactly the "dynamic segment not already mounted
+      // anywhere" case a single replace doesn't reliably land on the full path for (see
+      // lib/navigation.ts).
+      if (targetHouseholdId) {
+        navigateToHref(`/house/${targetHouseholdId}/dashboard`);
+      } else {
+        router.replace('/dashboard');
+      }
     } catch (err) {
       setError(getErrorMessage(err, 'Login failed. Check your email and password.'));
     } finally {

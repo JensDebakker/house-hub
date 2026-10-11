@@ -6,6 +6,7 @@ import { InviteLinkButton } from '@/components/InviteLinkButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
+import { navigateToHref } from '@/lib/navigation';
 import type { Household, HouseholdCreateRequest } from '@/types';
 
 const CREATE_HOUSE_COLOR = '#c026d3';
@@ -40,16 +41,18 @@ export default function CreateHouseScreen() {
         <InviteLinkButton inviteCode={created.inviteCode} color={CREATE_HOUSE_COLOR} />
 
         <Pressable
-          onPress={() => router.replace('/house/view')}
+          // navigateToHref, not a plain router.replace - fresh mount of the newly-created
+          // household's dynamic segment (see lib/navigation.ts).
+          onPress={() => navigateToHref(`/house/${created.id}/view`)}
           style={({ pressed }) => [buttonStyle(CREATE_HOUSE_COLOR), pressed && { opacity: 0.8 }]}
         >
           <Text style={{ color: 'white', fontWeight: '600' }}>View house</Text>
         </Pressable>
         <Pressable
-          onPress={() => router.replace('/house')}
+          onPress={() => router.replace('/dashboard')}
           style={({ pressed }) => [buttonStyle('#e5e7eb'), pressed && { opacity: 0.8 }]}
         >
-          <Text style={{ color: '#111827', fontWeight: '600' }}>Back to house menu</Text>
+          <Text style={{ color: '#111827', fontWeight: '600' }}>Back to houses overview</Text>
         </Pressable>
       </Module>
     );

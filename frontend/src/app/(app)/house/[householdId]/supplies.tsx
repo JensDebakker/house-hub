@@ -1,7 +1,7 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
-import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateSupplyMutation, useDeleteSupplyMutation, useSuppliesQuery } from '@/lib/useSupplies';
 
@@ -22,8 +22,7 @@ function statusColor(dateStr: string): string {
 }
 
 export default function SuppliesScreen() {
-  const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
 
   const suppliesQuery = useSuppliesQuery(householdId);
   const createSupply = useCreateSupplyMutation(householdId);

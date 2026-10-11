@@ -1,39 +1,32 @@
-import { Module } from '@/components/Module';
-import { TileGrid } from '@/components/TileGrid';
+import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { resolveDefaultHousehold } from '@/lib/households';
+import { navigateToHref } from '@/lib/navigation';
 
-export default function HouseIndexScreen() {
+// Bare "/house" has no screen of its own anymore - the per-house tile grid that used to
+// live here moved to house/[householdId]/house.tsx. Kept as a redirect (instead of
+// removing the route outright) so old links/deep links to "/house" still land somewhere
+// useful instead of 404ing.
+//
+// An imperative useEffect, not a declarative <Redirect>: this is a fresh entry into
+// house/[householdId]/... from outside that route group entirely - exactly the scenario
+// this screen exists for (an old bookmark/deep link straight to "/house"), and the same
+// "stuck at the nearest static ancestor, silently falls back to the wrong household" case
+// every other household-targeting redirect in this app already routes through
+// navigateToHref for instead of a plain replace (see lib/navigation.ts). <Redirect> can
+// only ever do a single declarative replace, so it can't go through that workaround.
+export default function HouseIndexRedirect() {
   const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const householdId = resolveDefaultHousehold(user)?.householdId;
 
-  return (
-    <TileGrid>
-      <Module
-        tile
-        title="View house"
-        subtitle="Details & invite code"
-        href={householdId ? '/house/view' : ''}
-        color="#db2777"
-        disabled={!householdId}
-      />
-      <Module tile title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
-      <Module tile title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
-      <Module
-        tile
-        title="Manage house"
-        subtitle="Members & roles"
-        href={householdId ? '/house/manage' : ''}
-        color="#0f766e"
-        disabled={!householdId}
-      />
-      <Module
-        tile
-        title="Leave house"
-        subtitle="Remove yourself"
-        href={householdId ? '/house/leave' : ''}
-        color="#e11d48"
-        disabled={!householdId}
-      />
-    </TileGrid>
-  );
+  useEffect(() => {
+    if (householdId) {
+      navigateToHref(`/house/${householdId}/dashboard`);
+    } else {
+      router.replace('/dashboard');
+    }
+  }, [householdId]);
+
+  return null;
 }

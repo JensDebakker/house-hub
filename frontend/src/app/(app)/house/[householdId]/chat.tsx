@@ -1,8 +1,10 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
+import { findHouseholdMembership } from '@/lib/households';
 import { useChatMessagesQuery, useDeleteChatMessage, useSendChatMessage } from '@/lib/useChatMessages';
 import type { ChatMessage } from '@/types';
 
@@ -14,13 +16,13 @@ function formatTime(iso: string): string {
 
 export default function ChatScreen() {
   const { user } = useAuth();
-  const householdId = user?.households[0]?.householdId;
+  const { householdId } = useLocalSearchParams<{ householdId: string }>();
 
   const messagesQuery = useChatMessagesQuery(householdId);
   const sendChatMessage = useSendChatMessage(householdId);
   const deleteChatMessage = useDeleteChatMessage(householdId);
 
-  const myRole = user?.households.find((h) => h.householdId === householdId)?.role;
+  const myRole = findHouseholdMembership(user, householdId)?.role;
   const canDelete = (message: ChatMessage) =>
     message.senderId === user?.id || myRole === 'OWNER' || user?.role === 'ADMIN';
 
