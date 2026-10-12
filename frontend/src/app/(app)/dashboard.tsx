@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Text } from 'react-native';
 import { Module, TitleBarChip } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { formatHouseStatus } from '@/lib/houseStatus';
+import { assignHouseColors } from '@/lib/houseColors';
 import { setDefaultHousehold } from '@/lib/households';
 
 const DEFAULT_MARKER_COLOR = '#f59e0b';
@@ -28,6 +29,14 @@ export default function DashboardScreen() {
   const { user, setHouseholds } = useAuth();
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Computed once per households change, not once per tile - assignHouseColors itself
+  // resolves collisions over the whole list, so calling it from inside the .map() below
+  // would redo that same whole-list work for every single tile on every render.
+  const houseColors = useMemo(
+    () => assignHouseColors((user?.households ?? []).map((h) => h.householdId)),
+    [user?.households],
+  );
 
   const makeDefault = async (householdId: string) => {
     setError(null);
@@ -53,7 +62,7 @@ export default function DashboardScreen() {
             title={household.householdName}
             subtitle={formatHouseStatus(household.memberCount ?? 0, household.onlineCount ?? 0)}
             href={`/house/${household.householdId}/dashboard`}
-            color="#2563eb"
+            color={houseColors.get(household.householdId) ?? '#2563eb'}
             titleBarActions={
               <DefaultHouseMarker
                 isDefault={Boolean(household.isDefault)}
