@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Module } from '@/components/Module';
+import { Text } from 'react-native';
+import { Module, TitleBarChip } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
@@ -8,7 +8,7 @@ import { formatHouseStatus } from '@/lib/houseStatus';
 import { assignHouseColors } from '@/lib/houseColors';
 import { setDefaultHousehold } from '@/lib/households';
 
-const DEFAULT_MARKER_COLOR = 'rgba(0,0,0,0.55)';
+const DEFAULT_MARKER_COLOR = '#f59e0b';
 
 /** The default-house marker in a house tile's top-right corner: a filled star (not
  * tappable) if this already is the user's default, an outline star (tappable, sets it as
@@ -16,21 +16,10 @@ const DEFAULT_MARKER_COLOR = 'rgba(0,0,0,0.55)';
  * swallows taps on separately from the tile's own tap-to-open - same idiom the
  * Screensaver tile's "Start" shortcut already uses. */
 function DefaultHouseMarker({ isDefault, onPress, busy }: { isDefault: boolean; onPress: () => void; busy: boolean }) {
-  if (isDefault) {
-    return (
-      <View style={{ backgroundColor: DEFAULT_MARKER_COLOR, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-        <Text style={{ color: 'white', fontSize: 13 }}>★</Text>
-      </View>
-    );
-  }
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={busy}
-      style={{ backgroundColor: DEFAULT_MARKER_COLOR, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, opacity: busy ? 0.6 : 1 }}
-    >
-      <Text style={{ color: 'white', fontSize: 13 }}>☆</Text>
-    </Pressable>
+    <TitleBarChip color={DEFAULT_MARKER_COLOR} onPress={isDefault ? undefined : onPress} disabled={busy}>
+      <Text style={{ color: DEFAULT_MARKER_COLOR, fontSize: 13 }}>{isDefault ? '★' : '☆'}</Text>
+    </TitleBarChip>
   );
 }
 

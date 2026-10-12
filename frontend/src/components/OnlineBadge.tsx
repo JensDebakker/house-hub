@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
+import { TitleBarChip } from '@/components/Module';
 import { useWebSocketChannel } from '@/contexts/WebSocketContext';
-import { pastelize } from '@/lib/color';
 
 const ONLINE_COLOR = '#16a34a';
 
@@ -32,21 +32,9 @@ export function OnlineBadge({ count }: { count: number | null }) {
   if (count === null) return null;
 
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        backgroundColor: pastelize(ONLINE_COLOR),
-        borderWidth: 2,
-        borderColor: ONLINE_COLOR,
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-      }}
-    >
+    <TitleBarChip color={ONLINE_COLOR}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: ONLINE_COLOR }} />
       <Text style={{ color: ONLINE_COLOR, fontSize: 13, fontWeight: '700' }}>{count} online</Text>
-    </View>
+    </TitleBarChip>
   );
 }

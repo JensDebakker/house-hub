@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
-import { Pressable, Text } from 'react-native';
-import { Module } from '@/components/Module';
+import { Text } from 'react-native';
+import { Module, TitleBarChip } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { navigateToHref } from '@/lib/navigation';
@@ -40,17 +40,9 @@ export default function HouseDashboardScreen() {
         href={screensaverHref}
         color={SCREENSAVER_COLOR}
         titleBarActions={
-          <Pressable
-            onPress={openScreensaver}
-            style={{
-              backgroundColor: 'rgba(0,0,0,0.55)',
-              borderRadius: 999,
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>Start</Text>
-          </Pressable>
+          <TitleBarChip color={SCREENSAVER_COLOR} onPress={openScreensaver}>
+            <Text style={{ color: SCREENSAVER_COLOR, fontSize: 11, fontWeight: '700' }}>Start</Text>
+          </TitleBarChip>
         }
       />
       <Module tile title="Files" subtitle="Shared uploads" href={`/house/${householdId}/files`} color="#ca8a04" />
