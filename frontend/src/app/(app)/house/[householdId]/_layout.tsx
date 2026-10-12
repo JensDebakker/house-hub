@@ -1,10 +1,10 @@
 import { router, Slot, useLocalSearchParams, usePathname } from 'expo-router';
+import { useMemo } from 'react';
 import { Module, navigateBackFromCard } from '@/components/Module';
 import { OnlineBadge, useOnlinePresence } from '@/components/OnlineBadge';
 import { useAuth } from '@/contexts/AuthContext';
+import { getHouseColor } from '@/lib/houseColors';
 import { findHouseholdMembership } from '@/lib/households';
-
-const HOUSE_COLOR = '#dc2626';
 
 // Level 1 of the card stack, one level below the Houses overview: this card stays mounted
 // for as long as any /house/[householdId]/* route is open, and collapses into a frame
@@ -14,6 +14,10 @@ const HOUSE_COLOR = '#dc2626';
 // the Houses overview, same as every other instance of this collapsed-frame pattern
 // (screensaver/[householdId]/_layout.tsx, the old house/_layout.tsx) targets its own base
 // route rather than jumping past it.
+//
+// Color comes from getHouseColor(user, householdId), the same call the Houses overview
+// tile for this house makes - this card has to open in the exact color its own tile was,
+// not a fixed "House" color shared by every household.
 //
 // The live "N online" badge used to be subscribed globally (one connection, "household 0
 // is THE household"); now that WebSocketContext opens a connection per the house actually
@@ -27,11 +31,15 @@ export default function HouseLayout() {
   const basePath = `/house/${householdId}`;
   const collapsed = pathname !== `${basePath}/dashboard`;
   const onlineCount = useOnlinePresence();
+  // This layout stays mounted across every sub-route inside the house (dashboard, chat,
+  // files, ...), re-rendering on each one via usePathname() above - memoized so switching
+  // tabs doesn't re-run the color assignment's full sort+hash+collision pass each time.
+  const color = useMemo(() => getHouseColor(user, householdId), [user, householdId]);
 
   return (
     <Module
       title={household?.householdName ?? 'House'}
-      color={HOUSE_COLOR}
+      color={color}
       collapsed={collapsed}
       onCollapsedPress={() => navigateBackFromCard(() => router.replace(`/house/${householdId}/dashboard`))}
       titleBarDisplays={<OnlineBadge count={onlineCount} />}
