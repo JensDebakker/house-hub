@@ -40,16 +40,19 @@ function hashToIndex(id: string, mod: number): number {
  * its preferred slot, nudged forward past any slot a lexicographically earlier id in
  * the same list already took - so two houses never render in the same color even if
  * their hashes collide, and the result doesn't depend on the order `householdIds`
- * arrives in (the backend's membership list has no guaranteed order). Beyond
- * `HOUSE_PALETTE.length` houses, slots wrap and start repeating - an accepted limit
- * given how few users will belong to more than ten houses.
+ * arrives in (the backend's membership list has no guaranteed order). The search for a
+ * free slot is capped at `HOUSE_PALETTE.length` attempts per id, so once a user belongs
+ * to more households than the palette has colors, the slots that ran out of room just
+ * reuse their hashed slot as-is instead of spinning forever looking for one that isn't
+ * there - an accepted limit (repeat colors past ten houses) given how few users will
+ * ever hit it, not a crash/hang like an unbounded search would be.
  */
-function assignHouseColors(householdIds: string[]): Map<string, string> {
+export function assignHouseColors(householdIds: string[]): Map<string, string> {
   const colors = new Map<string, string>();
   const used = new Set<number>();
   for (const id of [...householdIds].sort()) {
     let slot = hashToIndex(id, HOUSE_PALETTE.length);
-    while (used.has(slot)) {
+    for (let attempts = 0; used.has(slot) && attempts < HOUSE_PALETTE.length; attempts++) {
       slot = (slot + 1) % HOUSE_PALETTE.length;
     }
     used.add(slot);
@@ -63,7 +66,10 @@ function assignHouseColors(householdIds: string[]): Map<string, string> {
  * Level 1 card, kept in sync since both call this with the same user/householdId). Pass
  * the full `user` so the assignment is computed over every house the viewer belongs to -
  * calling this with just one id in isolation would lose the collision check against
- * their other houses.
+ * their other houses. Recomputes the whole assignment on every call - fine for the
+ * single-id call site (the per-house card, one call per open house), but a caller
+ * rendering every household at once (the Houses overview) should call
+ * `assignHouseColors` directly, once, instead of this per tile.
  */
 export function getHouseColor(user: User | null | undefined, householdId: string | undefined): string {
   const ids = user?.households.map((h) => h.householdId) ?? [];
