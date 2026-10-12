@@ -5,6 +5,7 @@ import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { formatHouseStatus } from '@/lib/houseStatus';
+import { getHouseColor } from '@/lib/houseColors';
 import { setDefaultHousehold } from '@/lib/households';
 
 const DEFAULT_MARKER_COLOR = 'rgba(0,0,0,0.55)';
@@ -64,7 +65,7 @@ export default function DashboardScreen() {
             title={household.householdName}
             subtitle={formatHouseStatus(household.memberCount ?? 0, household.onlineCount ?? 0)}
             href={`/house/${household.householdId}/dashboard`}
-            color="#2563eb"
+            color={getHouseColor(user, household.householdId)}
             titleBarActions={
               <DefaultHouseMarker
                 isDefault={Boolean(household.isDefault)}
