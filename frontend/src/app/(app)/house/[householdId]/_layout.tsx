@@ -1,4 +1,5 @@
 import { router, Slot, useLocalSearchParams, usePathname } from 'expo-router';
+import { useMemo } from 'react';
 import { Module, navigateBackFromCard } from '@/components/Module';
 import { OnlineBadge, useOnlinePresence } from '@/components/OnlineBadge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -30,11 +31,15 @@ export default function HouseLayout() {
   const basePath = `/house/${householdId}`;
   const collapsed = pathname !== `${basePath}/dashboard`;
   const onlineCount = useOnlinePresence();
+  // This layout stays mounted across every sub-route inside the house (dashboard, chat,
+  // files, ...), re-rendering on each one via usePathname() above - memoized so switching
+  // tabs doesn't re-run the color assignment's full sort+hash+collision pass each time.
+  const color = useMemo(() => getHouseColor(user, householdId), [user, householdId]);
 
   return (
     <Module
       title={household?.householdName ?? 'House'}
-      color={getHouseColor(user, householdId)}
+      color={color}
       collapsed={collapsed}
       onCollapsedPress={() => navigateBackFromCard(() => router.replace(`/house/${householdId}/dashboard`))}
       titleBarDisplays={<OnlineBadge count={onlineCount} />}
