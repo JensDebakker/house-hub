@@ -135,22 +135,76 @@ function TitleBarSlot({
             copy above, which is an out-of-flow sibling specifically so it's immune to this) -
             so capping this box also squeezes the inner's own layout width, wrapping/clipping
             real content instead of cleanly cropping it. Confirmed: the online badge started
-            getting cut off on its right and bottom edges under real use. */}
-        <Animated.View style={{ transform: [{ scale }] }}>{inner}</Animated.View>
+            getting cut off on its right and bottom edges under real use.
+
+            transformOrigin is 'left top' rather than the RN default (center): `scale`
+            shrinks `inner` around whatever point transformOrigin names, but the outer box
+            above is sized and positioned as a LEFT/TOP-anchored footprint
+            (`naturalSize * scale`, flush against this slot's own top-left corner in the
+            row). Scaling around the center would shrink inner toward the midpoint of its
+            full natural-size box instead of toward that corner, so the visible (post-scale)
+            content drifts away from the outer box's actual bounds as scale shrinks - exactly
+            the clipped-pill-with-a-gap-beside-it seen in production (right and bottom edges
+            cut off, since the content overshoots the box on those sides while the top/left
+            seem fine only by coincidence of having nowhere to drift past 0). Anchoring the
+            scale at the same corner the outer box is anchored at keeps the visible content
+            exactly filling the outer box at every point in the animation, left slot or right
+            slot alike. */}
+        <Animated.View style={{ transform: [{ scale }], transformOrigin: 'left top' }}>{inner}</Animated.View>
       </Animated.View>
     </>
   );
 }
 
+/** The title text itself, factored out of `ModuleTitleBar` so the bar's layout and the
+ * title's own styling are two separate concerns. Purely presentational - all the sizing it
+ * needs (font size, color) comes from the bar around it. */
+function ModuleTitleBarTitle({
+  fg,
+  title,
+  fontSize,
+}: {
+  fg: string;
+  title: string;
+  fontSize: Animated.WithAnimatedValue<number>;
+}) {
+  return (
+    <Animated.Text numberOfLines={1} style={{ fontSize, fontWeight: '700', color: fg, textAlign: 'center' }}>
+      {title}
+    </Animated.Text>
+  );
+}
+
 /**
- * Lays out a module's title bar as a row: optional displays on the left, the title centered
- * and flexible in the middle, optional action buttons on the right. Shared by the collapsed,
- * open and fullscreen render modes below - each just passes either Animated interpolations
- * (collapsed/open, so the row shrinks in sync with the title as the module collapses) or
- * plain static numbers (fullscreen, which has no parent to collapse in response to) for the
- * sizing fields; Animated.View/Text accept either in the same style object.
+ * Lays out a module's title bar: optional displays on the left, optional action buttons on
+ * the right, the title centered. Shared by the collapsed, open and fullscreen render modes
+ * below - each just passes either Animated interpolations (collapsed/open, so the bar
+ * shrinks in sync with the title as the module collapses) or plain static numbers
+ * (fullscreen, which has no parent to collapse in response to) for the sizing fields;
+ * Animated.View/Text accept either in the same style object.
+ *
+ * The title is centered on the *whole bar*, not just the leftover space between the two
+ * slots: it's rendered as a layer absolutely positioned over the full width/height of the
+ * bar's content box (`position: 'relative'` is React Native's default, so no extra style is
+ * needed to anchor it there), while displays/actions sit in a normal flex row underneath
+ * with an invisible flexible spacer between them. That keeps the title dead-center
+ * regardless of how wide the two slots are relative to each other - sizing the row's two
+ * slots to match widths so a flex-centered title would land in the middle was tried and
+ * discarded: it means measuring both slots and feeding the max back down into both, extra
+ * machinery this simpler overlay doesn't need. `pointerEvents="none"` on the title layer
+ * keeps it from stealing taps meant for the slots underneath (or the collapsed frame's
+ * tap-to-go-back) - the title itself has never been tappable here, unlike in tile mode.
+ *
+ * `barMinHeight` reserves enough vertical space for the title's own line height even when
+ * both slots are empty - without it, an empty flex row has no content to size itself by, the
+ * bar would collapse to just its padding, and the absolutely-positioned title (which spans
+ * the content box's actual height) would get squeezed into that near-zero space instead of
+ * reading at its intended font size. `justifyContent: 'center'` on the outer box then keeps
+ * the slot row vertically centered within that reserved height too, so a display/action chip
+ * and the title row's own vertical middle - not pinned to the top with the title centered
+ * below it.
  */
-function renderHeaderRow({
+function ModuleTitleBar({
   fg,
   title,
   displays,
@@ -159,6 +213,7 @@ function renderHeaderRow({
   paddingBottom,
   paddingHorizontal,
   fontSize,
+  barMinHeight,
   scale,
 }: {
   fg: string;
@@ -169,18 +224,69 @@ function renderHeaderRow({
   paddingBottom: Animated.WithAnimatedValue<number>;
   paddingHorizontal: Animated.WithAnimatedValue<number>;
   fontSize: Animated.WithAnimatedValue<number>;
+  barMinHeight: Animated.WithAnimatedValue<number>;
   scale: Animated.WithAnimatedValue<number>;
 }) {
   return (
     <Animated.View
-      style={{ flexDirection: 'row', alignItems: 'center', paddingTop, paddingHorizontal, paddingBottom }}
+      style={{ paddingTop, paddingBottom, paddingHorizontal, minHeight: barMinHeight, justifyContent: 'center' }}
     >
-      <TitleBarSlot content={displays} scale={scale} />
-      <Animated.Text style={{ flex: 1, fontSize, fontWeight: '700', color: fg, textAlign: 'center' }}>
-        {title}
-      </Animated.Text>
-      <TitleBarSlot content={actions} scale={scale} />
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <TitleBarSlot content={displays} scale={scale} />
+        <View style={{ flex: 1 }} />
+        <TitleBarSlot content={actions} scale={scale} />
+      </View>
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <ModuleTitleBarTitle fg={fg} title={title} fontSize={fontSize} />
+      </View>
     </Animated.View>
+  );
+}
+
+/** Rounded "chip" box for a title bar display or action - the same pastel-fill-with-a-
+ * colored-border treatment `cardSurface` gives a whole card, scaled down into a pill. Standard
+ * container for anything that sits in `titleBarDisplays`/`titleBarActions`, e.g. the online-
+ * count badge, so the title bar reads as one consistent visual language instead of each caller
+ * inventing its own badge style. Pass `onPress` to make the chip itself tappable (it's still
+ * wrapped by `TitleBarSlot`'s own tap-swallowing Pressable, same as any other title bar
+ * content); omit it for a purely informational chip. */
+export function TitleBarChip({
+  color,
+  onPress,
+  disabled,
+  children,
+}: {
+  color: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  const box = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: pastelize(color),
+        borderWidth: 2,
+        borderColor: color,
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      {children}
+    </View>
+  );
+  if (!onPress) return box;
+  return (
+    <Pressable onPress={onPress} disabled={disabled}>
+      {box}
+    </Pressable>
   );
 }
 
@@ -360,20 +466,26 @@ export function Module({
   const titlePaddingBottom = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [6, 0] });
   const titlePaddingHorizontal = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 16] });
   const titleFontSize = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28, 14] });
+  // Reserves enough height for the title's own line (roughly font size * a 1.4 line-height
+  // ratio) regardless of whether displays/actions are present - see ModuleTitleBar.
+  const titleBarMinHeight = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28 * 1.4, 14 * 1.4] });
   // Title bar displays/actions shrink at roughly the same ratio the title's own font size
   // does (14/28 = 0.5), just slightly less aggressively so small buttons/badges stay legible.
   const titleBarScale = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.6] });
-  const header = renderHeaderRow({
-    fg,
-    title,
-    displays: titleBarDisplays,
-    actions: titleBarActions,
-    paddingTop: titlePaddingTop,
-    paddingBottom: titlePaddingBottom,
-    paddingHorizontal: titlePaddingHorizontal,
-    fontSize: titleFontSize,
-    scale: titleBarScale,
-  });
+  const header = (
+    <ModuleTitleBar
+      fg={fg}
+      title={title}
+      displays={titleBarDisplays}
+      actions={titleBarActions}
+      paddingTop={titlePaddingTop}
+      paddingBottom={titlePaddingBottom}
+      paddingHorizontal={titlePaddingHorizontal}
+      fontSize={titleFontSize}
+      barMinHeight={titleBarMinHeight}
+      scale={titleBarScale}
+    />
+  );
 
   if (tile) {
     const onTilePress = () => {
@@ -420,9 +532,9 @@ export function Module({
             column count, fixed-size badge content must never spill past the tile's edge. */}
         {disabled ? (
           <View style={{ position: 'absolute', top: 10, left: 10, maxWidth: '45%', overflow: 'hidden' }}>
-            <View style={{ backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-              <Text numberOfLines={1} style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>Coming soon</Text>
-            </View>
+            <TitleBarChip color="#6b7280">
+              <Text numberOfLines={1} style={{ color: '#6b7280', fontSize: 11, fontWeight: '700' }}>Coming soon</Text>
+            </TitleBarChip>
           </View>
         ) : titleBarDisplays ? (
           <View style={{ position: 'absolute', top: 10, left: 10, maxWidth: '45%', overflow: 'hidden' }}>
