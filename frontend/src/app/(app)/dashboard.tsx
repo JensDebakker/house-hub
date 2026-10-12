@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Text } from 'react-native';
 import { Module, TitleBarChip } from '@/components/Module';
+import { OnlineBadge } from '@/components/OnlineBadge';
 import { TileGrid } from '@/components/TileGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
-import { formatHouseStatus } from '@/lib/houseStatus';
+import { formatMemberCount } from '@/lib/houseStatus';
 import { assignHouseColors } from '@/lib/houseColors';
 import { setDefaultHousehold } from '@/lib/households';
 
@@ -60,9 +61,10 @@ export default function DashboardScreen() {
             key={household.householdId}
             tile
             title={household.householdName}
-            subtitle={formatHouseStatus(household.memberCount ?? 0, household.onlineCount ?? 0)}
+            subtitle={formatMemberCount(household.memberCount ?? 0)}
             href={`/house/${household.householdId}/dashboard`}
             color={houseColors.get(household.householdId) ?? '#2563eb'}
+            titleBarDisplays={<OnlineBadge count={household.onlineCount ?? 0} compact />}
             titleBarActions={
               <DefaultHouseMarker
                 isDefault={Boolean(household.isDefault)}

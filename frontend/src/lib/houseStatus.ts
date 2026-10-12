@@ -1,15 +1,12 @@
 /**
- * Formats the "N members · N online" line shown under a house tile's title on the Houses
- * overview. A `Module` tile's `titleBarDisplays` corner slot is capped at 45% of the
- * tile's width with `overflow: hidden` (so fixed-size badge content never spills past a
- * narrow tile) - fine for one short pill (the default-house star, in `titleBarActions`),
- * but two side-by-side pills here clipped and visually collided with the centered title
- * text on anything but a very wide tile (confirmed via a Playwright screenshot during
- * manual testing). `subtitle` is plain centered text in normal flow directly under the
- * title - exactly what every other tile already uses for secondary info (e.g. "Kiosk
- * slideshow"), so reusing it here avoids the corner slot's width/overlap problems
- * entirely instead of working around them.
+ * Formats the "N members" line shown under a house tile's title on the Houses overview.
+ * Online count used to be folded into this same string ("N members · N online") since a
+ * house tile's `titleBarDisplays` corner slot, combined with the default-house star already
+ * occupying `titleBarActions`, previously collided with the centered title text (see
+ * `Module`'s tile-mode `titleInset`, which now reserves clearance for that combination) -
+ * online count has since moved to `titleBarDisplays` (an `OnlineBadge`) now that that's
+ * fixed, leaving this to format member count alone.
  */
-export function formatHouseStatus(memberCount: number, onlineCount: number): string {
-  return `${memberCount} member${memberCount === 1 ? '' : 's'} · ${onlineCount} online`;
+export function formatMemberCount(memberCount: number): string {
+  return `${memberCount} member${memberCount === 1 ? '' : 's'}`;
 }
