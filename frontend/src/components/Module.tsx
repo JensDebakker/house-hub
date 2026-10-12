@@ -93,9 +93,13 @@ function entersFreshDynamicSegment(currentPathname: string, href: string): boole
 function TitleBarSlot({
   content,
   scale,
+  onNaturalWidth,
 }: {
   content: ReactNode;
   scale: Animated.WithAnimatedValue<number>;
+  /** Reports this slot's natural (pre-scale) width up to `ModuleTitleBar`, so it can keep
+   * the centered title's own box from ever overlapping either slot - see there. */
+  onNaturalWidth?: (width: number) => void;
 }) {
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
 
@@ -118,6 +122,7 @@ function TitleBarSlot({
         onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
           setNaturalSize((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
+          onNaturalWidth?.(width);
         }}
       >
         {inner}
@@ -184,16 +189,23 @@ function ModuleTitleBarTitle({
  * Animated.View/Text accept either in the same style object.
  *
  * The title is centered on the *whole bar*, not just the leftover space between the two
- * slots: it's rendered as a layer absolutely positioned over the full width/height of the
- * bar's content box (`position: 'relative'` is React Native's default, so no extra style is
- * needed to anchor it there), while displays/actions sit in a normal flex row underneath
- * with an invisible flexible spacer between them. That keeps the title dead-center
- * regardless of how wide the two slots are relative to each other - sizing the row's two
- * slots to match widths so a flex-centered title would land in the middle was tried and
- * discarded: it means measuring both slots and feeding the max back down into both, extra
- * machinery this simpler overlay doesn't need. `pointerEvents="none"` on the title layer
- * keeps it from stealing taps meant for the slots underneath (or the collapsed frame's
+ * slots: it's rendered as a layer absolutely positioned over the bar's content box
+ * (`position: 'relative'` is React Native's default, so no extra style is needed to anchor
+ * it there), while displays/actions sit in a normal flex row underneath with an invisible
+ * flexible spacer between them. That keeps the title dead-center regardless of how wide the
+ * two slots are relative to each other. `pointerEvents="none"` on the title layer keeps it
+ * from stealing taps meant for the slots underneath (or the collapsed frame's
  * tap-to-go-back) - the title itself has never been tappable here, unlike in tile mode.
+ *
+ * The title layer's own `left`/`right` insets aren't pinned to 0 - each slot reports its own
+ * natural (pre-scale) width up via `onNaturalWidth`, and both insets are set to
+ * `scale * max(leftWidth, rightWidth)`, not each side's own width. Using the same (larger)
+ * value on *both* sides is what keeps the title's available box centered and symmetric
+ * (instead of off-center toward whichever slot happens to be narrower) while guaranteeing it
+ * never overlaps either slot: a title long enough to reach that inset now truncates
+ * (`numberOfLines` on `ModuleTitleBarTitle`) instead of rendering on top of a chip - title
+ * text is arbitrary data (e.g. a household's own name), not layout the two slots can be
+ * assumed to leave room for on their own.
  *
  * `barMinHeight` reserves enough vertical space for the title's own line height even when
  * both slots are empty - without it, an empty flex row has no content to size itself by, the
@@ -227,21 +239,32 @@ function ModuleTitleBar({
   barMinHeight: Animated.WithAnimatedValue<number>;
   scale: Animated.WithAnimatedValue<number>;
 }) {
+  const [leftWidth, setLeftWidth] = useState(0);
+  const [rightWidth, setRightWidth] = useState(0);
+  // 0 (not the last-measured width) whenever a slot has no content, so a slot that's
+  // currently empty never reserves space for content it last had before being cleared.
+  const maxSideWidth = Math.max(displays ? leftWidth : 0, actions ? rightWidth : 0);
+  // A flat (unscaled) gap on top of the slot's own width, only when a slot is actually
+  // present - otherwise a maxed-out title would truncate flush against a chip's edge with
+  // zero breathing room, since the title zone's edge and the chip's own box edge would
+  // otherwise land at exactly the same point.
+  const sideInset = maxSideWidth > 0 ? Animated.add(Animated.multiply(scale, maxSideWidth), 8) : 0;
+
   return (
     <Animated.View
       style={{ paddingTop, paddingBottom, paddingHorizontal, minHeight: barMinHeight, justifyContent: 'center' }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <TitleBarSlot content={displays} scale={scale} />
+        <TitleBarSlot content={displays} scale={scale} onNaturalWidth={setLeftWidth} />
         <View style={{ flex: 1 }} />
-        <TitleBarSlot content={actions} scale={scale} />
+        <TitleBarSlot content={actions} scale={scale} onNaturalWidth={setRightWidth} />
       </View>
-      <View
+      <Animated.View
         pointerEvents="none"
-        style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, alignItems: 'center', justifyContent: 'center' }}
+        style={{ position: 'absolute', top: 0, bottom: 0, left: sideInset, right: sideInset, alignItems: 'center', justifyContent: 'center' }}
       >
         <ModuleTitleBarTitle fg={fg} title={title} fontSize={fontSize} />
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 }
