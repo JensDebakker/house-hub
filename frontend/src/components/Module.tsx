@@ -395,6 +395,14 @@ export function Module({
   const [progress] = useState(() => new Animated.Value(0));
   const [contentOpacity] = useState(() => new Animated.Value(0));
   const [collapseAnim] = useState(() => new Animated.Value(collapsed ? 1 : 0));
+  // Tile mode only (see below) - the tile's own rendered width, so the title's inset can be
+  // given as a definite number rather than a percentage. A percentage `width` on the
+  // title's wrapper View never resolved against the tile's actual size here (confirmed by
+  // inspecting the rendered layout: it fell back to shrink-to-content, i.e. 0 width plus
+  // whatever padding was set) even though the tile itself has a perfectly definite width by
+  // the time it renders (TileGrid gives each tile an explicit numeric `width` style) - a
+  // plain numeric `width` resolves correctly where the equivalent percentage didn't.
+  const [tileWidth, setTileWidth] = useState<number | null>(null);
 
   const hasOrigin = params.cardX !== undefined;
 
@@ -523,10 +531,51 @@ export function Module({
       });
     };
 
+    // Both tile corners are absolutely positioned overlays, not in-flow siblings of the
+    // centered title text below - on purpose, so a tile's title sits at the same height
+    // whether or not that particular tile happens to have a corner badge, keeping every
+    // tile's title row aligned across a grid. That means the title itself has to stay clear
+    // of whichever corners are actually populated, rather than the corners making room for
+    // it. A single corner badge (today, every tile that sets one - the Screensaver "Start"
+    // action, a disabled tile's "Coming soon") has shipped fine with no inset: short title
+    // text next to one small pill doesn't reach it. Both corners at once (new as of house
+    // tiles getting an online-count display alongside the existing default-house star) is
+    // the combination that previously visually collided with the title on anything but a
+    // very wide tile - so only that combination reserves horizontal clearance (both sides,
+    // not just whichever single side has content, which would shift the title off-center -
+    // see ModuleTitleBar for the same symmetric-inset reasoning at the card-header level),
+    // and shrinks the font slightly to buy back some of the room the clearance costs -
+    // between the two, a narrow 2-column phone tile (where every pixel is scarce; a 5-column
+    // desktop tile has room to spare) still reliably avoids colliding with either badge.
+    //
+    // The inset is a fixed px number, not a `%`/`'100%'`-based one, and the title is wrapped
+    // in a `View` explicitly sized to the tile's own *measured* width (`tileWidth` state,
+    // above) rather than relying on the Text's own shrink-to-fit sizing or a percentage
+    // width to establish that box: both were tried and, per actual rendered layout
+    // (inspected directly, not guessed at) resolved to zero content width plus whatever
+    // padding was set, instead of the tile's real available width - a React Native Web
+    // quirk with percentage sizing in this nested-flex position, not a logic bug. A plain
+    // number resolves correctly where the equivalent `%`/`'100%'` didn't. `overflow:
+    // 'hidden'` on that same wrapper is a hard backstop against any further overflow -
+    // title text is arbitrary data (a household's own name), so there's no guarantee any
+    // fixed clearance is generous enough for every possible name at every tile width.
+    const hasLeftBadge = disabled || !!titleBarDisplays;
+    const hasRightBadge = !disabled && !!titleBarActions;
+    const bothBadges = hasLeftBadge && hasRightBadge;
+    const titleInset = bothBadges ? 46 : 0;
+    const titleFontSize = bothBadges ? 15 : 17;
+    // Subtracts the Pressable's own `padding: 16` on both sides, matching the box the title
+    // actually renders inside.
+    const tileContentWidth = tileWidth !== null ? tileWidth - 32 : undefined;
+
     return (
       <Pressable
         ref={containerRef}
         onPress={onTilePress}
+        onLayout={(e) => {
+          const { width } = e.nativeEvent.layout;
+          setTileWidth((prev) => (prev === width ? prev : width));
+        }}
         style={({ pressed }) => [
           {
             ...cardSurface(color),
@@ -541,7 +590,11 @@ export function Module({
           !disabled && pressed && { opacity: 0.85 },
         ]}
       >
-        <Text style={{ fontSize: 17, fontWeight: '700', color, textAlign: 'center' }}>{title}</Text>
+        <View style={{ width: tileContentWidth, paddingHorizontal: titleInset, overflow: 'hidden' }}>
+          <Text numberOfLines={3} style={{ fontSize: titleFontSize, fontWeight: '700', color, textAlign: 'center' }}>
+            {title}
+          </Text>
+        </View>
         {subtitle ? (
           <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2, textAlign: 'center' }}>{subtitle}</Text>
         ) : null}
