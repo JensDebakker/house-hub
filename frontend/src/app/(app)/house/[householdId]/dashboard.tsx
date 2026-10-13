@@ -49,7 +49,6 @@ export default function HouseDashboardScreen() {
       <Module tile title="Chat" subtitle="Household messages" href={`/house/${householdId}/chat`} color="#db2777" />
       <Module tile title="House" subtitle="View, leave, or manage" href={`/house/${householdId}/house`} color="#dc2626" />
       <Module tile title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
-      <Module tile title="App" subtitle="Install & app info" href="/app" color="#0ea5e9" />
       <Module tile title="Feedback" subtitle="Report a bug or idea" href="/feedback" color="#f97316" />
       {user?.role === 'ADMIN' ? (
         <Module tile title="Admin" subtitle="Manage everything" href="/admin" color="#6b7280" />

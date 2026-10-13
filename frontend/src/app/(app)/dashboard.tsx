@@ -76,6 +76,7 @@ export default function DashboardScreen() {
         ))}
         <Module tile title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
         <Module tile title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
+        <Module tile title="App" subtitle="Install & app info" href="/app" color="#0ea5e9" />
       </TileGrid>
     </>
   );
