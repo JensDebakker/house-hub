@@ -23,9 +23,17 @@ function isRunningStandalone(): boolean {
  * to home screen manually via the share sheet), and native builds have no concept of it. */
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [dismissed, setDismissed] = useState(
-    () => Platform.OS === 'web' && window.localStorage.getItem(DISMISSED_KEY) === '1'
-  );
+  const [dismissed, setDismissed] = useState(() => {
+    if (Platform.OS !== 'web') return false;
+    // localStorage can throw (blocked cookies/storage, some in-app browsers) - this
+    // renders unconditionally above everything else in the root layout with no error
+    // boundary, so a thrown error here would blank the entire app, not just this banner.
+    try {
+      return window.localStorage.getItem(DISMISSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -51,7 +59,11 @@ export function InstallPrompt() {
   };
 
   const onDismiss = () => {
-    window.localStorage.setItem(DISMISSED_KEY, '1');
+    try {
+      window.localStorage.setItem(DISMISSED_KEY, '1');
+    } catch {
+      // Storage may be blocked - the banner will just reappear next visit, which is fine.
+    }
     setDismissed(true);
   };
 
