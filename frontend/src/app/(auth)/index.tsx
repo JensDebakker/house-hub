@@ -1,9 +1,15 @@
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { Text } from 'react-native';
+import { Module } from '@/components/Module';
+import { TileGrid } from '@/components/TileGrid';
 import { loadPendingInviteCode } from '@/lib/storage';
 
+const LOGIN_COLOR = '#2563eb';
+const REGISTER_COLOR = '#16a34a';
+const APP_COLOR = '#0ea5e9';
+
+// Level 0 of this (auth) stack's own card hierarchy (see _layout.tsx) - one tile per
+// pre-login module, same shape as the Houses overview's tile grid.
 export default function AuthLandingScreen() {
   const [hasPendingInvite, setHasPendingInvite] = useState(false);
 
@@ -12,46 +18,22 @@ export default function AuthLandingScreen() {
   }, []);
 
   return (
-    <ScreenContainer>
-      <Text style={{ fontSize: 32, fontWeight: '700' }}>House Hub</Text>
-      <Text style={{ color: '#666', marginBottom: 8 }}>
+    <>
+      <Text style={{ color: '#666', paddingHorizontal: 4 }}>
         Manage your house — tasks, shopping, supplies, and more.
       </Text>
 
       {hasPendingInvite ? (
-        <Text style={{ color: '#2563eb', fontWeight: '600' }}>
+        <Text style={{ color: LOGIN_COLOR, fontWeight: '600', paddingHorizontal: 4 }}>
           Sign in or register to join the house you were invited to.
         </Text>
       ) : null}
 
-      <Pressable
-        onPress={() => router.push('/(auth)/login')}
-        style={({ pressed }) => [cardStyle, pressed && { opacity: 0.85 }]}
-      >
-        <Text style={{ fontSize: 22, fontWeight: '700', color: 'white' }}>Log in</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.85)', marginTop: 4 }}>
-          Already have an account? Welcome back.
-        </Text>
-      </Pressable>
-
-      <Pressable
-        onPress={() => router.push('/(auth)/register')}
-        style={({ pressed }) => [cardStyle, secondaryCardStyle, pressed && { opacity: 0.85 }]}
-      >
-        <Text style={{ fontSize: 22, fontWeight: '700' }}>Register</Text>
-        <Text style={{ color: '#666', marginTop: 4 }}>New here? Create an account.</Text>
-      </Pressable>
-    </ScreenContainer>
+      <TileGrid>
+        <Module tile title="Log in" subtitle="Already have an account?" href="/(auth)/login" color={LOGIN_COLOR} />
+        <Module tile title="Register" subtitle="New here? Create one" href="/(auth)/register" color={REGISTER_COLOR} />
+        <Module tile title="App" subtitle="Install & app info" href="/app" color={APP_COLOR} />
+      </TileGrid>
+    </>
   );
 }
-
-const cardStyle = {
-  backgroundColor: '#2563eb',
-  borderRadius: 16,
-  padding: 24,
-  marginTop: 8,
-};
-
-const secondaryCardStyle = {
-  backgroundColor: '#f3f4f6',
-};
