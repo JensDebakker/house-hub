@@ -1,7 +1,7 @@
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
@@ -34,9 +34,7 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <Text style={{ fontSize: 28, fontWeight: '700' }}>Reset password</Text>
-
+    <Module title="Reset password" color={RESET_PASSWORD_COLOR}>
       {message ? (
         <>
           <Text style={{ color: '#2e7d32' }}>{message}</Text>
@@ -74,6 +72,6 @@ export default function ResetPasswordScreen() {
           </Link>
         </>
       )}
-    </ScreenContainer>
+    </Module>
   );
 }
