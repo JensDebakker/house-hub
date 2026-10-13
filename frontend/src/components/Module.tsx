@@ -163,7 +163,15 @@ function TitleBarSlot({
 
 /** The title text itself, factored out of `ModuleTitleBar` so the bar's layout and the
  * title's own styling are two separate concerns. Purely presentational - all the sizing it
- * needs (font size, color) comes from the bar around it. */
+ * needs (font size, color) comes from the bar around it.
+ *
+ * `numberOfLines={1}` stays on as a backstop (so a title so long even the minimum font
+ * scale in `ModuleTitleBar` can't save it still ellipsizes instead of wrapping into a
+ * second line and blowing out the bar's reserved height), but it's no longer the primary
+ * way a narrow bar copes with a long title - `ModuleTitleBar` measures how wide this text
+ * *wants* to be (via a hidden sibling, not this element itself - see there) and shrinks
+ * `fontSize` to fit instead, matching the expectation that the whole bar (badges included)
+ * shrinks together rather than the title alone getting clipped. */
 function ModuleTitleBarTitle({
   fg,
   title,
@@ -229,6 +237,22 @@ function ModuleTitleBarTitle({
  * `justifyContent: 'center'` on the outer box then keeps the slot row vertically centered
  * within that reserved height too, so a display/action chip and the title share the same
  * vertical middle - not pinned to the top with the title centered below it.
+ *
+ * `titleFitScale` is the piece that keeps a long title (a household's own name - arbitrary
+ * data, no guaranteed length) from ever hard-truncating on a narrow phone bar: a hidden,
+ * unscaled sibling (`naturalTitleWidth` below) measures how wide the title text actually
+ * wants to be at the bar's fully-open `baseFontSize`, and that's compared against how much
+ * width the bar has *actually* measured itself at (`barWidth`, via this component's own
+ * `onLayout`) minus the base padding and side insets. Deliberately uses the OPEN state's own
+ * (larger) `basePaddingHorizontal`/inset as the reference, not whatever `paddingHorizontal`/
+ * `scale` happen to be live-animating through right now: those are `Animated.WithAnimatedValue`s
+ * driven off a JS (not native) animation, not plain numbers usable in arithmetic, and the
+ * open state reserves the *most* space of any point in the collapse animation - so sizing
+ * against it errs toward shrinking the title a touch more than strictly necessary once
+ * actually collapsed (which has more room to spare) rather than ever under-shrinking and
+ * truncating anyway. `numberOfLines` on `ModuleTitleBarTitle` stays on as a hard backstop
+ * below the floor this clamps to (a still-legible ~10px) - a title long enough to still not
+ * fit even that small still ellipsizes rather than shrinking into unreadable text.
  */
 function ModuleTitleBar({
   fg,
@@ -241,6 +265,8 @@ function ModuleTitleBar({
   fontSize,
   barMinHeight,
   scale,
+  baseFontSize,
+  basePaddingHorizontal,
 }: {
   fg: string;
   title: string;
@@ -252,9 +278,16 @@ function ModuleTitleBar({
   fontSize: Animated.WithAnimatedValue<number>;
   barMinHeight: Animated.WithAnimatedValue<number>;
   scale: Animated.WithAnimatedValue<number>;
+  /** The title's font size at collapseAnim=0 (fully open) - the reference size the hidden
+   * measuring sibling renders at, see `titleFitScale` above. */
+  baseFontSize: number;
+  /** The bar's paddingHorizontal at collapseAnim=0 (fully open) - see `titleFitScale` above. */
+  basePaddingHorizontal: number;
 }) {
   const [leftWidth, setLeftWidth] = useState(0);
   const [rightWidth, setRightWidth] = useState(0);
+  const [barWidth, setBarWidth] = useState(0);
+  const [naturalTitleWidth, setNaturalTitleWidth] = useState(0);
   // 0 (not the last-measured width) whenever a slot has no content, so a slot that's
   // currently empty never reserves space for content it last had before being cleared.
   const maxSideWidth = Math.max(displays ? leftWidth : 0, actions ? rightWidth : 0);
@@ -263,9 +296,23 @@ function ModuleTitleBar({
   // zero breathing room, since the title zone's edge and the chip's own box edge would
   // otherwise land at exactly the same point.
   const sideInset = maxSideWidth > 0 ? Animated.add(Animated.multiply(scale, maxSideWidth), 8) : 0;
+  const openSideInset = maxSideWidth > 0 ? maxSideWidth + 8 : 0;
+  const availableTitleWidth = barWidth > 0 ? barWidth - 2 * basePaddingHorizontal - 2 * openSideInset : 0;
+  // Floor is relative to baseFontSize (28), not an absolute scale picked in a vacuum - it's
+  // chosen to bottom out around a still-legible ~10px, the smallest size this bar's title
+  // ever renders at even for a household name long enough that no realistic bar width could
+  // fit it at a larger size without wrapping.
+  const titleFitScale =
+    availableTitleWidth > 0 && naturalTitleWidth > 0
+      ? Math.max(10 / baseFontSize, Math.min(1, availableTitleWidth / naturalTitleWidth))
+      : 1;
 
   return (
     <Animated.View
+      onLayout={(e) => {
+        const { width } = e.nativeEvent.layout;
+        setBarWidth((prev) => (prev === width ? prev : width));
+      }}
       style={{ paddingTop, paddingBottom, paddingHorizontal, minHeight: barMinHeight, justifyContent: 'center' }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -273,6 +320,41 @@ function ModuleTitleBar({
         <View style={{ flex: 1 }} />
         <TitleBarSlot content={actions} scale={scale} onNaturalWidth={setRightWidth} />
       </View>
+      {/* Hidden, unscaled sibling measuring how wide the title *wants* to be at the bar's
+          base font size - the same "shadow sibling kept entirely out of the box its own
+          measurement feeds into" idiom TitleBarSlot uses above (see its own comment for why:
+          an in-flow or even absolutely-positioned child measured from inside the box that's
+          itself sized off that measurement isn't reliably decoupled from that box's current
+          size).
+
+          `aria-hidden` keeps this duplicate copy of the title text out of the
+          accessibility tree, so a real screen reader doesn't announce the title twice. RN's
+          own `accessibilityElementsHidden`/`importantForAccessibility` props were tried
+          first and don't do this on web at all - react-native-web doesn't forward either of
+          them to any DOM attribute (confirmed in its source: neither name appears anywhere
+          in its `forwardedProps`/`createDOMProps` modules), so they're a native-only no-op
+          here; `aria-hidden` is RNW's own explicitly-forwarded prop instead (see its
+          `forwardedProps` module), and the one that actually lands in the DOM.
+
+          This does NOT make Playwright's `getByText` stop matching it, though - confirmed
+          empirically (it still counted toward `login.spec.ts`'s `getByText('House Hub')`
+          strict-mode violation even with `aria-hidden="true"` present). Playwright's text
+          locators match on raw text content regardless of `aria-hidden`, `opacity`, or any
+          other hidden-from-a11y signal - only `display: none` (which would also zero out
+          the very box this element exists to measure) removes an element from matching.
+          A Playwright query against a title has to pick the real, visible copy explicitly
+          (`.last()` - this shadow copy always renders before it in DOM order, see the
+          e2e specs) rather than relying on there being only one match. */}
+      <Text
+        aria-hidden
+        style={{ position: 'absolute', opacity: 0, fontSize: baseFontSize, fontWeight: '700' }}
+        onLayout={(e) => {
+          const { width } = e.nativeEvent.layout;
+          setNaturalTitleWidth((prev) => (prev === width ? prev : width));
+        }}
+      >
+        {title}
+      </Text>
       <Animated.View
         pointerEvents="none"
         style={{
@@ -285,7 +367,7 @@ function ModuleTitleBar({
           justifyContent: 'center',
         }}
       >
-        <ModuleTitleBarTitle fg={fg} title={title} fontSize={fontSize} />
+        <ModuleTitleBarTitle fg={fg} title={title} fontSize={Animated.multiply(fontSize, titleFitScale)} />
       </Animated.View>
     </Animated.View>
   );
@@ -429,6 +511,11 @@ export function Module({
   // the time it renders (TileGrid gives each tile an explicit numeric `width` style) - a
   // plain numeric `width` resolves correctly where the equivalent percentage didn't.
   const [tileWidth, setTileWidth] = useState<number | null>(null);
+  // Tile mode only - the title's natural (single-line, base-font-size) width, measured via
+  // a hidden shadow sibling the same way ModuleTitleBar measures its own title - see
+  // `titleFitScale` below (tile branch) for how this turns into a shrink factor instead of
+  // the old fixed-at-two-sizes switch.
+  const [naturalTileTitleWidth, setNaturalTileTitleWidth] = useState(0);
 
   const hasOrigin = params.cardX !== undefined;
 
@@ -551,6 +638,8 @@ export function Module({
       fontSize={titleFontSize}
       barMinHeight={titleBarMinHeight}
       scale={titleBarScale}
+      baseFontSize={28}
+      basePaddingHorizontal={24}
     />
   );
 
@@ -578,17 +667,41 @@ export function Module({
     // whether or not that particular tile happens to have a corner badge, keeping every
     // tile's title row aligned across a grid. That means the title itself has to stay clear
     // of whichever corners are actually populated, rather than the corners making room for
-    // it. A single corner badge (today, every tile that sets one - the Screensaver "Start"
-    // action, a disabled tile's "Coming soon") has shipped fine with no inset: short title
-    // text next to one small pill doesn't reach it. Both corners at once (new as of house
-    // tiles getting an online-count display alongside the existing default-house star) is
-    // the combination that previously visually collided with the title on anything but a
-    // very wide tile - so only that combination reserves horizontal clearance (both sides,
-    // not just whichever single side has content, which would shift the title off-center -
-    // see ModuleTitleBar for the same symmetric-inset reasoning at the card-header level),
-    // and shrinks the font slightly to buy back some of the room the clearance costs -
-    // between the two, a narrow 2-column phone tile (where every pixel is scarce; a 5-column
-    // desktop tile has room to spare) still reliably avoids colliding with either badge.
+    // it.
+    //
+    // Clearance used to only kick in when BOTH corners were populated (`bothBadges`) - a
+    // single corner badge (the Screensaver "Start" action, a disabled tile's "Coming soon",
+    // or a house tile's online-count display alone) got zero inset, on the assumption that
+    // "short title text next to one small pill doesn't reach it". Confirmed via Playwright
+    // at phone width that assumption is false for several real tiles ("Tasks", "Shopping",
+    // "Supplies", "Calendar", "Screensaver") on a narrow 2-column grid: the badge visibly
+    // overlapped/covered the title.
+    //
+    // Each corner now reserves clearance independently (`titleInsetLeft`/`titleInsetRight`),
+    // rather than always reserving the same amount symmetrically on *both* sides whenever
+    // *either* one is populated. Tried fully symmetric first (reserve `max` of the two on
+    // both sides even for a single badge, mirroring `ModuleTitleBar`'s own `sideInset`) and
+    // confirmed via Playwright that it overcorrects on a narrow 2-column phone tile: a
+    // single ~46px badge already consumes a third of a ~130px tile's total width, so
+    // reserving that *again* on the empty side as well left as little as 9px of actual title
+    // width and forced the title down to a barely-legible, badly-wrapped sliver even for a
+    // short word like "Screensaver". Reserving clearance only on the side(s) actually
+    // populated costs roughly half as much width for the single-badge case (the common one -
+    // `bothBadges` tiles still reserve both sides, same as before), at the cost of the title
+    // no longer being perfectly centered in that case - a reasonable trade negotiated in
+    // favor of the title actually being readable.
+    //
+    // `titleFitScale` replaces the old fixed-at-two-sizes font switch (15 with clearance, 17
+    // without) with a continuously measured one: a hidden shadow sibling (`naturalTileTitleWidth`
+    // state, same "sibling kept entirely out of the box its own measurement feeds into" idiom
+    // `TitleBarSlot`/`ModuleTitleBar` already use - see their own comments for why an in-flow or
+    // absolutely-positioned-inside-it child isn't reliably decoupled) measures how wide this
+    // title wants to be at the base font size, and that's compared against how much width the
+    // tile's own measured size (`tileWidth`) actually leaves once the corner clearance above is
+    // subtracted - so a title that's merely a bit too wide for a narrow 2-column phone tile
+    // shrinks to fit instead of wrapping into a cramped 3-line block. `numberOfLines={3}` on the
+    // title `Text` stays on as a backstop below the floor this clamps to, for a title long
+    // enough that no reasonable shrink makes it fit on one line anyway.
     //
     // The inset is a fixed px number, not a `%`/`'100%'`-based one, and the title is wrapped
     // in a `View` explicitly sized to the tile's own *measured* width (`tileWidth` state,
@@ -603,12 +716,20 @@ export function Module({
     // fixed clearance is generous enough for every possible name at every tile width.
     const hasLeftBadge = disabled || !!titleBarDisplays;
     const hasRightBadge = !disabled && !!titleBarActions;
-    const bothBadges = hasLeftBadge && hasRightBadge;
-    const titleInset = bothBadges ? 46 : 0;
-    const titleFontSize = bothBadges ? 15 : 17;
+    const CORNER_BADGE_CLEARANCE = 46;
+    const titleInsetLeft = hasLeftBadge ? CORNER_BADGE_CLEARANCE : 0;
+    const titleInsetRight = hasRightBadge ? CORNER_BADGE_CLEARANCE : 0;
+    const baseTileTitleFontSize = 17;
     // Subtracts the Pressable's own `padding: 16` on both sides, matching the box the title
     // actually renders inside.
     const tileContentWidth = tileWidth !== null ? tileWidth - 32 : undefined;
+    const availableTileTitleWidth =
+      tileContentWidth !== undefined ? tileContentWidth - titleInsetLeft - titleInsetRight : undefined;
+    const tileTitleFitScale =
+      availableTileTitleWidth !== undefined && availableTileTitleWidth > 0 && naturalTileTitleWidth > 0
+        ? Math.max(10 / baseTileTitleFontSize, Math.min(1, availableTileTitleWidth / naturalTileTitleWidth))
+        : 1;
+    const titleFontSize = baseTileTitleFontSize * tileTitleFitScale;
 
     return (
       <Pressable
@@ -632,7 +753,22 @@ export function Module({
           !disabled && pressed && { opacity: 0.85 },
         ]}
       >
-        <View style={{ width: tileContentWidth, paddingHorizontal: titleInset, overflow: 'hidden' }}>
+        {/* Hidden, unscaled sibling measuring how wide the title wants to be at the base
+            font size - see tileTitleFitScale above. Absolutely positioned and out of flow
+            so it never contributes to (or gets constrained by) the Pressable's own size,
+            same "sibling kept entirely out of the box its own measurement feeds into" idiom
+            TitleBarSlot/ModuleTitleBar use for their own measurements. */}
+        <Text
+          aria-hidden
+          style={{ position: 'absolute', opacity: 0, fontSize: baseTileTitleFontSize, fontWeight: '700' }}
+          onLayout={(e) => {
+            const { width } = e.nativeEvent.layout;
+            setNaturalTileTitleWidth((prev) => (prev === width ? prev : width));
+          }}
+        >
+          {title}
+        </Text>
+        <View style={{ width: tileContentWidth, paddingLeft: titleInsetLeft, paddingRight: titleInsetRight, overflow: 'hidden' }}>
           <Text numberOfLines={3} style={{ fontSize: titleFontSize, fontWeight: '700', color, textAlign: 'center' }}>
             {title}
           </Text>
