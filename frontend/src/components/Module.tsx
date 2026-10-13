@@ -197,9 +197,9 @@ function ModuleTitleBarTitle({
  * from stealing taps meant for the slots underneath (or the collapsed frame's
  * tap-to-go-back) - the title itself has never been tappable here, unlike in tile mode.
  *
- * The title layer's own `left`/`right` insets aren't pinned to 0 - each slot reports its own
- * natural (pre-scale) width up via `onNaturalWidth`, and both insets are set to
- * `scale * max(leftWidth, rightWidth)`, not each side's own width. Using the same (larger)
+ * The title layer's own `left`/`right` insets aren't pinned to `paddingHorizontal` alone -
+ * each slot reports its own natural (pre-scale) width up via `onNaturalWidth`, and both insets
+ * add `scale * max(leftWidth, rightWidth)` on top of that base padding. Using the same (larger)
  * value on *both* sides is what keeps the title's available box centered and symmetric
  * (instead of off-center toward whichever slot happens to be narrower) while guaranteeing it
  * never overlaps either slot: a title long enough to reach that inset now truncates
@@ -207,14 +207,28 @@ function ModuleTitleBarTitle({
  * text is arbitrary data (e.g. a household's own name), not layout the two slots can be
  * assumed to leave room for on their own.
  *
+ * The title layer's `top`/`bottom` insets are the bar's own `paddingTop`/`paddingBottom`, not
+ * 0 - a `position: 'absolute'` child's `top`/`bottom: 0` is flush with the *border* box of its
+ * positioned ancestor (confirmed empirically: it ignores the ancestor's own padding entirely,
+ * same as plain CSS), so pinning both to 0 made the title center on the bar's full height
+ * regardless of how asymmetric paddingTop/paddingBottom were set to be - the deliberate
+ * imbalance between them (see paddingTop/paddingBottom below) had no visible effect at all.
+ * Insetting by the actual padding values instead makes the title track the same content box
+ * the slot row already sits in, so the two stay vertically aligned with each other and the
+ * padding asymmetry finally reaches the screen.
+ *
  * `barMinHeight` reserves enough vertical space for the title's own line height even when
  * both slots are empty - without it, an empty flex row has no content to size itself by, the
- * bar would collapse to just its padding, and the absolutely-positioned title (which spans
- * the content box's actual height) would get squeezed into that near-zero space instead of
- * reading at its intended font size. `justifyContent: 'center'` on the outer box then keeps
- * the slot row vertically centered within that reserved height too, so a display/action chip
- * and the title row's own vertical middle - not pinned to the top with the title centered
- * below it.
+ * bar would collapse to just its padding, and the absolutely-positioned title (which spans the
+ * content box's actual height, per the `top`/`bottom` insets above) would get squeezed into
+ * that near-zero space instead of reading at its intended font size. Because `minHeight`
+ * constrains the bar's *total* (border-box) height, the caller has to add paddingTop +
+ * paddingBottom into `barMinHeight` itself on top of the line-height figure - otherwise
+ * `minHeight` alone caps the total height at just the line-height estimate and the padding
+ * budget gets silently absorbed rather than actually reserved (see `titleBarMinHeight` below).
+ * `justifyContent: 'center'` on the outer box then keeps the slot row vertically centered
+ * within that reserved height too, so a display/action chip and the title share the same
+ * vertical middle - not pinned to the top with the title centered below it.
  */
 function ModuleTitleBar({
   fg,
@@ -261,7 +275,15 @@ function ModuleTitleBar({
       </View>
       <Animated.View
         pointerEvents="none"
-        style={{ position: 'absolute', top: 0, bottom: 0, left: sideInset, right: sideInset, alignItems: 'center', justifyContent: 'center' }}
+        style={{
+          position: 'absolute',
+          top: paddingTop,
+          bottom: paddingBottom,
+          left: Animated.add(paddingHorizontal, sideInset),
+          right: Animated.add(paddingHorizontal, sideInset),
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
         <ModuleTitleBarTitle fg={fg} title={title} fontSize={fontSize} />
       </Animated.View>
@@ -498,8 +520,18 @@ export function Module({
   const titlePaddingHorizontal = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 16] });
   const titleFontSize = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28, 14] });
   // Reserves enough height for the title's own line (roughly font size * a 1.4 line-height
-  // ratio) regardless of whether displays/actions are present - see ModuleTitleBar.
-  const titleBarMinHeight = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28 * 1.4, 14 * 1.4] });
+  // ratio) regardless of whether displays/actions are present - see ModuleTitleBar. `minHeight`
+  // on a React Native box constrains the *total* (border-box) height, so paddingTop/paddingBottom
+  // eat into this budget rather than adding on top of it - the line-height allowance has to be
+  // layered on top of the padding here, or an asymmetric top/bottom padding gets silently
+  // squeezed down to ~0 of its intended effect whenever the padding sum is smaller than this
+  // minimum (confirmed via a Playwright layout probe: before this fix, the rendered header
+  // height always landed on exactly this line-height figure regardless of padding, and the
+  // title sat centered on the *whole* bar instead of being offset by paddingTop/paddingBottom).
+  const titleBarMinHeight = Animated.add(
+    Animated.add(titlePaddingTop, titlePaddingBottom),
+    collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [28 * 1.4, 14 * 1.4] }),
+  );
   // Title bar displays/actions shrink at roughly the same ratio the title's own font size
   // does (14/28 = 0.5), just slightly less aggressively so small buttons/badges stay legible.
   const titleBarScale = collapseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.6] });
