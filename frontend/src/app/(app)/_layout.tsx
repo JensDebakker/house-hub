@@ -43,7 +43,16 @@ function useIdleScreensaverRedirect() {
         // anywhere" case lib/navigation.ts's own comment calls out. Unlike /house, there's
         // no screensaver/index.tsx fallback to catch a stuck redirect here - it would just
         // silently fail to open the screensaver at all.
-        timer.current = setTimeout(() => navigateToHref(`/screensaver/${householdId}/start`), idleMs);
+        //
+        // Captures the current `pathname` as `returnTo` so touching the kiosk display sends
+        // the user back to whatever screen was open when they went idle, not some fixed
+        // default - `schedule` is recreated (and the timer rearmed) on every pathname change
+        // since this whole effect depends on `pathname`, so this always reflects wherever
+        // the user actually was, not just where they were when the effect first ran.
+        timer.current = setTimeout(
+          () => navigateToHref(`/screensaver/${householdId}/start`, { returnTo: pathname }),
+          idleMs,
+        );
       };
 
       schedule();

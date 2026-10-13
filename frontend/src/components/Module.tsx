@@ -367,6 +367,7 @@ export function Module({
   color,
   textColor,
   href,
+  extraParams,
   subtitle,
   tile = false,
   disabled = false,
@@ -383,6 +384,9 @@ export function Module({
   textColor?: string;
   /** Forward-navigation target - tile mode only. */
   href?: string;
+  /** Extra route params merged into the tile's navigation, alongside the auto-computed
+   * card-origin params (cardX/Y/W/H) - tile mode only. */
+  extraParams?: Record<string, string>;
   /** Shown under the title - tile mode only. */
   subtitle?: string;
   /** Render as a small grid tile instead of a card. */
@@ -554,7 +558,13 @@ export function Module({
     const onTilePress = () => {
       if (disabled || !href) return;
       containerRef.current?.measureInWindow((x, y, width, height) => {
-        const cardParams = { cardX: String(x), cardY: String(y), cardW: String(width), cardH: String(height) };
+        const cardParams = {
+          cardX: String(x),
+          cardY: String(y),
+          cardW: String(width),
+          cardH: String(height),
+          ...extraParams,
+        };
         if (entersFreshDynamicSegment(pathname, href)) {
           navigateToHref(href, cardParams);
         } else {
