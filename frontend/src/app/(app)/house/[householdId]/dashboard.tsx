@@ -14,21 +14,22 @@ const SCREENSAVER_COLOR = '#7c3aed';
 export default function HouseDashboardScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const { user } = useAuth();
-  const screensaverHref = `/screensaver/${householdId}`;
-
-  // Shared by the tile's own tap-to-open (which goes through Module's own onTilePress,
-  // not this function) and its "Start" title bar action, which does the exact same
-  // navigation - Start is just an explicit shortcut for what opening the module already
-  // does, not a second distinct behavior. No cardX/Y/W/H origin params, since the
-  // screensaver renders as a fullscreen module with no entrance animation for them to
-  // feed. Uses the shared `navigateToHref` (replace + same-frame-later follow-up replace)
-  // rather than a plain `router.replace` - this is the exact same kind of
-  // never-before-mounted dynamic-segment jump (house/[householdId] ->
-  // screensaver/[householdId], a different top-level Stack.Screen entirely) that a single
-  // replace doesn't reliably land on the full path for. See lib/navigation.ts for how
-  // that was confirmed.
+  // The tile's own tap-to-open (via Module's onTilePress) goes here - a normal nested
+  // settings screen under this house's own route, same as Files/Chat, so it opens "in" the
+  // house card's own frame instead of jumping out to a different screen entirely.
+  const screensaverHref = `/house/${householdId}/screensaver`;
+  // The "Start" title bar action is a distinct target, not just a shortcut into the tile
+  // above: it jumps straight to the actual kiosk display, which deliberately lives at the
+  // separate top-level screensaver/[householdId]/start route (see that route's own
+  // _layout.tsx) so it can escape all card chrome and take over the whole screen - no
+  // cardX/Y/W/H origin params, since there's no parent frame for it to expand out of.
+  // Uses the shared `navigateToHref` (replace + same-frame-later follow-up replace) rather
+  // than a plain `router.replace` - this is the exact same kind of never-before-mounted
+  // dynamic-segment jump (house/[householdId] -> screensaver/[householdId], a different
+  // top-level Stack.Screen entirely) that a single replace doesn't reliably land on the
+  // full path for. See lib/navigation.ts for how that was confirmed.
   const openScreensaver = () => {
-    navigateToHref(`${screensaverHref}/start`);
+    navigateToHref(`/screensaver/${householdId}/start`);
   };
 
   return (
