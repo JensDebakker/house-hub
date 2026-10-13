@@ -118,7 +118,10 @@ async function login(page: Page) {
   await page.goto('/login');
   await page.getByPlaceholder('Email').fill(USER.email);
   await page.getByPlaceholder('Password').fill('password123');
-  await page.getByText('Log in', { exact: true }).click();
+  // .last(): the open card's header also renders a hidden shadow copy of its own title
+  // ("Log in") to measure natural width (see Module.tsx) - the real, visible submit button
+  // is the last "Log in" match in DOM order, after both the shadow copy and the real title.
+  await page.getByText('Log in', { exact: true }).last().click();
 }
 
 test.describe('mobile title bar / tile grid scaling', () => {

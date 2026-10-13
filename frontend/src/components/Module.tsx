@@ -325,8 +325,28 @@ function ModuleTitleBar({
           measurement feeds into" idiom TitleBarSlot uses above (see its own comment for why:
           an in-flow or even absolutely-positioned child measured from inside the box that's
           itself sized off that measurement isn't reliably decoupled from that box's current
-          size). */}
+          size).
+
+          `aria-hidden` keeps this duplicate copy of the title text out of the
+          accessibility tree, so a real screen reader doesn't announce the title twice. RN's
+          own `accessibilityElementsHidden`/`importantForAccessibility` props were tried
+          first and don't do this on web at all - react-native-web doesn't forward either of
+          them to any DOM attribute (confirmed in its source: neither name appears anywhere
+          in its `forwardedProps`/`createDOMProps` modules), so they're a native-only no-op
+          here; `aria-hidden` is RNW's own explicitly-forwarded prop instead (see its
+          `forwardedProps` module), and the one that actually lands in the DOM.
+
+          This does NOT make Playwright's `getByText` stop matching it, though - confirmed
+          empirically (it still counted toward `login.spec.ts`'s `getByText('House Hub')`
+          strict-mode violation even with `aria-hidden="true"` present). Playwright's text
+          locators match on raw text content regardless of `aria-hidden`, `opacity`, or any
+          other hidden-from-a11y signal - only `display: none` (which would also zero out
+          the very box this element exists to measure) removes an element from matching.
+          A Playwright query against a title has to pick the real, visible copy explicitly
+          (`.last()` - this shadow copy always renders before it in DOM order, see the
+          e2e specs) rather than relying on there being only one match. */}
       <Text
+        aria-hidden
         style={{ position: 'absolute', opacity: 0, fontSize: baseFontSize, fontWeight: '700' }}
         onLayout={(e) => {
           const { width } = e.nativeEvent.layout;
@@ -739,6 +759,7 @@ export function Module({
             same "sibling kept entirely out of the box its own measurement feeds into" idiom
             TitleBarSlot/ModuleTitleBar use for their own measurements. */}
         <Text
+          aria-hidden
           style={{ position: 'absolute', opacity: 0, fontSize: baseTileTitleFontSize, fontWeight: '700' }}
           onLayout={(e) => {
             const { width } = e.nativeEvent.layout;
