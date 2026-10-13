@@ -23,7 +23,13 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "House Hub",
+      "shortName": "House Hub",
+      "themeColor": "#E6F4FE",
+      "backgroundColor": "#E6F4FE",
+      "display": "standalone",
+      "orientation": "portrait"
     },
     "plugins": [
       "expo-router",
