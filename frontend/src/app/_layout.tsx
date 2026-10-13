@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { InAppBrowserBanner } from '@/components/InAppBrowserBanner';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
 
@@ -66,6 +67,7 @@ export default function RootLayout() {
           whole point is to catch someone before the in-app browser's JS throttling can
           strand them mid-load. */}
       <InAppBrowserBanner />
+      <InstallPrompt />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <WebSocketProvider>
