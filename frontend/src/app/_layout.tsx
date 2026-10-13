@@ -3,9 +3,14 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { InAppBrowserBanner } from '@/components/InAppBrowserBanner';
-import { InstallPrompt } from '@/components/InstallPrompt';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
+// Side-effect only: registers the beforeinstallprompt listener (see lib/installPrompt) as
+// early as the web bundle loads. That event fires once per page load and is lost for good
+// if nothing's listening yet - the App module (src/app/(app)/app.tsx) that surfaces the
+// actual install button isn't mounted until the user navigates to it, so capturing it has
+// to happen here instead.
+import '@/lib/installPrompt';
 
 // react-native-web's showsVerticalScrollIndicator={false} only hides Firefox's
 // scrollbar (via scrollbar-width). This covers Chrome/Safari/Edge too.
@@ -67,7 +72,6 @@ export default function RootLayout() {
           whole point is to catch someone before the in-app browser's JS throttling can
           strand them mid-load. */}
       <InAppBrowserBanner />
-      <InstallPrompt />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <WebSocketProvider>
