@@ -13,7 +13,7 @@ const DASHBOARD_COLOR = '#2563eb';
 // how the smart screen is meant to behave when left alone. Web only: this is the same
 // event set the screensaver itself uses to detect activity. Whether this is enabled at
 // all, and how long "idle" means, are both user-configurable via the screensaver's
-// AutoStart submodule (frontend/src/app/screensaver/[householdId]/autostart.tsx) -
+// AutoStart submodule (frontend/src/app/(app)/house/[householdId]/screensaver/autostart.tsx) -
 // prefs are re-read every time this effect re-runs rather than cached, so a change made
 // there takes effect the next time the user navigates without needing a global event bus.
 //

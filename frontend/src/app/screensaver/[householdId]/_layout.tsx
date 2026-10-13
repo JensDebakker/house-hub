@@ -1,29 +1,14 @@
-import { router, Slot, useLocalSearchParams, usePathname } from 'expo-router';
-import { Module, navigateBackFromCard } from '@/components/Module';
+import { Slot } from 'expo-router';
 
-const SCREENSAVER_COLOR = '#7c3aed';
-
-// Same pattern as Admin: this card stays mounted for as long as any /screensaver/[id]/*
-// route is open, and collapses into a purple frame around whichever submodule (Layout,
-// AutoStart) is open on top of it. Start is the odd one out - it renders its own
-// fullscreen kiosk Module and must never end up nested inside this layout's collapsed
-// frame (which reserves a title bar and margin that would break the full-bleed look), so
-// it bypasses this wrapper entirely and renders directly via <Slot/>.
+// Plain pass-through, same pattern as house/_layout.tsx: start.tsx is the only route left
+// under this top-level group (its sibling settings screens - the overview, Layout,
+// AutoStart - moved to house/[householdId]/screensaver/ so they nest in the house's own
+// card stack like any other feature tile). This group stays a separate top-level
+// Stack.Screen (see app/_layout.tsx) purely so the kiosk display can escape all card
+// chrome and take over the whole screen - an explicit Slot here (instead of leaving this
+// folder to an auto-generated implicit native-stack navigator) opts back out of that
+// navigator's own per-screen state, which doesn't understand this app's "same dynamic
+// segment, different id" navigation pattern (see lib/navigation.ts).
 export default function ScreensaverLayout() {
-  const { householdId } = useLocalSearchParams<{ householdId: string }>();
-  const pathname = usePathname();
-  const basePath = `/screensaver/${householdId}`;
-
-  if (pathname === `${basePath}/start`) return <Slot />;
-
-  return (
-    <Module
-      title="Screensaver"
-      color={SCREENSAVER_COLOR}
-      collapsed={pathname !== basePath}
-      onCollapsedPress={() => navigateBackFromCard(() => router.replace(`/screensaver/${householdId}`))}
-    >
-      <Slot />
-    </Module>
-  );
+  return <Slot />;
 }
