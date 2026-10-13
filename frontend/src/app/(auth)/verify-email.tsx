@@ -1,12 +1,14 @@
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { resolveDefaultHousehold } from '@/lib/households';
 import { navigateToHref } from '@/lib/navigation';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
+
+const VERIFY_EMAIL_COLOR = '#2563eb';
 
 export default function VerifyEmailScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
@@ -47,9 +49,7 @@ export default function VerifyEmailScreen() {
   const error = token ? verifyError : 'No verification token in this link.';
 
   return (
-    <ScreenContainer>
-      <Text style={{ fontSize: 28, fontWeight: '700' }}>Verify email</Text>
-
+    <Module title="Verify email" color={VERIFY_EMAIL_COLOR}>
       {error ? (
         <>
           <Text style={{ color: '#c62828' }}>{error}</Text>
@@ -63,6 +63,6 @@ export default function VerifyEmailScreen() {
           <Text style={{ color: '#666' }}>Verifying and logging you in…</Text>
         </>
       )}
-    </ScreenContainer>
+    </Module>
   );
 }

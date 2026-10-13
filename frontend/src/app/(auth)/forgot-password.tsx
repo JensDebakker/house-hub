@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
@@ -30,8 +30,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <Text style={{ fontSize: 28, fontWeight: '700' }}>Forgot password</Text>
+    <Module title="Forgot password" color={FORGOT_PASSWORD_COLOR}>
       <Text style={{ color: '#666' }}>
         Enter your account email and we&apos;ll send you a link to reset your password.
       </Text>
@@ -61,6 +60,6 @@ export default function ForgotPasswordScreen() {
       <Link href="/(auth)/login" style={{ textAlign: 'center', marginTop: 8 }}>
         Back to login
       </Link>
-    </ScreenContainer>
+    </Module>
   );
 }

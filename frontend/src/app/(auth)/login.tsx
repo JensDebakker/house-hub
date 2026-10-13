@@ -1,7 +1,7 @@
 import { Link, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
@@ -86,8 +86,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <Text style={{ fontSize: 28, fontWeight: '700' }}>House Hub</Text>
+    <Module title="Log in" color={LOGIN_COLOR}>
       <Text style={{ color: '#666' }}>Log in to your house</Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -147,6 +146,6 @@ export default function LoginScreen() {
       <Link href="/(auth)/forgot-password" style={{ textAlign: 'center' }}>
         Forgot your password?
       </Link>
-    </ScreenContainer>
+    </Module>
   );
 }

@@ -1,12 +1,12 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
-import { ScreenContainer } from '@/components/ScreenContainer';
+import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
 
-const REGISTER_COLOR = '#2563eb';
+const REGISTER_COLOR = '#16a34a';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -31,8 +31,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <Text style={{ fontSize: 28, fontWeight: '700' }}>Create account</Text>
+    <Module title="Register" color={REGISTER_COLOR}>
       <Text style={{ color: '#666' }}>Join or start a house</Text>
 
       <TextInput
@@ -76,6 +75,6 @@ export default function RegisterScreen() {
       <Link href="/(auth)/login" style={{ textAlign: 'center', marginTop: 8 }}>
         Already have an account? Log in
       </Link>
-    </ScreenContainer>
+    </Module>
   );
 }

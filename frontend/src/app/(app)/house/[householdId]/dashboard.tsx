@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, usePathname } from 'expo-router';
 import { Text } from 'react-native';
 import { Module, TitleBarChip } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
@@ -14,6 +14,7 @@ const SCREENSAVER_COLOR = '#7c3aed';
 export default function HouseDashboardScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const { user } = useAuth();
+  const pathname = usePathname();
   // The tile's own tap-to-open (via Module's onTilePress) goes here - a normal nested
   // settings screen under this house's own route, same as Files/Chat, so it opens "in" the
   // house card's own frame instead of jumping out to a different screen entirely.
@@ -28,8 +29,11 @@ export default function HouseDashboardScreen() {
   // dynamic-segment jump (house/[householdId] -> screensaver/[householdId], a different
   // top-level Stack.Screen entirely) that a single replace doesn't reliably land on the
   // full path for. See lib/navigation.ts for how that was confirmed.
+  //
+  // Passes this screen's own pathname as `returnTo` so the kiosk display's touch-to-dismiss
+  // can send the user back here rather than to some fixed default.
   const openScreensaver = () => {
-    navigateToHref(`/screensaver/${householdId}/start`);
+    navigateToHref(`/screensaver/${householdId}/start`, { returnTo: pathname });
   };
 
   return (
