@@ -33,6 +33,16 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
   });
 }
 
+/** iPhone/iPod, or an iPad running iPadOS 13+ - which reports as desktop Safari in its user
+ * agent, but (unlike an actual Mac) exposes multi-touch. Either way, `beforeinstallprompt`
+ * never fires there - Safari's share-sheet "Add to Home Screen" is the only install path,
+ * so the App module needs to point there explicitly instead of leaving a dead end. */
+export function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) return true;
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+}
+
 /** True once the app is already running installed (standalone window, no browser chrome) -
  * covers both the standard Display Mode Media Query (Chrome/Android) and iOS Safari's older,
  * non-standard `navigator.standalone` flag. Either way there's nothing left to prompt for. */
