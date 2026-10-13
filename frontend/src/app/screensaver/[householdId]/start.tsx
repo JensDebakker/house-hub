@@ -1,9 +1,10 @@
-import { Link, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Platform, Pressable, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Image, Platform, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Module } from '@/components/Module';
 import { api } from '@/lib/api';
+import { navigateToHref } from '@/lib/navigation';
 import {
   loadScreensaverLayoutPrefs,
   type ScreensaverCorner,
@@ -15,8 +16,9 @@ import { useChatMessagesQuery } from '@/lib/useChatMessages';
 import type { HouseFile } from '@/types';
 
 const SLIDE_DURATION_MS = 6000;
-const IDLE_TIMEOUT_MS = 10000;
-const FALLBACK_BACKGROUND = '#111827';
+// Letterbox color for slides that don't match the screen's aspect ratio (resizeMode
+// "contain" below) - also the plain backdrop when there are no slides at all.
+const FALLBACK_BACKGROUND = '#000000';
 const SCREENSAVER_COLOR = '#7c3aed';
 
 const CORNER_STYLE: Record<ScreensaverCorner, { position: 'absolute'; top?: number; bottom?: number; left?: number; right?: number }> = {
@@ -117,14 +119,20 @@ function renderElement(id: ScreensaverElementId, now: Date, householdId: string 
 }
 
 export default function ScreensaverStartScreen() {
-  const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const { householdId, returnTo } = useLocalSearchParams<{ householdId: string; returnTo?: string }>();
   const [slideUrls, setSlideUrls] = useState<string[]>([]);
   const [slideIndex, setSlideIndex] = useState(0);
   const [now, setNow] = useState(new Date());
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const [cardAnim] = useState(() => new Animated.Value(1));
   const [layoutPrefs, setLayoutPrefs] = useState<ScreensaverLayoutPrefs | null>(null);
-  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Touching anywhere on the kiosk display dismisses it back to wherever the user was when
+  // it started - whether that was a manual "Start" tap or the idle-timeout auto-launch (see
+  // (app)/_layout.tsx's useIdleScreensaverRedirect) - rather than always landing on a fixed
+  // "home" screen. Falls back to this house's dashboard only if `returnTo` is somehow
+  // missing (e.g. the kiosk route was opened directly, with no prior screen to return to).
+  const dismiss = () => {
+    navigateToHref(returnTo || `/house/${householdId}/dashboard`);
+  };
 
   useEffect(() => {
     loadScreensaverLayoutPrefs().then(setLayoutPrefs);
@@ -176,40 +184,6 @@ export default function ScreensaverStartScreen() {
     return () => clearInterval(clockTimer);
   }, []);
 
-  useEffect(() => {
-    Animated.timing(cardAnim, {
-      toValue: controlsVisible ? 1 : 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [controlsVisible, cardAnim]);
-
-  const scheduleHide = useCallback(() => {
-    if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setControlsVisible(false), IDLE_TIMEOUT_MS);
-  }, []);
-
-  const wake = useCallback(() => {
-    setControlsVisible(true);
-    scheduleHide();
-  }, [scheduleHide]);
-
-  // Start the initial idle countdown on mount.
-  useEffect(() => {
-    scheduleHide();
-    return () => {
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-    };
-  }, [scheduleHide]);
-
-  // Mouse movement only makes sense on web - touch/click are handled by the
-  // Pressable wrapper below on every platform.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    window.addEventListener('mousemove', wake);
-    return () => window.removeEventListener('mousemove', wake);
-  }, [wake]);
-
   const currentSlideUrl = slideUrls[slideIndex];
 
   // Group enabled elements by their configured corner, in a stable order, so elements
@@ -231,14 +205,14 @@ export default function ScreensaverStartScreen() {
 
   return (
     <Module fullscreen title="Screensaver" color={SCREENSAVER_COLOR}>
-      <Pressable style={{ flex: 1, backgroundColor: FALLBACK_BACKGROUND }} onPress={wake}>
+      <Pressable style={{ flex: 1, backgroundColor: FALLBACK_BACKGROUND }} onPress={dismiss}>
         <StatusBar hidden />
 
         {currentSlideUrl ? (
           <Image
             key={currentSlideUrl}
             source={{ uri: currentSlideUrl }}
-            resizeMode="cover"
+            resizeMode="contain"
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
         ) : null}
@@ -254,51 +228,6 @@ export default function ScreensaverStartScreen() {
             </View>
           );
         })}
-
-        <Animated.View
-          pointerEvents={controlsVisible ? 'auto' : 'none'}
-          style={{
-            position: 'absolute',
-            bottom: 32,
-            left: 32,
-            right: 32,
-            opacity: cardAnim,
-            transform: [
-              {
-                translateY: cardAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [40, 0],
-                }),
-              },
-            ],
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: 'rgba(0,0,0,0.35)',
-              borderRadius: 16,
-              padding: 20,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-            }}
-          >
-            <Link
-              href="/"
-              style={{
-                color: 'white',
-                fontWeight: '600',
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                paddingVertical: 10,
-                paddingHorizontal: 18,
-                borderRadius: 10,
-                overflow: 'hidden',
-              }}
-            >
-              Open House Hub →
-            </Link>
-          </View>
-        </Animated.View>
       </Pressable>
     </Module>
   );
