@@ -163,7 +163,15 @@ function TitleBarSlot({
 
 /** The title text itself, factored out of `ModuleTitleBar` so the bar's layout and the
  * title's own styling are two separate concerns. Purely presentational - all the sizing it
- * needs (font size, color) comes from the bar around it. */
+ * needs (font size, color) comes from the bar around it.
+ *
+ * `numberOfLines={1}` stays on as a backstop (so a title so long even the minimum font
+ * scale in `ModuleTitleBar` can't save it still ellipsizes instead of wrapping into a
+ * second line and blowing out the bar's reserved height), but it's no longer the primary
+ * way a narrow bar copes with a long title - `ModuleTitleBar` measures how wide this text
+ * *wants* to be (via a hidden sibling, not this element itself - see there) and shrinks
+ * `fontSize` to fit instead, matching the expectation that the whole bar (badges included)
+ * shrinks together rather than the title alone getting clipped. */
 function ModuleTitleBarTitle({
   fg,
   title,
@@ -229,6 +237,22 @@ function ModuleTitleBarTitle({
  * `justifyContent: 'center'` on the outer box then keeps the slot row vertically centered
  * within that reserved height too, so a display/action chip and the title share the same
  * vertical middle - not pinned to the top with the title centered below it.
+ *
+ * `titleFitScale` is the piece that keeps a long title (a household's own name - arbitrary
+ * data, no guaranteed length) from ever hard-truncating on a narrow phone bar: a hidden,
+ * unscaled sibling (`naturalTitleWidth` below) measures how wide the title text actually
+ * wants to be at the bar's fully-open `baseFontSize`, and that's compared against how much
+ * width the bar has *actually* measured itself at (`barWidth`, via this component's own
+ * `onLayout`) minus the base padding and side insets. Deliberately uses the OPEN state's own
+ * (larger) `basePaddingHorizontal`/inset as the reference, not whatever `paddingHorizontal`/
+ * `scale` happen to be live-animating through right now: those are `Animated.WithAnimatedValue`s
+ * driven off a JS (not native) animation, not plain numbers usable in arithmetic, and the
+ * open state reserves the *most* space of any point in the collapse animation - so sizing
+ * against it errs toward shrinking the title a touch more than strictly necessary once
+ * actually collapsed (which has more room to spare) rather than ever under-shrinking and
+ * truncating anyway. `numberOfLines` on `ModuleTitleBarTitle` stays on as a hard backstop
+ * below the floor this clamps to (a still-legible ~10px) - a title long enough to still not
+ * fit even that small still ellipsizes rather than shrinking into unreadable text.
  */
 function ModuleTitleBar({
   fg,
@@ -241,6 +265,8 @@ function ModuleTitleBar({
   fontSize,
   barMinHeight,
   scale,
+  baseFontSize,
+  basePaddingHorizontal,
 }: {
   fg: string;
   title: string;
@@ -252,9 +278,16 @@ function ModuleTitleBar({
   fontSize: Animated.WithAnimatedValue<number>;
   barMinHeight: Animated.WithAnimatedValue<number>;
   scale: Animated.WithAnimatedValue<number>;
+  /** The title's font size at collapseAnim=0 (fully open) - the reference size the hidden
+   * measuring sibling renders at, see `titleFitScale` above. */
+  baseFontSize: number;
+  /** The bar's paddingHorizontal at collapseAnim=0 (fully open) - see `titleFitScale` above. */
+  basePaddingHorizontal: number;
 }) {
   const [leftWidth, setLeftWidth] = useState(0);
   const [rightWidth, setRightWidth] = useState(0);
+  const [barWidth, setBarWidth] = useState(0);
+  const [naturalTitleWidth, setNaturalTitleWidth] = useState(0);
   // 0 (not the last-measured width) whenever a slot has no content, so a slot that's
   // currently empty never reserves space for content it last had before being cleared.
   const maxSideWidth = Math.max(displays ? leftWidth : 0, actions ? rightWidth : 0);
@@ -263,9 +296,23 @@ function ModuleTitleBar({
   // zero breathing room, since the title zone's edge and the chip's own box edge would
   // otherwise land at exactly the same point.
   const sideInset = maxSideWidth > 0 ? Animated.add(Animated.multiply(scale, maxSideWidth), 8) : 0;
+  const openSideInset = maxSideWidth > 0 ? maxSideWidth + 8 : 0;
+  const availableTitleWidth = barWidth > 0 ? barWidth - 2 * basePaddingHorizontal - 2 * openSideInset : 0;
+  // Floor is relative to baseFontSize (28), not an absolute scale picked in a vacuum - it's
+  // chosen to bottom out around a still-legible ~10px, the smallest size this bar's title
+  // ever renders at even for a household name long enough that no realistic bar width could
+  // fit it at a larger size without wrapping.
+  const titleFitScale =
+    availableTitleWidth > 0 && naturalTitleWidth > 0
+      ? Math.max(10 / baseFontSize, Math.min(1, availableTitleWidth / naturalTitleWidth))
+      : 1;
 
   return (
     <Animated.View
+      onLayout={(e) => {
+        const { width } = e.nativeEvent.layout;
+        setBarWidth((prev) => (prev === width ? prev : width));
+      }}
       style={{ paddingTop, paddingBottom, paddingHorizontal, minHeight: barMinHeight, justifyContent: 'center' }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -273,6 +320,21 @@ function ModuleTitleBar({
         <View style={{ flex: 1 }} />
         <TitleBarSlot content={actions} scale={scale} onNaturalWidth={setRightWidth} />
       </View>
+      {/* Hidden, unscaled sibling measuring how wide the title *wants* to be at the bar's
+          base font size - the same "shadow sibling kept entirely out of the box its own
+          measurement feeds into" idiom TitleBarSlot uses above (see its own comment for why:
+          an in-flow or even absolutely-positioned child measured from inside the box that's
+          itself sized off that measurement isn't reliably decoupled from that box's current
+          size). */}
+      <Text
+        style={{ position: 'absolute', opacity: 0, fontSize: baseFontSize, fontWeight: '700' }}
+        onLayout={(e) => {
+          const { width } = e.nativeEvent.layout;
+          setNaturalTitleWidth((prev) => (prev === width ? prev : width));
+        }}
+      >
+        {title}
+      </Text>
       <Animated.View
         pointerEvents="none"
         style={{
@@ -285,7 +347,7 @@ function ModuleTitleBar({
           justifyContent: 'center',
         }}
       >
-        <ModuleTitleBarTitle fg={fg} title={title} fontSize={fontSize} />
+        <ModuleTitleBarTitle fg={fg} title={title} fontSize={Animated.multiply(fontSize, titleFitScale)} />
       </Animated.View>
     </Animated.View>
   );
@@ -547,6 +609,8 @@ export function Module({
       fontSize={titleFontSize}
       barMinHeight={titleBarMinHeight}
       scale={titleBarScale}
+      baseFontSize={28}
+      basePaddingHorizontal={24}
     />
   );
 
