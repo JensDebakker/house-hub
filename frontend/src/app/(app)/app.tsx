@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Platform, Pressable, Text } from 'react-native';
 import { Module } from '@/components/Module';
-import { isIOS, isRunningStandalone, useInstallPrompt } from '@/lib/installPrompt';
+import { isIOS, isIOSSafari, isRunningStandalone, useInstallPrompt } from '@/lib/installPrompt';
 
 const APP_COLOR = '#0ea5e9';
 
@@ -34,9 +34,11 @@ export default function AppScreen() {
       ? 'Install House Hub for quicker access from your home screen.'
       : outcome === 'dismissed'
         ? "You can install House Hub later from this browser's menu."
-        : isIOS()
+        : isIOSSafari()
           ? 'Tap the Share icon in Safari, then "Add to Home Screen".'
-          : 'This browser doesn\'t support one-tap install here - look for "Add to Home Screen" or "Install app" in its menu.';
+          : isIOS()
+            ? "Open this page in Safari to install it - other browsers on iPhone/iPad can't add it to your home screen."
+            : 'This browser doesn\'t support one-tap install here - look for "Add to Home Screen" or "Install app" in its menu.';
 
   return (
     <Module title="App" color={APP_COLOR}>

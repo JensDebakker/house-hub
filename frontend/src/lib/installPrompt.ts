@@ -43,6 +43,20 @@ export function isIOS(): boolean {
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
 }
 
+/** True only for Safari itself on iOS/iPadOS. Every other iOS browser (Chrome, Firefox,
+ * Edge, ...) is forced to run on the same WebKit engine by Apple's rules and still
+ * includes "Safari" in its user agent for site-compatibility reasons, but each adds its
+ * own token first (CriOS, FxiOS, EdgiOS, ...). Despite sharing the engine, Apple restricts
+ * the actual "Add to Home Screen" -> standalone install flow to Safari specifically on
+ * iOS - a Chrome-on-iPhone user has no equivalent in Chrome's own UI, so telling them to
+ * tap Safari's Share icon (which `isIOS()` alone would do) is a dead end; they need to be
+ * told to switch browsers first. */
+export function isIOSSafari(): boolean {
+  if (!isIOS()) return false;
+  if (typeof navigator === 'undefined') return false;
+  return !/CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo/i.test(navigator.userAgent);
+}
+
 /** True once the app is already running installed (standalone window, no browser chrome) -
  * covers both the standard Display Mode Media Query (Chrome/Android) and iOS Safari's older,
  * non-standard `navigator.standalone` flag. Either way there's nothing left to prompt for. */
