@@ -7,7 +7,11 @@ const APP_COLOR = '#0ea5e9';
 
 export default function AppScreen() {
   const { available, promptInstall } = useInstallPrompt();
-  const [justInstalled, setJustInstalled] = useState(false);
+  // Distinguishes "the prompt is gone because the user already acted on it" from "the
+  // prompt was never available in the first place" - both leave `available` false, but
+  // they need different messages (a dismissed prompt doesn't mean the browser can't
+  // install the app, just that this page load's one-shot chance was already used).
+  const [outcome, setOutcome] = useState<'accepted' | 'dismissed' | null>(null);
 
   if (Platform.OS !== 'web') {
     return (
@@ -17,22 +21,24 @@ export default function AppScreen() {
     );
   }
 
-  const alreadyInstalled = justInstalled || isRunningStandalone();
+  const alreadyInstalled = outcome === 'accepted' || isRunningStandalone();
 
   const onInstall = async () => {
-    const outcome = await promptInstall();
-    if (outcome === 'accepted') setJustInstalled(true);
+    const result = await promptInstall();
+    if (result) setOutcome(result);
   };
+
+  const message = alreadyInstalled
+    ? 'House Hub is installed on this device.'
+    : available
+      ? 'Install House Hub for quicker access from your home screen.'
+      : outcome === 'dismissed'
+        ? "You can install House Hub later from this browser's menu."
+        : 'This browser doesn\'t support one-tap install here - use its "Add to Home Screen" option instead.';
 
   return (
     <Module title="App" color={APP_COLOR}>
-      <Text style={{ color: '#475569' }}>
-        {alreadyInstalled
-          ? 'House Hub is installed on this device.'
-          : available
-            ? 'Install House Hub for quicker access from your home screen.'
-            : 'This browser doesn&apos;t support one-tap install here - use its &quot;Add to Home Screen&quot; option instead.'}
-      </Text>
+      <Text style={{ color: '#475569' }}>{message}</Text>
       {!alreadyInstalled && available ? (
         <Pressable
           onPress={onInstall}
