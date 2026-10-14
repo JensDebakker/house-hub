@@ -18,13 +18,17 @@ public class PushSubscriptionService {
 
     private final PushSubscriptionRepository pushSubscriptionRepository;
 
-    /** Upsert by (user, endpoint) - re-subscribing the same device (e.g. after the service
-     * worker resets its subscription) updates the existing row rather than erroring or
-     * creating a duplicate. */
+    /** Upsert by endpoint alone (not scoped to the current user) - the DB enforces endpoint
+     * uniqueness globally, since a push endpoint URL belongs to exactly one browser
+     * subscription regardless of which account is logged in when it's created. Looking this
+     * up scoped to (user, endpoint) instead would miss a row that already exists under a
+     * different user (e.g. someone logged out and another user logged in on the same device
+     * without the service worker unsubscribing first) and then fail on the unique
+     * constraint - reassigning ownership here instead is what makes this a true upsert. */
     @Transactional
     public PushSubscriptionResponse subscribe(User user, PushSubscriptionRequest request) {
         PushSubscription subscription = pushSubscriptionRepository
-                .findByUserIdAndEndpoint(user.getId(), request.endpoint())
+                .findByEndpoint(request.endpoint())
                 .orElseGet(PushSubscription::new);
 
         subscription.setUser(user);

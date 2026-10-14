@@ -50,7 +50,7 @@ class PushSubscriptionServiceTest {
                 "https://push.example/abc",
                 new PushSubscriptionRequest.Keys("p256dh-value", "auth-value"),
                 true, false);
-        when(pushSubscriptionRepository.findByUserIdAndEndpoint(user.getId(), request.endpoint()))
+        when(pushSubscriptionRepository.findByEndpoint(request.endpoint()))
                 .thenReturn(Optional.empty());
         when(pushSubscriptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -82,7 +82,7 @@ class PushSubscriptionServiceTest {
                 "https://push.example/abc",
                 new PushSubscriptionRequest.Keys("new-p256dh", "new-auth"),
                 true, true);
-        when(pushSubscriptionRepository.findByUserIdAndEndpoint(user.getId(), request.endpoint()))
+        when(pushSubscriptionRepository.findByEndpoint(request.endpoint()))
                 .thenReturn(Optional.of(existing));
         when(pushSubscriptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -93,6 +93,36 @@ class PushSubscriptionServiceTest {
         assertThat(captor.getValue().getId()).isEqualTo(existing.getId());
         assertThat(captor.getValue().getP256dh()).isEqualTo("new-p256dh");
         assertThat(captor.getValue().isNotifyOnChatMessage()).isTrue();
+    }
+
+    @Test
+    void subscribe_endpointPreviouslyOwnedByDifferentUser_reassignsOwnershipInsteadOfViolatingUniqueConstraint() {
+        User previousOwner = user();
+        User newOwner = user();
+        PushSubscription existing = new PushSubscription();
+        existing.setId(UUID.randomUUID());
+        existing.setUser(previousOwner);
+        existing.setEndpoint("https://push.example/shared-device");
+
+        var request = new PushSubscriptionRequest(
+                "https://push.example/shared-device",
+                new PushSubscriptionRequest.Keys("p256dh-value", "auth-value"),
+                true, true);
+        // Looked up by endpoint alone, not (user, endpoint) - the row exists under a
+        // different user, e.g. someone logged out on a shared device and someone else
+        // logged in without the service worker unsubscribing first.
+        when(pushSubscriptionRepository.findByEndpoint(request.endpoint()))
+                .thenReturn(Optional.of(existing));
+        when(pushSubscriptionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        pushSubscriptionService.subscribe(newOwner, request);
+
+        ArgumentCaptor<PushSubscription> captor = ArgumentCaptor.forClass(PushSubscription.class);
+        verify(pushSubscriptionRepository).save(captor.capture());
+        // Same row (same id) reassigned to the new owner - not a second row for the same
+        // endpoint, which the DB's unique constraint on endpoint would reject outright.
+        assertThat(captor.getValue().getId()).isEqualTo(existing.getId());
+        assertThat(captor.getValue().getUser()).isEqualTo(newOwner);
     }
 
     @Test

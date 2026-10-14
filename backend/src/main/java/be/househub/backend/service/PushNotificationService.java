@@ -7,12 +7,14 @@ import com.zerodeplibs.webpush.httpclient.StandardHttpClientRequestPreparer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -22,16 +24,23 @@ import java.util.concurrent.TimeUnit;
  * reaches a session that's actively connected right now). A push delivery failure must never
  * break whatever triggered it (a chat send, a version deploy) - every failure mode here is
  * caught and logged, never propagated.
+ *
+ * <p>{@link #sendToSubscriptions} is {@code @Async}: its callers (the chat message handler,
+ * the version-deploy listener) run on time-sensitive threads - a WebSocket session's own
+ * handling thread, the application startup thread - that must not block on a third-party push
+ * service's network latency or a stalled connection for every subscriber, one at a time.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PushNotificationService {
 
+    private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(10);
+
     private final VAPIDKeyPair vapidKeyPair;
     private final PushSubscriptionRepository pushSubscriptionRepository;
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(HTTP_TIMEOUT).build();
 
     @Value("${push.vapid.subject}")
     private String vapidSubject;
@@ -40,6 +49,7 @@ public class PushNotificationService {
     public record PushPayload(String title, String body, String url) {
     }
 
+    @Async
     public void sendToSubscriptions(List<PushSubscription> subscriptions, PushPayload payload) {
         if (subscriptions.isEmpty()) {
             return;
@@ -65,7 +75,9 @@ public class PushNotificationService {
                     .ttl(1, TimeUnit.DAYS)
                     .urgencyNormal()
                     .build(vapidKeyPair)
-                    .toRequest();
+                    .toRequestBuilder()
+                    .timeout(HTTP_TIMEOUT)
+                    .build();
 
             HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
             int status = response.statusCode();

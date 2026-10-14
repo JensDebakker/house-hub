@@ -7,6 +7,7 @@ import com.zerodeplibs.webpush.key.PublicKeySources;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.math.BigInteger;
 import java.security.AlgorithmParameters;
@@ -27,8 +28,14 @@ import java.util.Base64;
  * 32-byte scalar with no library-provided decoder for that shape, so it's reconstructed
  * here via the standard JCE EC key APIs (P-256 / secp256r1, the curve VAPID always uses)
  * rather than needing an extra PEM-conversion step at deploy time.
+ *
+ * <p>Also enables {@code @Async} (used by {@link be.househub.backend.service.PushNotificationService}
+ * so sending a push never blocks the WebSocket/startup thread that triggered it) - scoped to
+ * this config rather than the main application class since nothing else in this app needs it
+ * yet.
  */
 @Configuration
+@EnableAsync
 public class WebPushConfig {
 
     @Bean
