@@ -74,3 +74,53 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Opt-in push notifications (see src/lib/pushNotifications.ts for subscribing). The
+// backend's payload shape is frozen as { title, body, url? } - see PushNotificationService.
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    return;
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'House Hub', {
+      body: payload.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: payload.url || '/' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          // Focusing an existing tab doesn't navigate it - this is a client-side-routed
+          // SPA, so the click has to drive it to the right route itself.
+          if ('navigate' in client) {
+            try {
+              await client.navigate(targetUrl);
+            } catch {
+              // Some browsers refuse to navigate a client that isn't fully active yet -
+              // focusing it below still gets the user to the app, just not the exact route.
+            }
+          }
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
