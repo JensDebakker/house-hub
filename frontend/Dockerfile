@@ -12,6 +12,11 @@ COPY . .
 ARG EXPO_PUBLIC_API_URL
 ENV EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL}
 
+# Web Push's VAPID public key - not secret, it's meant to ship in the client bundle (only
+# the matching private key, backend-only, needs protecting).
+ARG EXPO_PUBLIC_VAPID_PUBLIC_KEY
+ENV EXPO_PUBLIC_VAPID_PUBLIC_KEY=${EXPO_PUBLIC_VAPID_PUBLIC_KEY}
+
 RUN npx expo export -p web
 
 # --- Runtime stage ---
