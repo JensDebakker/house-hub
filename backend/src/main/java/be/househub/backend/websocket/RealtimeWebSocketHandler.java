@@ -1,7 +1,11 @@
 package be.househub.backend.websocket;
 
 import be.househub.backend.dto.chat.ChatMessageResponse;
+import be.househub.backend.entity.HouseholdMembership;
+import be.househub.backend.repository.HouseholdMembershipRepository;
+import be.househub.backend.repository.PushSubscriptionRepository;
 import be.househub.backend.service.ChatMessageService;
+import be.househub.backend.service.PushNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -15,6 +19,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -37,6 +42,9 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
     private final WebSocketBroadcaster broadcaster;
     private final ObjectMapper objectMapper;
     private final ChatMessageService chatMessageService;
+    private final HouseholdMembershipRepository householdMembershipRepository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
+    private final PushNotificationService pushNotificationService;
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
@@ -108,5 +116,27 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
         MessageEnvelope outgoing = MessageEnvelope.of(
                 MessageEnvelope.CHANNEL_CHAT, sessionHouseId, objectMapper.valueToTree(persisted));
         broadcaster.broadcastToHouse(sessionHouseId, outgoing, session.getId());
+
+        notifyOtherMembers(sessionHouseId, userId, persisted);
+    }
+
+    /** Web Push to every *other* household member opted into chat notifications - the
+     * WebSocket broadcast above only reaches a session that's open right now. */
+    private void notifyOtherMembers(UUID houseId, UUID senderId, ChatMessageResponse message) {
+        List<UUID> otherMemberIds = householdMembershipRepository.findByHouseholdId(houseId).stream()
+                .map(HouseholdMembership::getUser)
+                .map(user -> user.getId())
+                .filter(memberId -> !memberId.equals(senderId))
+                .toList();
+        if (otherMemberIds.isEmpty()) {
+            return;
+        }
+
+        var subscriptions = pushSubscriptionRepository.findByUserIdInAndNotifyOnChatMessageTrue(otherMemberIds);
+        String preview = message.text().length() > 120 ? message.text().substring(0, 117) + "..." : message.text();
+        pushNotificationService.sendToSubscriptions(subscriptions, new PushNotificationService.PushPayload(
+                message.senderDisplayName(),
+                preview,
+                "/house/" + houseId + "/chat"));
     }
 }

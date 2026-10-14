@@ -1,7 +1,10 @@
 package be.househub.backend.websocket;
 
 import be.househub.backend.dto.chat.ChatMessageResponse;
+import be.househub.backend.repository.HouseholdMembershipRepository;
+import be.househub.backend.repository.PushSubscriptionRepository;
 import be.househub.backend.service.ChatMessageService;
+import be.househub.backend.service.PushNotificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,6 +55,15 @@ class RealtimeWebSocketHandlerTest {
     @Mock
     private ChatMessageService chatMessageService;
 
+    @Mock
+    private HouseholdMembershipRepository householdMembershipRepository;
+
+    @Mock
+    private PushSubscriptionRepository pushSubscriptionRepository;
+
+    @Mock
+    private PushNotificationService pushNotificationService;
+
     private SessionRegistry sessionRegistry;
     private RealtimeWebSocketHandler handler;
     private VersionBroadcastListener versionBroadcastListener;
@@ -68,9 +80,13 @@ class RealtimeWebSocketHandlerTest {
         objectMapper = new ObjectMapper();
         sessionRegistry = new SessionRegistry();
         WebSocketBroadcaster broadcaster = new WebSocketBroadcaster(sessionRegistry, objectMapper);
-        handler = new RealtimeWebSocketHandler(sessionRegistry, broadcaster, objectMapper, chatMessageService);
-        versionBroadcastListener = new VersionBroadcastListener(broadcaster, objectMapper);
+        handler = new RealtimeWebSocketHandler(sessionRegistry, broadcaster, objectMapper, chatMessageService,
+                householdMembershipRepository, pushSubscriptionRepository, pushNotificationService);
+        versionBroadcastListener = new VersionBroadcastListener(broadcaster, objectMapper, pushSubscriptionRepository, pushNotificationService);
         ReflectionTestUtils.setField(versionBroadcastListener, "version", "110");
+        lenient().when(householdMembershipRepository.findByHouseholdId(any())).thenReturn(List.of());
+        lenient().when(pushSubscriptionRepository.findByNotifyOnVersionTrue()).thenReturn(List.of());
+        lenient().when(pushSubscriptionRepository.findByUserIdInAndNotifyOnChatMessageTrue(any())).thenReturn(List.of());
 
         mockSession(sessionA1, "session-a1", userIdA1, houseA);
         mockSession(sessionA2, "session-a2", userIdA2, houseA);
@@ -123,6 +139,45 @@ class RealtimeWebSocketHandlerTest {
         verify(sessionA2).sendMessage(any(TextMessage.class));
         verify(sessionA1, never()).sendMessage(any(TextMessage.class));
         verify(sessionB1, never()).sendMessage(any(TextMessage.class));
+    }
+
+    @Test
+    void chatMessage_sendsPushToOtherHouseholdMembersExcludingSender() throws Exception {
+        UUID messageId = UUID.randomUUID();
+        Instant createdAt = Instant.now();
+        when(chatMessageService.persist(eq(houseA), eq(userIdA1), eq("hello")))
+                .thenReturn(new ChatMessageResponse(messageId, houseA, userIdA1, "Alice", "hello", createdAt));
+
+        be.househub.backend.entity.User sender = new be.househub.backend.entity.User();
+        sender.setId(userIdA1);
+        be.househub.backend.entity.User otherMember = new be.househub.backend.entity.User();
+        otherMember.setId(userIdA2);
+
+        be.househub.backend.entity.HouseholdMembership senderMembership = new be.househub.backend.entity.HouseholdMembership();
+        senderMembership.setUser(sender);
+        be.househub.backend.entity.HouseholdMembership otherMembership = new be.househub.backend.entity.HouseholdMembership();
+        otherMembership.setUser(otherMember);
+        when(householdMembershipRepository.findByHouseholdId(houseA))
+                .thenReturn(List.of(senderMembership, otherMembership));
+
+        be.househub.backend.entity.PushSubscription otherSubscription = new be.househub.backend.entity.PushSubscription();
+        otherSubscription.setId(UUID.randomUUID());
+        when(pushSubscriptionRepository.findByUserIdInAndNotifyOnChatMessageTrue(List.of(userIdA2)))
+                .thenReturn(List.of(otherSubscription));
+
+        handler.afterConnectionEstablished(sessionA1);
+
+        String chatJson = """
+                {"channel":"chat","houseId":"%s","payload":{"text":"hello"}}
+                """.formatted(houseA);
+        handler.handleMessage(sessionA1, new TextMessage(chatJson));
+
+        ArgumentCaptor<PushNotificationService.PushPayload> payloadCaptor =
+                ArgumentCaptor.forClass(PushNotificationService.PushPayload.class);
+        verify(pushNotificationService).sendToSubscriptions(eq(List.of(otherSubscription)), payloadCaptor.capture());
+        assertThat(payloadCaptor.getValue().title()).isEqualTo("Alice");
+        assertThat(payloadCaptor.getValue().body()).isEqualTo("hello");
+        assertThat(payloadCaptor.getValue().url()).isEqualTo("/house/" + houseA + "/chat");
     }
 
     @Test
