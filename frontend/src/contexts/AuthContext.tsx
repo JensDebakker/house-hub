@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, setOnAuthFailure } from '@/lib/api';
+import { clearPushSubscriptionOnLogout } from '@/lib/pushNotifications';
 import { clearTokens, loadTokens, saveTokens } from '@/lib/storage';
 import type { AuthTokens, HouseholdMembership, User } from '@/types';
 
@@ -32,7 +33,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setOnAuthFailure(() => setUser(null));
+    setOnAuthFailure(() => {
+      // Same reasoning as the explicit logout() path below - tokens are already cleared
+      // by the time this fires (see api.ts), so the backend DELETE this issues will
+      // likely just 401 and no-op, but the browser-side unsubscribe + local prefs
+      // cleanup still matter for a shared device's next login. Fire-and-forget: this
+      // callback's own type is synchronous, and the function is already best-effort
+      // internally (never throws).
+      clearPushSubscriptionOnLogout();
+      setUser(null);
+    });
 
     (async () => {
       const tokens = await loadTokens();
@@ -61,6 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // Must run before clearTokens() - it needs a still-valid token for its own backend
+    // call. A push subscription lives at the browser/device level, not the account
+    // level, so without this a shared device would keep showing "push notifications: on"
+    // for whoever logs in next, still tied to the account that just logged out.
+    await clearPushSubscriptionOnLogout();
     await clearTokens();
     setUser(null);
   };
