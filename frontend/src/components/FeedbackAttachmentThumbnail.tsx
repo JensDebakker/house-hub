@@ -10,7 +10,7 @@ const SIZE = 72;
  * native) - this falls back to the filename in a plain box on native, same as the rest of
  * this codebase does for authed images rather than inventing a new pattern here.
  */
-export function FeedbackAttachmentThumbnail({ url, filename }: { url: string; filename: string }) {
+export const FeedbackAttachmentThumbnail = ({ url, filename }: { url: string; filename: string }) => {
   const imageUrl = useAuthedImage(url);
 
   if (imageUrl) {
@@ -34,4 +34,4 @@ export function FeedbackAttachmentThumbnail({ url, filename }: { url: string; fi
       </Text>
     </View>
   );
-}
+};
