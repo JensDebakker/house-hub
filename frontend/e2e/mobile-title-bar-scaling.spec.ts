@@ -191,4 +191,64 @@ test.describe('mobile title bar / tile grid scaling', () => {
 
     await expect(page).toHaveScreenshot('mobile-house-card-title-bar.png');
   });
+
+  test('a disabled tile\'s "Coming soon" badge and title both shrink to fit on one line, neither clipped nor wrapped', async ({
+    page,
+  }) => {
+    await mockBackend(page);
+    await login(page);
+    await page.waitForURL('**/house/h1/dashboard');
+    await expect(page.getByText('Shopping').last()).toBeVisible();
+    await page.waitForTimeout(500);
+
+    // Bug: "Coming soon" used to hard-clip via CSS text-overflow: ellipsis once its own
+    // corner badge hit its 45%-of-tile-width cap, instead of its font shrinking to fit (see
+    // components/Module/ModuleTile.tsx's comingSoonFitScale / TitleBarChip's `compact` prop).
+    // scrollWidth > clientWidth is the real signal CSS truncation actually fired - textContent
+    // alone isn't enough, since numberOfLines ellipsis never touches the DOM text itself.
+    const [comingSoonOverflow, titleLineCount] = await page.evaluate(() => {
+      const els = Array.from(document.querySelectorAll('div')).filter(
+        (el) => el.textContent?.trim() === 'Coming soon' && el.children.length === 0,
+      );
+      const shoppingEls = Array.from(document.querySelectorAll('div')).filter(
+        (el) => el.textContent?.trim() === 'Shopping' && el.children.length === 0,
+      );
+      const shopping = shoppingEls[shoppingEls.length - 1];
+      const sr = shopping.getBoundingClientRect();
+      let comingSoon = els[0];
+      let bestDist = Infinity;
+      for (const el of els) {
+        const d = Math.abs(el.getBoundingClientRect().y - sr.y);
+        if (d < bestDist) {
+          bestDist = d;
+          comingSoon = el;
+        }
+      }
+      const overflow = comingSoon.scrollWidth - comingSoon.clientWidth;
+      // A wrapped title renders roughly 2x (or more) a single line's height.
+      const singleLineHeight = parseFloat(getComputedStyle(shopping).fontSize) * 1.6;
+      const lines = Math.round(sr.height / singleLineHeight);
+      return [overflow, lines];
+    });
+    expect(comingSoonOverflow).toBeLessThanOrEqual(1); // allow sub-px rounding only
+    expect(titleLineCount).toBe(1);
+
+    // And, as ever, the badge and title must not overlap each other.
+    const shoppingBox = await page.getByText('Shopping').last().boundingBox();
+    const comingSoonBoxes = await page.getByText('Coming soon').all();
+    let shoppingComingSoonBox: Box | null = null;
+    let bestDist = Infinity;
+    for (const locator of comingSoonBoxes) {
+      const box = await locator.boundingBox();
+      if (!box || !shoppingBox) continue;
+      const dist = Math.abs(box.y - shoppingBox.y);
+      if (dist < bestDist) {
+        bestDist = dist;
+        shoppingComingSoonBox = box;
+      }
+    }
+    expect(shoppingBox).not.toBeNull();
+    expect(shoppingComingSoonBox).not.toBeNull();
+    expect(boxesOverlap(shoppingBox!, shoppingComingSoonBox!)).toBe(false);
+  });
 });

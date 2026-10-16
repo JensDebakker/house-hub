@@ -13,11 +13,21 @@ export const TitleBarChip = ({
   color,
   onPress,
   disabled,
+  compact = false,
   children,
 }: {
   color: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** Tighter padding - for a corner badge on a narrow 2-column phone tile, where the chip's
+   * own chrome (normally ~28px of fixed padding+border) competes directly with the tile's
+   * title for a very small amount of total width. Confirmed via a real rendered page that the
+   * standard padding alone could cost enough room to force a title into a floor-sized,
+   * still-wrapping font even after the chip's own text had already shrunk to fit - every px of
+   * fixed chrome matters at that scale. Unused by every other caller (the open/collapsed card
+   * header's badges, tile actions like Screensaver's "Start") - they have comparatively more
+   * room, and shrinking their chrome too isn't what was reported broken. */
+  compact?: boolean;
   children: ReactNode;
 }) => {
   const box = (
@@ -30,8 +40,8 @@ export const TitleBarChip = ({
         borderWidth: 2,
         borderColor: color,
         borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: compact ? 8 : 12,
+        paddingVertical: compact ? 4 : 6,
         opacity: disabled ? 0.6 : 1,
       }}
     >
