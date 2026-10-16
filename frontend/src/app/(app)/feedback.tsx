@@ -166,7 +166,10 @@ function TicketRow({ ticket, userId }: { ticket: FeedbackTicket; userId: string 
   };
 
   return (
-    <View style={{ gap: 6, padding: 12, borderRadius: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee' }}>
+    <View
+      testID={`feedback-ticket-${ticket.id}`}
+      style={{ gap: 6, padding: 12, borderRadius: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee' }}
+    >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         {canEdit ? (
           <View style={{ flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, backgroundColor: 'white' }}>

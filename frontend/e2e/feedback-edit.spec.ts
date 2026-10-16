@@ -92,7 +92,9 @@ async function loginAndOpenFeedback(page: Page) {
 
 test.describe('feedback ticket editing', () => {
   // Pinned so the "Submitted <date>" text in the screenshot doesn't depend on the machine.
-  test.use({ locale: 'en-US', timezoneId: 'Europe/Brussels' });
+  // Taller than the default 720px so the ticket card ends well above the bottom-left
+  // corner, where Expo's dev-tools button intermittently overlays the page.
+  test.use({ locale: 'en-US', timezoneId: 'Europe/Brussels', viewport: { width: 1280, height: 1000 } });
 
   test('edit controls only on OPEN tickets; save updates the row', async ({ page }) => {
     const state = { ticket: openTicket() };
@@ -108,7 +110,9 @@ test.describe('feedback ticket editing', () => {
     await expect(page.getByLabel('Remove screenshot.png')).toBeVisible();
     await expect(page.getByText('Add image (1/5)')).toBeVisible();
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('feedback-ticket-edit-mode.png');
+    // Just the ticket card, not the whole page - keeps the baseline independent of the
+    // create form above it and of the Expo dev-tools button that sometimes overlays the page.
+    await expect(page.getByTestId('feedback-ticket-t1')).toHaveScreenshot('feedback-ticket-edit-mode.png');
 
     await description.fill('The save button is broken on web');
     await page.getByText('Save', { exact: true }).click();
