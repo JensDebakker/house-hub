@@ -1,5 +1,5 @@
 import { usePathname, useSegments } from 'expo-router';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { getValidAccessToken } from '@/lib/api';
@@ -57,6 +57,10 @@ type WebSocketContextValue = {
   subscribe: (channel: WebSocketChannelName, handler: ChannelHandler) => () => void;
   /** Sends an envelope over the socket; no-ops silently if it isn't currently open. */
   send: (envelope: WebSocketEnvelope) => void;
+  /** The current household's online-member count, or `null` until the first "presence"
+   * message for it has arrived - see `useOnlinePresence` (components/OnlineBadge) for why
+   * this lives here rather than in a `useState` local to whichever component displays it. */
+  presenceCount: number | null;
 };
 
 const WebSocketContext = createContext<WebSocketContextValue | null>(null);
@@ -88,6 +92,30 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
    * on reconnect, so a backend restart (new connection, new baseline on the server
    * side) still gets picked up as a change here. */
   const knownVersionRef = useRef<string | null>(null);
+  // Lives here, not as a `useState` local to whichever component renders the online badge
+  // (house/[householdId]/_layout.tsx) - that component unmounts whenever navigation leaves
+  // the house's own route tree entirely, including to the real screensaver kiosk display
+  // (screensaver/[householdId]/start, a top-level route outside "house"). This socket
+  // connection deliberately stays open and doesn't reconnect across that exact navigation
+  // (see HOUSEHOLD_ROUTE_GROUPS above - "screensaver" keeps the same householdId, so the
+  // effect below never tears the connection down), which is normally the right call, but it
+  // meant the backend never saw a fresh connect/disconnect to re-broadcast presence from -
+  // so a `useState` local to the remounted component came back permanently stuck at its
+  // initial `null`, with no new message ever going to arrive to fill it in. Tracking the
+  // count at this level instead means a freshly re-mounted consumer just reads whatever's
+  // already here - this provider never lost track of it, regardless of what mounted or
+  // unmounted around it.
+  //
+  // Stored alongside the household it was reported for, rather than reset to `null` via a
+  // separate effect whenever `householdId` changes (switching houses) - setState-in-an-effect
+  // for a derived reset like that is exactly what the `react-hooks/set-state-in-effect` lint
+  // rule flags, and rightly so here: comparing the stored household against the current one
+  // at read time (`presenceCount` below) gives the exact same behavior - `null` the instant
+  // you're looking at a different house than the one the last count was for, the last known
+  // count still showing for the *same* house regardless of what mounted/unmounted in between -
+  // without an effect or a setState call needed to produce it.
+  const [presenceState, setPresenceState] = useState<{ householdId: string; count: number } | null>(null);
+  const presenceCount = presenceState && presenceState.householdId === householdId ? presenceState.count : null;
 
   const subscribe = useCallback((channel: WebSocketChannelName, handler: ChannelHandler) => {
     const handlers = listenersRef.current.get(channel) ?? new Set<ChannelHandler>();
@@ -237,13 +265,28 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     });
   }, [subscribe]);
 
+  // Tracks presenceCount (see its own comment above) regardless of whether any component is
+  // currently rendering the online badge - useOnlinePresence (components/OnlineBadge) just
+  // reads the resulting context value, the same way nothing has to separately subscribe to
+  // learn about a 'version'-triggered reload above.
+  useEffect(() => {
+    if (!householdId) return;
+    return subscribe('presence', (payload) => {
+      const count = (payload as { count?: number } | undefined)?.count;
+      if (typeof count === 'number') setPresenceState({ householdId, count });
+    });
+  }, [subscribe, householdId]);
+
   const send = useCallback((envelope: WebSocketEnvelope) => {
     const socket = socketRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
     socket.send(JSON.stringify(envelope));
   }, []);
 
-  const value = useMemo<WebSocketContextValue>(() => ({ subscribe, send }), [subscribe, send]);
+  const value = useMemo<WebSocketContextValue>(
+    () => ({ subscribe, send, presenceCount }),
+    [subscribe, send, presenceCount],
+  );
 
   return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
