@@ -1,6 +1,7 @@
 package be.househub.backend.service;
 
 import be.househub.backend.dto.feedback.FeedbackTicketResponse;
+import be.househub.backend.dto.feedback.FeedbackUpdateRequest;
 import be.househub.backend.entity.FeedbackAttachment;
 import be.househub.backend.entity.FeedbackStatus;
 import be.househub.backend.entity.FeedbackTicket;
@@ -16,8 +17,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -207,5 +210,165 @@ class FeedbackServiceTest {
 
         assertThat(result.contentType()).isEqualTo("image/png");
         assertThat(result.file()).isSameAs(stored);
+    }
+
+    private FeedbackAttachment attachment(FeedbackTicket ticket) {
+        FeedbackAttachment attachment = new FeedbackAttachment();
+        attachment.setId(UUID.randomUUID());
+        attachment.setTicket(ticket);
+        attachment.setContentType("image/png");
+        attachment.setOriginalFilename("a.png");
+        attachment.setStorageKey("feedback/" + ticket.getId() + "/" + attachment.getId());
+        ticket.getAttachments().add(attachment);
+        return attachment;
+    }
+
+    @Test
+    void update_openTicket_changesOnlyProvidedFieldsAndBumpsUpdatedAt() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        Instant before = Instant.parse("2020-01-01T00:00:00Z");
+        ticket.setUpdatedAt(before);
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+        when(feedbackTicketRepository.save(ticket)).thenReturn(ticket);
+
+        FeedbackTicketResponse response = feedbackService.update(user, ticket.getId(),
+                new FeedbackUpdateRequest(null, "Actually it is fine now"));
+
+        assertThat(response.type()).isEqualTo(FeedbackType.BUG);
+        assertThat(response.description()).isEqualTo("Actually it is fine now");
+        assertThat(response.updatedAt()).isAfter(before);
+    }
+
+    @Test
+    void update_changesType() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+        when(feedbackTicketRepository.save(ticket)).thenReturn(ticket);
+
+        FeedbackTicketResponse response = feedbackService.update(user, ticket.getId(),
+                new FeedbackUpdateRequest(FeedbackType.SUGGESTION, null));
+
+        assertThat(response.type()).isEqualTo(FeedbackType.SUGGESTION);
+        assertThat(response.description()).isEqualTo("Something broke");
+    }
+
+    @Test
+    void update_blankDescription_throwsBadRequest() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+
+        assertThatThrownBy(() -> feedbackService.update(user, ticket.getId(), new FeedbackUpdateRequest(null, " ")))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(feedbackTicketRepository, never()).save(any());
+    }
+
+    @Test
+    void update_nonOpenTicket_throwsConflict() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        ticket.setStatus(FeedbackStatus.IN_PROGRESS);
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+
+        assertThatThrownBy(() -> feedbackService.update(user, ticket.getId(), new FeedbackUpdateRequest(null, "New text")))
+                .isInstanceOf(IllegalStateException.class);
+        verify(feedbackTicketRepository, never()).save(any());
+    }
+
+    @Test
+    void update_someoneElsesTicket_throwsNotFound() {
+        User user = user();
+        UUID ticketId = UUID.randomUUID();
+        when(feedbackTicketRepository.findByIdAndUserId(ticketId, user.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> feedbackService.update(user, ticketId, new FeedbackUpdateRequest(null, "New text")))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(feedbackTicketRepository, never()).save(any());
+    }
+
+    @Test
+    void addAttachments_overTotalLimit_throwsBadRequest() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        for (int i = 0; i < 4; i++) {
+            attachment(ticket);
+        }
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+        List<MultipartFile> files = List.of(
+                new MockMultipartFile("files", "x.png", "image/png", new byte[]{1}),
+                new MockMultipartFile("files", "y.png", "image/png", new byte[]{1})
+        );
+
+        assertThatThrownBy(() -> feedbackService.addAttachments(user, ticket.getId(), files))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(fileStorageService, never()).store(anyString(), any(), anyLong(), anyString());
+        verify(feedbackAttachmentRepository, never()).save(any());
+    }
+
+    @Test
+    void addAttachments_withinLimit_storesAndReturnsAllAttachments() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        attachment(ticket);
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+        when(feedbackTicketRepository.save(ticket)).thenReturn(ticket);
+        when(feedbackAttachmentRepository.save(any(FeedbackAttachment.class))).thenAnswer(invocation -> {
+            FeedbackAttachment saved = invocation.getArgument(0);
+            if (saved.getId() == null) {
+                saved.setId(UUID.randomUUID());
+            }
+            return saved;
+        });
+
+        FeedbackTicketResponse response = feedbackService.addAttachments(user, ticket.getId(),
+                List.of(new MockMultipartFile("files", "new.png", "image/png", new byte[]{1, 2})));
+
+        assertThat(response.attachments()).hasSize(2);
+        assertThat(response.attachments().get(1).originalFilename()).isEqualTo("new.png");
+        verify(fileStorageService).store(anyString(), any(), anyLong(), eq("image/png"));
+    }
+
+    @Test
+    void addAttachments_nonOpenTicket_throwsConflict() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        ticket.setStatus(FeedbackStatus.RESOLVED);
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+
+        assertThatThrownBy(() -> feedbackService.addAttachments(user, ticket.getId(),
+                List.of(new MockMultipartFile("files", "new.png", "image/png", new byte[]{1}))))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void deleteAttachment_removesRowAndBlob() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        FeedbackAttachment keep = attachment(ticket);
+        FeedbackAttachment remove = attachment(ticket);
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+        when(feedbackAttachmentRepository.findByIdAndTicketId(remove.getId(), ticket.getId())).thenReturn(Optional.of(remove));
+        when(feedbackTicketRepository.saveAndFlush(ticket)).thenReturn(ticket);
+
+        FeedbackTicketResponse response = feedbackService.deleteAttachment(user, ticket.getId(), remove.getId());
+
+        assertThat(response.attachments()).extracting(a -> a.id()).containsExactly(keep.getId());
+        assertThat(ticket.getAttachments()).doesNotContain(remove);
+        verify(fileStorageService).delete(remove.getStorageKey());
+    }
+
+    @Test
+    void deleteAttachment_unknownAttachment_throwsNotFound() {
+        User user = user();
+        FeedbackTicket ticket = ticket(user);
+        UUID attachmentId = UUID.randomUUID();
+        when(feedbackTicketRepository.findByIdAndUserId(ticket.getId(), user.getId())).thenReturn(Optional.of(ticket));
+        when(feedbackAttachmentRepository.findByIdAndTicketId(attachmentId, ticket.getId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> feedbackService.deleteAttachment(user, ticket.getId(), attachmentId))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(fileStorageService, never()).delete(anyString());
     }
 }

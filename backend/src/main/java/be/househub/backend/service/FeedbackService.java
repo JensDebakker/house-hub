@@ -2,6 +2,7 @@ package be.househub.backend.service;
 
 import be.househub.backend.dto.feedback.FeedbackAttachmentResponse;
 import be.househub.backend.dto.feedback.FeedbackTicketResponse;
+import be.househub.backend.dto.feedback.FeedbackUpdateRequest;
 import be.househub.backend.entity.FeedbackAttachment;
 import be.househub.backend.entity.FeedbackStatus;
 import be.househub.backend.entity.FeedbackTicket;
@@ -18,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,28 +50,9 @@ public class FeedbackService {
         if (type == null) {
             throw new IllegalArgumentException("Feedback type is required");
         }
-        if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Description is required");
-        }
-        if (description.length() > MAX_DESCRIPTION_LENGTH) {
-            throw new IllegalArgumentException("Description must be at most " + MAX_DESCRIPTION_LENGTH + " characters");
-        }
+        validateDescription(description);
 
-        List<MultipartFile> attachments = files == null ? List.of() : files.stream()
-                .filter(file -> file != null && !file.isEmpty())
-                .toList();
-        if (attachments.size() > MAX_ATTACHMENTS) {
-            throw new IllegalArgumentException("A feedback ticket can have at most " + MAX_ATTACHMENTS + " attachments");
-        }
-        for (MultipartFile file : attachments) {
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                throw new IllegalArgumentException("Feedback attachments must be image files");
-            }
-            if (file.getOriginalFilename() == null || file.getOriginalFilename().isBlank()) {
-                throw new IllegalArgumentException("Feedback attachments must have a filename");
-            }
-        }
+        List<MultipartFile> attachments = validAttachments(files, 0);
 
         FeedbackTicket newTicket = new FeedbackTicket();
         newTicket.setUser(user);
@@ -87,6 +70,49 @@ public class FeedbackService {
                 ticket.getId(), ticket.getType(), ticket.getDescription(), ticket.getStatus(),
                 ticket.getCreatedAt(), ticket.getUpdatedAt(), attachmentResponses
         );
+    }
+
+    @Transactional
+    public FeedbackTicketResponse update(User user, UUID ticketId, FeedbackUpdateRequest request) {
+        FeedbackTicket ticket = findOwnedEditable(user, ticketId);
+        if (request != null && request.description() != null) {
+            validateDescription(request.description());
+            ticket.setDescription(request.description());
+        }
+        if (request != null && request.type() != null) {
+            ticket.setType(request.type());
+        }
+        ticket.setUpdatedAt(Instant.now());
+        return toResponse(feedbackTicketRepository.save(ticket));
+    }
+
+    @Transactional
+    public FeedbackTicketResponse addAttachments(User user, UUID ticketId, List<MultipartFile> files) {
+        FeedbackTicket ticket = findOwnedEditable(user, ticketId);
+        List<MultipartFile> attachments = validAttachments(files, ticket.getAttachments().size());
+        if (attachments.isEmpty()) {
+            throw new IllegalArgumentException("At least one file is required");
+        }
+        for (MultipartFile file : attachments) {
+            ticket.getAttachments().add(storeAttachment(ticket, file));
+        }
+        ticket.setUpdatedAt(Instant.now());
+        return toResponse(feedbackTicketRepository.save(ticket));
+    }
+
+    @Transactional
+    public FeedbackTicketResponse deleteAttachment(User user, UUID ticketId, UUID attachmentId) {
+        FeedbackTicket ticket = findOwnedEditable(user, ticketId);
+        FeedbackAttachment attachment = feedbackAttachmentRepository.findByIdAndTicketId(attachmentId, ticket.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("FeedbackAttachment", attachmentId));
+        String storageKey = attachment.getStorageKey();
+        // orphanRemoval on FeedbackTicket.attachments deletes the row once it leaves the collection.
+        ticket.getAttachments().removeIf(a -> a.getId().equals(attachment.getId()));
+        ticket.setUpdatedAt(Instant.now());
+        FeedbackTicket saved = feedbackTicketRepository.saveAndFlush(ticket);
+        // Blob is removed only after the row delete has been flushed successfully.
+        fileStorageService.delete(storageKey);
+        return toResponse(saved);
     }
 
     public AttachmentFile downloadAttachment(User user, UUID ticketId, UUID attachmentId) {
@@ -115,6 +141,50 @@ public class FeedbackService {
         }
         attachment.setStorageKey(storageKey);
         return feedbackAttachmentRepository.save(attachment);
+    }
+
+    private void validateDescription(String description) {
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Description is required");
+        }
+        if (description.length() > MAX_DESCRIPTION_LENGTH) {
+            throw new IllegalArgumentException("Description must be at most " + MAX_DESCRIPTION_LENGTH + " characters");
+        }
+    }
+
+    /**
+     * Filters out empty parts and validates the rest; {@code existingCount} is how many
+     * attachments the ticket already has, so the total never exceeds {@link #MAX_ATTACHMENTS}.
+     */
+    private List<MultipartFile> validAttachments(List<MultipartFile> files, int existingCount) {
+        List<MultipartFile> attachments = files == null ? List.of() : files.stream()
+                .filter(file -> file != null && !file.isEmpty())
+                .toList();
+        if (existingCount + attachments.size() > MAX_ATTACHMENTS) {
+            throw new IllegalArgumentException("A feedback ticket can have at most " + MAX_ATTACHMENTS + " attachments");
+        }
+        for (MultipartFile file : attachments) {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                throw new IllegalArgumentException("Feedback attachments must be image files");
+            }
+            if (file.getOriginalFilename() == null || file.getOriginalFilename().isBlank()) {
+                throw new IllegalArgumentException("Feedback attachments must have a filename");
+            }
+        }
+        return attachments;
+    }
+
+    /**
+     * Owned ticket that the owner may still change. Non-OPEN tickets throw
+     * IllegalStateException, which GlobalExceptionHandler maps to 409 Conflict.
+     */
+    private FeedbackTicket findOwnedEditable(User user, UUID ticketId) {
+        FeedbackTicket ticket = findOwned(user, ticketId);
+        if (ticket.getStatus() != FeedbackStatus.OPEN) {
+            throw new IllegalStateException("Feedback can only be edited while its status is OPEN");
+        }
+        return ticket;
     }
 
     private FeedbackTicket findOwned(User user, UUID ticketId) {
