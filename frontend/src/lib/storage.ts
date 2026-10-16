@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isLanguageCode, type LanguageCode } from '@/i18n/languages';
 import type { AuthTokens } from '@/types';
 
 const TOKENS_KEY = 'house-hub.auth-tokens';
 const PENDING_INVITE_CODE_KEY = 'house-hub.pending-invite-code';
 const SCREENSAVER_LAYOUT_KEY = 'house-hub.screensaver-layout';
 const SCREENSAVER_AUTOSTART_KEY = 'house-hub.screensaver-autostart';
+const LANGUAGE_KEY = 'house-hub.language';
 
 export async function saveTokens(tokens: AuthTokens): Promise<void> {
   await AsyncStorage.setItem(TOKENS_KEY, JSON.stringify(tokens));
@@ -78,4 +80,15 @@ export async function saveScreensaverAutoStartPrefs(prefs: ScreensaverAutoStartP
 export async function loadScreensaverAutoStartPrefs(): Promise<ScreensaverAutoStartPrefs> {
   const raw = await AsyncStorage.getItem(SCREENSAVER_AUTOSTART_KEY);
   return raw ? (JSON.parse(raw) as ScreensaverAutoStartPrefs) : DEFAULT_SCREENSAVER_AUTOSTART_PREFS;
+}
+
+/** Per-device UI language choice from the Language module; null until the user picks one,
+ * in which case the device/browser language is used instead. */
+export async function saveLanguage(language: LanguageCode): Promise<void> {
+  await AsyncStorage.setItem(LANGUAGE_KEY, language);
+}
+
+export async function loadLanguage(): Promise<LanguageCode | null> {
+  const raw = await AsyncStorage.getItem(LANGUAGE_KEY);
+  return isLanguageCode(raw) ? raw : null;
 }

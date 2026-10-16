@@ -3,7 +3,9 @@ import { Text } from 'react-native';
 import { Module, TitleBarChip } from '@/components/Module';
 import { OnlineBadge } from '@/components/OnlineBadge';
 import { TileGrid } from '@/components/TileGrid';
+import { LANGUAGE_COLOR } from '@/components/LanguageModuleCard';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { formatMemberCount } from '@/lib/houseStatus';
 import { assignHouseColors } from '@/lib/houseColors';
@@ -31,6 +33,7 @@ function DefaultHouseMarker({ isDefault, onPress, busy }: { isDefault: boolean; 
 // neither is about an existing specific house, so there's nothing for them to nest under.
 export default function DashboardScreen() {
   const { user, setHouseholds } = useAuth();
+  const { t } = useTranslation();
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,6 +83,7 @@ export default function DashboardScreen() {
         <Module tile title="Create house" subtitle="Start a new house" href="/create-house" color="#c026d3" />
         <Module tile title="Join house" subtitle="Use an invite code" href="/join-house" color="#2563eb" />
         <Module tile title="App" subtitle="Install & app info" href="/app" color="#0ea5e9" />
+        <Module tile title={t('language.title')} subtitle={t('language.subtitle')} href="/language" color={LANGUAGE_COLOR} />
         <Module tile title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
         <Module tile title="Feedback" subtitle="Report a bug or idea" href="/feedback" color="#f97316" />
         {user?.role === 'ADMIN' ? (

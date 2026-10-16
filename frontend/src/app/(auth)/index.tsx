@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { Module } from '@/components/Module';
+import { LANGUAGE_COLOR } from '@/components/LanguageModuleCard';
 import { TileGrid } from '@/components/TileGrid';
+import { useTranslation } from '@/i18n';
 import { loadPendingInviteCode } from '@/lib/storage';
 
 const LOGIN_COLOR = '#2563eb';
@@ -11,6 +13,7 @@ const APP_COLOR = '#0ea5e9';
 // Level 0 of this (auth) stack's own card hierarchy (see _layout.tsx) - one tile per
 // pre-login module, same shape as the Houses overview's tile grid.
 export default function AuthLandingScreen() {
+  const { t } = useTranslation();
   const [hasPendingInvite, setHasPendingInvite] = useState(false);
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export default function AuthLandingScreen() {
         <Module tile title="Log in" subtitle="Already have an account?" href="/(auth)/login" color={LOGIN_COLOR} />
         <Module tile title="Register" subtitle="New here? Create one" href="/(auth)/register" color={REGISTER_COLOR} />
         <Module tile title="App" subtitle="Install & app info" href="/app" color={APP_COLOR} />
+        <Module tile title={t('language.title')} subtitle={t('language.subtitle')} href="/language" color={LANGUAGE_COLOR} />
       </TileGrid>
     </>
   );

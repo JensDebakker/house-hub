@@ -5,6 +5,7 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import { InAppBrowserBanner } from '@/components/InAppBrowserBanner';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
+import { LanguageProvider } from '@/i18n';
 // Side-effect only: registers the beforeinstallprompt listener (see lib/installPrompt) as
 // early as the web bundle loads. That event fires once per page load and is lost for good
 // if nothing's listening yet - the App module (src/app/(app)/app.tsx) that surfaces the
@@ -67,18 +68,20 @@ export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Rendered outside auth/loading state so it shows up as early as possible - the
-          whole point is to catch someone before the in-app browser's JS throttling can
-          strand them mid-load. */}
-      <InAppBrowserBanner />
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <WebSocketProvider>
-            <RootNavigator />
-          </WebSocketProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </View>
+    <LanguageProvider>
+      <View style={{ flex: 1 }}>
+        {/* Rendered outside auth/loading state so it shows up as early as possible - the
+            whole point is to catch someone before the in-app browser's JS throttling can
+            strand them mid-load. */}
+        <InAppBrowserBanner />
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <WebSocketProvider>
+              <RootNavigator />
+            </WebSocketProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </View>
+    </LanguageProvider>
   );
 }
