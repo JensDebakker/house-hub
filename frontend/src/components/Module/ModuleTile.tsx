@@ -7,6 +7,7 @@ import { cardSurface } from './cardSurface';
 import { entersFreshDynamicSegment } from './routeGroup';
 import { TitleBarChip } from './TitleBarChip';
 import type { TitleBarContent } from './types';
+import { widthChanged } from '@/lib/widthChanged';
 
 // Fallback clearance used only before a corner's real width has been measured (first paint) -
 // see `titleInsetLeft`/`titleInsetRight` below, which switch to the corner's actual measured
@@ -213,7 +214,7 @@ export const ModuleTile = ({
       onPress={onTilePress}
       onLayout={(e) => {
         const { width } = e.nativeEvent.layout;
-        setTileWidth((prev) => (prev === width ? prev : width));
+        setTileWidth((prev) => (prev !== null && !widthChanged(prev, width) ? prev : width));
       }}
       style={({ pressed }) => [
         {
@@ -239,7 +240,7 @@ export const ModuleTile = ({
         style={{ position: 'absolute', opacity: 0, fontSize: BASE_TILE_TITLE_FONT_SIZE, fontWeight: '700' }}
         onLayout={(e) => {
           const { width } = e.nativeEvent.layout;
-          setNaturalTileTitleWidth((prev) => (prev === width ? prev : width));
+          setNaturalTileTitleWidth((prev) => (!widthChanged(prev, width) ? prev : width));
         }}
       >
         {title}
@@ -274,7 +275,7 @@ export const ModuleTile = ({
           style={{ position: 'absolute', top: 10, left: 10, overflow: 'hidden' }}
           onLayout={(e) => {
             const { width } = e.nativeEvent.layout;
-            setLeftBadgeWidth((prev) => (prev === width ? prev : width));
+            setLeftBadgeWidth((prev) => (!widthChanged(prev, width) ? prev : width));
           }}
         >
           {/* Hidden, unscaled sibling measuring how wide "Coming soon" wants to be at the
@@ -284,7 +285,7 @@ export const ModuleTile = ({
             style={{ position: 'absolute', opacity: 0, fontSize: BASE_CORNER_BADGE_FONT_SIZE, fontWeight: '700' }}
             onLayout={(e) => {
               const { width } = e.nativeEvent.layout;
-              setNaturalComingSoonWidth((prev) => (prev === width ? prev : width));
+              setNaturalComingSoonWidth((prev) => (!widthChanged(prev, width) ? prev : width));
             }}
           >
             Coming soon
@@ -300,7 +301,7 @@ export const ModuleTile = ({
           style={{ position: 'absolute', top: 10, left: 10, maxWidth: '45%', overflow: 'hidden' }}
           onLayout={(e) => {
             const { width } = e.nativeEvent.layout;
-            setLeftBadgeWidth((prev) => (prev === width ? prev : width));
+            setLeftBadgeWidth((prev) => (!widthChanged(prev, width) ? prev : width));
           }}
         >
           <Pressable onPress={() => {}}>{titleBarDisplays}</Pressable>
@@ -312,7 +313,7 @@ export const ModuleTile = ({
           style={{ position: 'absolute', top: 10, right: 10, maxWidth: '45%', overflow: 'hidden' }}
           onLayout={(e) => {
             const { width } = e.nativeEvent.layout;
-            setRightBadgeWidth((prev) => (prev === width ? prev : width));
+            setRightBadgeWidth((prev) => (!widthChanged(prev, width) ? prev : width));
           }}
         >
           <Pressable onPress={() => {}}>{titleBarActions}</Pressable>

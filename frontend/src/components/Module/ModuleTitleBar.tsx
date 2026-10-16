@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Animated, Text, View } from 'react-native';
 import { TitleBarSlot } from './TitleBarSlot';
 import { ModuleTitleBarTitle } from './ModuleTitleBarTitle';
+import { widthChanged } from '@/lib/widthChanged';
 
 /**
  * Lays out a module's title bar: optional displays on the left, optional action buttons on
@@ -126,7 +127,7 @@ export const ModuleTitleBar = ({
     <Animated.View
       onLayout={(e) => {
         const { width } = e.nativeEvent.layout;
-        setBarWidth((prev) => (prev === width ? prev : width));
+        setBarWidth((prev) => (!widthChanged(prev, width) ? prev : width));
       }}
       style={{ paddingTop, paddingBottom, paddingHorizontal, minHeight: barMinHeight, justifyContent: 'center' }}
     >
@@ -165,7 +166,7 @@ export const ModuleTitleBar = ({
         style={{ position: 'absolute', opacity: 0, fontSize: baseFontSize, fontWeight: '700' }}
         onLayout={(e) => {
           const { width } = e.nativeEvent.layout;
-          setNaturalTitleWidth((prev) => (prev === width ? prev : width));
+          setNaturalTitleWidth((prev) => (!widthChanged(prev, width) ? prev : width));
         }}
       >
         {title}

@@ -1,5 +1,6 @@
 import { Children, isValidElement, useState, type ReactNode } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
+import { widthChanged } from '@/lib/widthChanged';
 
 const GAP = 14;
 
@@ -34,7 +35,11 @@ export const TileGrid = ({ children }: { children: ReactNode }) => {
 
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
-    setWidth((prev) => (prev === w ? prev : w));
+    // Tolerance, not exact equality - see widthChanged's own comment. tileWidth below floors
+    // to a whole px anyway, so a bare sub-pixel jitter in `width` wouldn't normally even
+    // change what's rendered, but still churns a state update and re-render on every frame of
+    // jitter if left unguarded.
+    setWidth((prev) => (!widthChanged(prev, w) ? prev : w));
   };
 
   const columns = BREAKPOINTS.find((b) => width >= b.minWidth)?.columns ?? 2;
