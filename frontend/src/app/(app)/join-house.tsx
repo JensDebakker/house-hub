@@ -4,6 +4,7 @@ import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
+import { extractInviteCode } from '@/lib/invite';
 import { navigateToHref } from '@/lib/navigation';
 import type { Household, HouseholdJoinRequest } from '@/types';
 
@@ -19,8 +20,11 @@ export default function JoinHouseScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
+      // extractInviteCode: this field accepts either the bare code or a pasted invite link
+      // (e.g. someone forwarded the whole "Share this invite code" link instead of just the
+      // code) - a raw code round-trips through it unchanged.
       const { data } = await api.post<Household>('/households/join', {
-        inviteCode: inviteCode.trim(),
+        inviteCode: extractInviteCode(inviteCode),
       } satisfies HouseholdJoinRequest);
       await refreshUser();
       // navigateToHref, not a plain router.replace - fresh mount of the joined
@@ -35,11 +39,12 @@ export default function JoinHouseScreen() {
 
   return (
     <Module title="Join House" color={JOIN_HOUSE_COLOR}>
-      <Text style={{ color: '#666' }}>Enter the invite code you were given.</Text>
+      <Text style={{ color: '#666' }}>Enter the invite code or paste the invite link you were given.</Text>
 
       <TextInput
-        placeholder="Invite code"
-        autoCapitalize="characters"
+        placeholder="Invite code or link"
+        autoCapitalize="none"
+        autoCorrect={false}
         value={inviteCode}
         onChangeText={setInviteCode}
         style={inputStyle}
