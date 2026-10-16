@@ -8,7 +8,7 @@ const GAP = 14;
 // rendered space rather than which target built the app. Measured against the grid's own
 // layout width (not the window's), so it already accounts for whatever margin/padding sits
 // between the window edge and the grid itself - no separate chrome-width constant to keep
-// in sync with Module.tsx's own spacing.
+// in sync with components/Module's own spacing.
 const BREAKPOINTS = [
   { minWidth: 1000, columns: 5 }, // desktop / wide kiosk display
   { minWidth: 700, columns: 3 }, // tablet
@@ -29,7 +29,7 @@ const BREAKPOINTS = [
  * to fill the remaining space, so it reads as a real grid with blank slots left over, not a
  * row that reflows to fit however many tiles happen to be left.
  */
-export function TileGrid({ children }: { children: ReactNode }) {
+export const TileGrid = ({ children }: { children: ReactNode }) => {
   const [width, setWidth] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -53,4 +53,4 @@ export function TileGrid({ children }: { children: ReactNode }) {
       })}
     </View>
   );
-}
+};

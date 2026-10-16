@@ -10,8 +10,9 @@ test('login screen renders and matches visual snapshot', async ({ page }) => {
   await page.goto('/login');
 
   // .last(): the collapsed "House Hub" frame's header also renders a hidden shadow copy of
-  // its own title to measure natural width for its shrink-to-fit sizing (see Module.tsx's
-  // ModuleTitleBar) - the real, visible title is the last "House Hub" match in DOM order.
+  // its own title to measure natural width for its shrink-to-fit sizing (see
+  // components/Module/ModuleTitleBar.tsx) - the real, visible title is the last "House
+  // Hub" match in DOM order.
   await expect(page.getByText('House Hub').last()).toBeVisible();
   await expect(page.getByPlaceholder('Email')).toBeVisible();
   await expect(page.getByPlaceholder('Password')).toBeVisible();

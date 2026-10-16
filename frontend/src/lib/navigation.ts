@@ -25,7 +25,7 @@ import { router } from 'expo-router';
  * verification, both join flows (the public `/join?code=` landing page and the in-app
  * "Join house" form), "Create house"'s post-create "View house" button, and any tile whose
  * `href` the Module tile-press handler judges to be entering a not-currently-mounted
- * household/screensaver segment (see `Module.tsx`'s own use of this).
+ * household/screensaver segment (see `components/Module/ModuleTile.tsx`'s own use of this).
  */
 export function navigateToHref(href: string, params: Record<string, string> = {}) {
   router.replace({ pathname: href as never, params });
