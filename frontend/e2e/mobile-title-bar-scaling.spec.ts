@@ -1,10 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Visual regression coverage for three mobile-responsiveness bugs fixed together (see
-// components/Module/ and TileGrid.tsx): a phone-width tile grid wrapping to one column instead of
-// two, a title-bar badge/button overlapping its title text, and a long title hard-
-// truncating instead of shrinking to fit. Run at a phone-ish width (390px, roughly an
-// iPhone) since none of these reproduced at tablet/desktop widths.
+// Visual regression coverage for mobile-responsiveness bugs in components/Module/ and
+// TileGrid.tsx: a phone-width tile grid wrapping to one column instead of two, and a
+// title-bar badge/button overlapping its title text. Run at a phone-ish width (390px,
+// roughly an iPhone) since none of these reproduced at tablet/desktop widths.
+//
+// Tile-mode badges (a tile's own corner badge/action, e.g. "Coming soon" or Screensaver's
+// "Start") render in a plain row below the title now, not shrink-to-fit text measured
+// against an absolutely-positioned corner - that whole measurement scheme caused continuous
+// visible flicker on a real device (each width-driven state update could nudge a real
+// device's sub-pixel layout rounding by a hair, retriggering another measurement,
+// indefinitely) despite working in every desktop/Playwright test, so it was removed outright
+// for tiles rather than patched further. The open/collapsed card header's own title bar
+// (ModuleTitleBar.tsx, tested below) still does shrink a long title to fit next to a badge -
+// that one hasn't been reported as flickering and is a different, already-open-card context,
+// not a not-yet-opened tile.
 
 const USER = {
   id: 'u1',
@@ -128,39 +138,38 @@ async function login(page: Page) {
 test.describe('mobile title bar / tile grid scaling', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('house dashboard tile grid uses two columns with no title/badge overlap', async ({ page }) => {
+  test('house dashboard tile grid uses two columns, with each tile\'s badge below its title', async ({ page }) => {
     await mockBackend(page);
     await login(page);
     await page.waitForURL('**/house/h1/dashboard');
-    // The last() of each pair below is the real, visible/rendered copy - components/Module
-    // also renders a hidden (opacity: 0) shadow copy of title/badge content to measure natural
-    // size for its shrink-to-fit math (see TitleBarSlot/ModuleTitleBar/tile-mode comments),
-    // which getByText would otherwise also match.
-    await expect(page.getByText('Screensaver').last()).toBeVisible();
-    // Let the one-time card entrance animation (and the shrink-to-fit measurement passes
-    // it triggers) finish before asserting on layout.
+    // Tile titles/badges render just once each - no hidden shadow-measurement copy to
+    // disambiguate (see ModuleTile.tsx: tiles no longer measure anything to avoid overlap,
+    // a badge row below the title makes overlap structurally impossible instead).
+    await expect(page.getByText('Screensaver')).toBeVisible();
     await page.waitForTimeout(500);
 
-    // Bug 1: two tiles per row, not one at ~55% width with a blank gap beside it.
-    const screensaverBox = await page.getByText('Screensaver').last().boundingBox();
-    const filesBox = await page.getByText('Files').last().boundingBox();
+    // Two tiles per row, not one at ~55% width with a blank gap beside it.
+    const screensaverBox = await page.getByText('Screensaver').boundingBox();
+    const filesBox = await page.getByText('Files').boundingBox();
     expect(screensaverBox).not.toBeNull();
     expect(filesBox).not.toBeNull();
     // Files sits to the right of Screensaver, same row (roughly equal y).
     expect(Math.abs(screensaverBox!.y - filesBox!.y)).toBeLessThan(5);
     expect(filesBox!.x).toBeGreaterThan(screensaverBox!.x + screensaverBox!.width - 5);
 
-    // Bug 2: a single corner badge ("Start" on Screensaver, "Coming soon" on the disabled
-    // tiles) must not overlap its tile's title text.
+    // A tile's badge ("Start" on Screensaver, "Coming soon" on the disabled tiles) sits in
+    // its own row below the title, not overlapping it, and strictly below it vertically.
     const startBox = await page.getByText('Start').boundingBox();
     expect(startBox).not.toBeNull();
     expect(boxesOverlap(screensaverBox!, startBox!)).toBe(false);
+    expect(startBox!.y).toBeGreaterThanOrEqual(screensaverBox!.y + screensaverBox!.height - 2);
 
-    const tasksBox = await page.getByText('Tasks').last().boundingBox();
+    const tasksBox = await page.getByText('Tasks').boundingBox();
     const tasksChipBox = await page.getByText('Coming soon').first().boundingBox();
     expect(tasksBox).not.toBeNull();
     expect(tasksChipBox).not.toBeNull();
     expect(boxesOverlap(tasksBox!, tasksChipBox!)).toBe(false);
+    expect(tasksChipBox!.y).toBeGreaterThanOrEqual(tasksBox!.y + tasksBox!.height - 2);
 
     await expect(page).toHaveScreenshot('mobile-house-dashboard-tile-grid.png');
   });
@@ -192,63 +201,43 @@ test.describe('mobile title bar / tile grid scaling', () => {
     await expect(page).toHaveScreenshot('mobile-house-card-title-bar.png');
   });
 
-  test('a disabled tile\'s "Coming soon" badge and title both shrink to fit on one line, neither clipped nor wrapped', async ({
+  test('a disabled tile\'s "Coming soon" badge renders in full below the title, on a single line, never overlapping it', async ({
     page,
   }) => {
     await mockBackend(page);
     await login(page);
     await page.waitForURL('**/house/h1/dashboard');
-    await expect(page.getByText('Shopping').last()).toBeVisible();
+    await expect(page.getByText('Shopping')).toBeVisible();
     await page.waitForTimeout(500);
 
-    // Bug: "Coming soon" used to hard-clip via CSS text-overflow: ellipsis once its own
-    // corner badge hit its 45%-of-tile-width cap, instead of its font shrinking to fit (see
-    // components/Module/ModuleTile.tsx's comingSoonFitScale / TitleBarChip's `compact` prop).
-    // scrollWidth > clientWidth is the real signal CSS truncation actually fired - textContent
-    // alone isn't enough, since numberOfLines ellipsis never touches the DOM text itself.
-    const [comingSoonOverflow, titleLineCount] = await page.evaluate(() => {
-      const els = Array.from(document.querySelectorAll('div')).filter(
-        (el) => el.textContent?.trim() === 'Coming soon' && el.children.length === 0,
-      );
-      const shoppingEls = Array.from(document.querySelectorAll('div')).filter(
-        (el) => el.textContent?.trim() === 'Shopping' && el.children.length === 0,
-      );
-      const shopping = shoppingEls[shoppingEls.length - 1];
-      const sr = shopping.getBoundingClientRect();
-      let comingSoon = els[0];
-      let bestDist = Infinity;
-      for (const el of els) {
-        const d = Math.abs(el.getBoundingClientRect().y - sr.y);
-        if (d < bestDist) {
-          bestDist = d;
-          comingSoon = el;
-        }
-      }
-      const overflow = comingSoon.scrollWidth - comingSoon.clientWidth;
-      // A wrapped title renders roughly 2x (or more) a single line's height.
-      const singleLineHeight = parseFloat(getComputedStyle(shopping).fontSize) * 1.6;
-      const lines = Math.round(sr.height / singleLineHeight);
-      return [overflow, lines];
-    });
-    expect(comingSoonOverflow).toBeLessThanOrEqual(1); // allow sub-px rounding only
-    expect(titleLineCount).toBe(1);
+    // "Coming soon" used to hard-clip via CSS text-overflow: ellipsis once its old
+    // absolutely-positioned corner badge hit a 45%-of-tile-width cap. It's now a plain,
+    // fixed-size Text in a normal-flow row below the title (see ModuleTile.tsx) - nothing
+    // constrains its width anymore, so this is really just confirming the DOM text is intact
+    // and its box isn't CSS-truncating (scrollWidth > clientWidth would mean it still is).
+    const title = page.getByText('Shopping');
+    const badge = page.getByText('Coming soon').first();
+    await expect(title).toHaveText('Shopping');
+    await expect(badge).toHaveText('Coming soon');
 
-    // And, as ever, the badge and title must not overlap each other.
-    const shoppingBox = await page.getByText('Shopping').last().boundingBox();
-    const comingSoonBoxes = await page.getByText('Coming soon').all();
-    let shoppingComingSoonBox: Box | null = null;
-    let bestDist = Infinity;
-    for (const locator of comingSoonBoxes) {
-      const box = await locator.boundingBox();
-      if (!box || !shoppingBox) continue;
-      const dist = Math.abs(box.y - shoppingBox.y);
-      if (dist < bestDist) {
-        bestDist = dist;
-        shoppingComingSoonBox = box;
-      }
-    }
-    expect(shoppingBox).not.toBeNull();
-    expect(shoppingComingSoonBox).not.toBeNull();
-    expect(boxesOverlap(shoppingBox!, shoppingComingSoonBox!)).toBe(false);
+    const overflow = await badge.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1); // allow sub-px rounding only
+
+    // The title itself renders on one line - it's a single short word, fixed font size, no
+    // reason to wrap.
+    const titleBox = await title.boundingBox();
+    const titleLines = await title.evaluate((el) => {
+      const singleLineHeight = parseFloat(getComputedStyle(el).fontSize) * 1.6;
+      return Math.round(el.getBoundingClientRect().height / singleLineHeight);
+    });
+    expect(titleLines).toBe(1);
+
+    // And the badge, in its own row below the title, structurally can't overlap it - confirm
+    // that's actually true on screen, not just in theory.
+    const badgeBox = await badge.boundingBox();
+    expect(titleBox).not.toBeNull();
+    expect(badgeBox).not.toBeNull();
+    expect(boxesOverlap(titleBox!, badgeBox!)).toBe(false);
+    expect(badgeBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height - 2);
   });
 });
