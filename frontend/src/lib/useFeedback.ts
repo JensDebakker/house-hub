@@ -38,6 +38,23 @@ export function useFeedbackQuery(userId: string | undefined, ticketId: string | 
   });
 }
 
+/** Max attachments per ticket - enforced by the backend (400 above this), mirrored client-side. */
+export const MAX_FEEDBACK_ATTACHMENTS = 5;
+
+// Same per-platform FormData construction as the profile-picture upload in settings.tsx
+// (web needs a real Blob; native accepts the {uri,name,type} shape). Shared by the create
+// call and the add-attachments call so both send the `files` field identically.
+async function appendImageFiles(formData: FormData, files: DocumentPickerAsset[]) {
+  if (Platform.OS === 'web') {
+    const blobs = await Promise.all(files.map((asset) => fetch(asset.uri).then((r) => r.blob())));
+    blobs.forEach((blob, i) => formData.append('files', blob, files[i].name));
+  } else {
+    for (const asset of files) {
+      formData.append('files', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
+    }
+  }
+}
+
 export type CreateFeedbackRequest = {
   type: FeedbackType;
   description: string;
@@ -52,21 +69,71 @@ export function useCreateFeedbackMutation(userId: string | undefined) {
       const formData = new FormData();
       formData.append('type', request.type);
       formData.append('description', request.description);
-      // Same per-platform FormData construction as the profile-picture upload in
-      // settings.tsx (web needs a real Blob; native accepts the {uri,name,type} shape).
-      if (Platform.OS === 'web') {
-        const blobs = await Promise.all(request.files.map((asset) => fetch(asset.uri).then((r) => r.blob())));
-        blobs.forEach((blob, i) => formData.append('files', blob, request.files[i].name));
-      } else {
-        for (const asset of request.files) {
-          formData.append('files', { uri: asset.uri, name: asset.name, type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
-        }
-      }
+      await appendImageFiles(formData, request.files);
       const { data } = await api.post<FeedbackTicket>('/feedback', formData);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: feedbackQueryKey(userId ?? '') });
     },
+  });
+}
+
+export type UpdateFeedbackRequest = {
+  type?: FeedbackType;
+  description?: string;
+};
+
+/**
+ * Every edit endpoint returns the full updated ticket, so write it straight into both the
+ * list and the detail cache entries rather than re-fetching - the list row reflects the
+ * change immediately without another round-trip.
+ */
+function useSyncTicketIntoCache(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  return (ticket: FeedbackTicket) => {
+    const key = userId ?? '';
+    queryClient.setQueryData<FeedbackTicket[]>(feedbackQueryKey(key), (prev) =>
+      prev?.map((t) => (t.id === ticket.id ? ticket : t)),
+    );
+    queryClient.setQueryData(feedbackDetailQueryKey(key, ticket.id), ticket);
+  };
+}
+
+/** PATCH /feedback/{id} - only allowed while the ticket is OPEN (backend answers 409 otherwise). */
+export function useUpdateFeedbackMutation(userId: string | undefined) {
+  const syncTicket = useSyncTicketIntoCache(userId);
+  return useMutation({
+    mutationFn: async ({ ticketId, ...body }: UpdateFeedbackRequest & { ticketId: string }) => {
+      const { data } = await api.patch<FeedbackTicket>(`/feedback/${ticketId}`, body);
+      return data;
+    },
+    onSuccess: syncTicket,
+  });
+}
+
+/** POST /feedback/{id}/attachments - multipart `files`; at most 5 attachments per ticket in total. */
+export function useAddFeedbackAttachmentsMutation(userId: string | undefined) {
+  const syncTicket = useSyncTicketIntoCache(userId);
+  return useMutation({
+    mutationFn: async ({ ticketId, files }: { ticketId: string; files: DocumentPickerAsset[] }) => {
+      const formData = new FormData();
+      await appendImageFiles(formData, files);
+      const { data } = await api.post<FeedbackTicket>(`/feedback/${ticketId}/attachments`, formData);
+      return data;
+    },
+    onSuccess: syncTicket,
+  });
+}
+
+/** DELETE /feedback/{id}/attachments/{attachmentId} - returns the updated ticket. */
+export function useDeleteFeedbackAttachmentMutation(userId: string | undefined) {
+  const syncTicket = useSyncTicketIntoCache(userId);
+  return useMutation({
+    mutationFn: async ({ ticketId, attachmentId }: { ticketId: string; attachmentId: string }) => {
+      const { data } = await api.delete<FeedbackTicket>(`/feedback/${ticketId}/attachments/${attachmentId}`);
+      return data;
+    },
+    onSuccess: syncTicket,
   });
 }

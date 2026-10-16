@@ -1,12 +1,18 @@
 import { Picker } from '@react-native-picker/picker';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
+import { AdminActionButton } from '@/components/AdminTable';
 import { FeedbackAttachmentThumbnail } from '@/components/FeedbackAttachmentThumbnail';
 import { FeedbackStatusBadge } from '@/components/FeedbackStatusBadge';
 import { Module } from '@/components/Module';
 import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
-import { useAdminFeedbackQuery, useUpdateAdminFeedbackStatusMutation } from '@/lib/useAdminFeedback';
+import { confirmDestructive } from '@/lib/confirm';
+import {
+  useAdminFeedbackQuery,
+  useDeleteAdminFeedbackMutation,
+  useUpdateAdminFeedbackStatusMutation,
+} from '@/lib/useAdminFeedback';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { FeedbackStatus } from '@/types';
 
@@ -19,6 +25,7 @@ export default function AdminFeedbackDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ticketQuery = useAdminFeedbackQuery(isAdmin, id);
   const updateStatus = useUpdateAdminFeedbackStatusMutation();
+  const deleteTicket = useDeleteAdminFeedbackMutation();
 
   if (!isAdmin) {
     return (
@@ -42,13 +49,38 @@ export default function AdminFeedbackDetailScreen() {
     );
   }
 
-  const errorMessage = updateStatus.isError ? getErrorMessage(updateStatus.error, t('admin.feedbackDetail.updateStatusFailed')) : null;
+  const errorMessage = deleteTicket.isError
+    ? getErrorMessage(deleteTicket.error, t('admin.feedbackDetail.deleteFailed'))
+    : updateStatus.isError
+      ? getErrorMessage(updateStatus.error, t('admin.feedbackDetail.updateStatusFailed'))
+      : null;
+
+  const confirmDelete = () => {
+    const from = ticket.userDisplayName || ticket.userEmail;
+    confirmDestructive({
+      title: t('admin.feedbackDetail.deleteTitle'),
+      message: t(ticket.type === 'BUG' ? 'admin.feedbackDetail.deleteMessageBug' : 'admin.feedbackDetail.deleteMessageSuggestion', { from }),
+      onConfirm: () =>
+        deleteTicket.mutate(ticket.id, {
+          onSuccess: () => router.replace('/admin/feedback'),
+        }),
+    });
+  };
 
   return (
     <Module title={ticket.type === 'BUG' ? t('admin.feedbackDetail.titleBug') : t('admin.feedbackDetail.titleSuggestion')} color={FEEDBACK_COLOR}>
-      <Link href="/admin/feedback" style={{ color: '#2563eb' }}>
-        {t('admin.feedbackDetail.backToFeedback')}
-      </Link>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Link href="/admin/feedback" style={{ color: '#2563eb' }}>
+          {t('admin.feedbackDetail.backToFeedback')}
+        </Link>
+        <AdminActionButton
+          label={t('admin.feedbackDetail.deleteTicket')}
+          variant="danger"
+          onPress={confirmDelete}
+          busy={deleteTicket.isPending}
+          busyLabel={t('admin.feedbackDetail.deleting')}
+        />
+      </View>
 
       <View style={{ gap: 4 }}>
         <Text style={{ color: '#666' }}>

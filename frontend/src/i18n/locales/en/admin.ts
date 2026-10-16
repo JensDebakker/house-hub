@@ -152,6 +152,12 @@ export const admin = {
   feedbackDetail: {
     loadFailed: 'Failed to load ticket.',
     updateStatusFailed: 'Failed to update status.',
+    deleteFailed: 'Failed to delete ticket.',
+    deleteTitle: 'Permanently delete ticket?',
+    deleteMessageBug: 'Permanently delete this bug report from {{from}}, including its attachments? This cannot be undone.',
+    deleteMessageSuggestion: 'Permanently delete this suggestion from {{from}}, including its attachments? This cannot be undone.',
+    deleteTicket: 'Delete ticket',
+    deleting: 'Deleting…',
     titleBug: 'Bug report',
     titleSuggestion: 'Suggestion',
     backToFeedback: '← Back to feedback',

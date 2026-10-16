@@ -154,6 +154,12 @@ export const admin: typeof en = {
   feedbackDetail: {
     loadFailed: 'Impossible de charger le ticket.',
     updateStatusFailed: 'Impossible de mettre à jour le statut.',
+    deleteFailed: 'Échec de la suppression du ticket.',
+    deleteTitle: 'Supprimer définitivement le ticket ?',
+    deleteMessageBug: 'Supprimer définitivement ce signalement de bug de {{from}}, pièces jointes comprises ? Cette action est irréversible.',
+    deleteMessageSuggestion: 'Supprimer définitivement cette suggestion de {{from}}, pièces jointes comprises ? Cette action est irréversible.',
+    deleteTicket: 'Supprimer le ticket',
+    deleting: 'Suppression…',
     titleBug: 'Signalement de bug',
     titleSuggestion: 'Suggestion',
     backToFeedback: '← Retour aux retours',

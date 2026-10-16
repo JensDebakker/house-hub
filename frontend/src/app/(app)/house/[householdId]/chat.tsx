@@ -11,8 +11,23 @@ import type { ChatMessage } from '@/types';
 
 const CHAT_COLOR = '#db2777';
 
-function formatTime(iso: string, locale: string): string {
-  return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+/**
+ * Time only for messages sent today (device-local day); earlier messages also get the
+ * date in the chosen language's locale - "14 Oct" style day+month, plus the year only when it's not
+ * the current one - so older history isn't ambiguous.
+ */
+function formatMessageTimestamp(iso: string, locale: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  const time = date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const sameDay =
+    date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+  if (sameDay) return time;
+  const day = date.toLocaleDateString(locale, {
+    day: 'numeric',
+    month: 'short',
+    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+  });
+  return `${day}, ${time}`;
 }
 
 export default function ChatScreen() {
@@ -107,7 +122,7 @@ export default function ChatScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                   <Text style={{ fontWeight: '700', fontSize: 12, color: '#555' }}>{item.senderDisplayName}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 11, color: '#999' }}>{formatTime(item.createdAt, locale)}</Text>
+                    <Text style={{ fontSize: 11, color: '#999' }}>{formatMessageTimestamp(item.createdAt, locale)}</Text>
                     {canDelete(item) ? (
                       <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={{ padding: 2 }}>
                         <Text style={{ fontSize: 14, color: '#999', fontWeight: '700' }}>⋯</Text>

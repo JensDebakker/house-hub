@@ -95,6 +95,19 @@ tickets:
 - `GET /feedback/{id}` — single ticket; 404 (not 403) if it isn't the caller's, to avoid
   leaking existence → `FeedbackTicketResponse`
 - `GET /feedback/{id}/attachments/{attachmentId}` — streams the image bytes, owner only
+- `PATCH /feedback/{id}` — JSON `{ type?: "BUG"|"SUGGESTION", description?: string }`;
+  only provided fields change, `description` (when provided) must be non-blank and max
+  2000 chars (else 400) → 200 + updated `FeedbackTicketResponse`
+- `POST /feedback/{id}/attachments` — multipart `files` (one or more images, `image/*`,
+  filename required); the ticket's total attachment count after adding must stay ≤ 5
+  (else 400) → 200 + updated `FeedbackTicketResponse`
+- `DELETE /feedback/{id}/attachments/{attachmentId}` — removes the attachment and its
+  stored image; 404 if that attachment isn't on this ticket → 200 + updated
+  `FeedbackTicketResponse`
+
+The three editing endpoints above only work while the ticket's `status` is `OPEN` —
+otherwise 409 Conflict (normal error body). Someone else's ticket → 404, as for `GET`.
+Each successful edit bumps `updatedAt`.
 
 `FeedbackTicketResponse`: `{ id, type, description, status, createdAt, updatedAt,
 attachments: [{ id, contentType, originalFilename }] }` — `status` is one of `OPEN`,
@@ -127,6 +140,9 @@ Admin (`ROLE_ADMIN` only):
   submitter's id/email/display name → `List<AdminFeedbackResponse>`
 - `GET /admin/feedback/{id}` — single ticket detail, any user's → `AdminFeedbackResponse`
 - `PATCH /admin/feedback/{id}` — `{ status }` only → updated `AdminFeedbackResponse`
+- `DELETE /admin/feedback/{id}` — 204; permanently deletes the ticket, its attachment rows
+  and their stored images (any status). 404 for an unknown id. Also accepted with the API
+  key below
 - `GET /admin/feedback/{id}/attachments/{attachmentId}` — streams image bytes for any
   ticket (ownership bypassed)
 
@@ -135,9 +151,9 @@ userEmail, userDisplayName, attachments: [{ id, contentType, originalFilename }]
 
 **Admin API key (for tools/agents).** Besides an admin user's JWT, every `GET /admin/**`
 endpoint also accepts the header `X-Admin-Api-Key: <ADMIN_API_KEY>` — e.g.
-`curl -H "X-Admin-Api-Key: $KEY" https://jensdebakker.com/api/admin/feedback`. Read-only by
-design: the key never authenticates a non-GET request or anything outside `/admin/**`
-(those get 401). Configured via the `ADMIN_API_KEY` env var (`app.admin-api-key`); blank or
+`curl -H "X-Admin-Api-Key: $KEY" https://jensdebakker.com/api/admin/feedback`. The only write
+it allows is `DELETE /admin/feedback/{id}` (spam cleanup); every other non-GET request, and
+anything outside `/admin/**`, gets 401 with the key. Configured via the `ADMIN_API_KEY` env var (`app.admin-api-key`); blank or
 unset disables it. Rotate by setting a new value in the VPS `.env` and restarting the backend.
 
 ## Notes

@@ -45,3 +45,24 @@ export function useUpdateAdminFeedbackStatusMutation() {
     },
   });
 }
+
+/** DELETE /admin/feedback/{id} -> 204. Permanently removes the ticket and its attachments. */
+export function useDeleteAdminFeedbackMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ticketId: string) => {
+      await api.delete(`/admin/feedback/${ticketId}`);
+      return ticketId;
+    },
+    onSuccess: (ticketId) => {
+      queryClient.setQueryData<AdminFeedbackTicket[]>(adminFeedbackQueryKey(), (prev) =>
+        prev?.filter((t) => t.id !== ticketId),
+      );
+      // Drop the cached detail entry so it can't be served stale later - but only when no
+      // screen is observing it: removing an observed query makes its observer immediately
+      // refetch it (a pointless 404). The detail screen navigates away on success instead,
+      // after which the now-unobserved entry is garbage-collected normally.
+      queryClient.removeQueries({ queryKey: adminFeedbackDetailQueryKey(ticketId), exact: true, type: 'inactive' });
+    },
+  });
+}

@@ -154,6 +154,12 @@ export const admin: typeof en = {
   feedbackDetail: {
     loadFailed: 'Ticket laden mislukt.',
     updateStatusFailed: 'Status bijwerken mislukt.',
+    deleteFailed: 'Ticket verwijderen mislukt.',
+    deleteTitle: 'Ticket definitief verwijderen?',
+    deleteMessageBug: 'Deze bugmelding van {{from}} definitief verwijderen, inclusief bijlagen? Dit kan niet ongedaan worden gemaakt.',
+    deleteMessageSuggestion: 'Deze suggestie van {{from}} definitief verwijderen, inclusief bijlagen? Dit kan niet ongedaan worden gemaakt.',
+    deleteTicket: 'Ticket verwijderen',
+    deleting: 'Verwijderen…',
     titleBug: 'Bugmelding',
     titleSuggestion: 'Suggestie',
     backToFeedback: '← Terug naar feedback',

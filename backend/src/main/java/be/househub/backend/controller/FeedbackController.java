@@ -1,6 +1,7 @@
 package be.househub.backend.controller;
 
 import be.househub.backend.dto.feedback.FeedbackTicketResponse;
+import be.househub.backend.dto.feedback.FeedbackUpdateRequest;
 import be.househub.backend.entity.FeedbackType;
 import be.househub.backend.security.SecurityUtils;
 import be.househub.backend.service.FeedbackService;
@@ -9,9 +10,12 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +47,22 @@ public class FeedbackController {
     @GetMapping("/{id}")
     public FeedbackTicketResponse findOne(@PathVariable UUID id) {
         return feedbackService.findOne(SecurityUtils.getCurrentUser(), id);
+    }
+
+    @PatchMapping("/{id}")
+    public FeedbackTicketResponse update(@PathVariable UUID id, @RequestBody FeedbackUpdateRequest request) {
+        return feedbackService.update(SecurityUtils.getCurrentUser(), id, request);
+    }
+
+    @PostMapping(value = "/{id}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public FeedbackTicketResponse addAttachments(@PathVariable UUID id,
+                                                 @RequestParam("files") List<MultipartFile> files) {
+        return feedbackService.addAttachments(SecurityUtils.getCurrentUser(), id, files);
+    }
+
+    @DeleteMapping("/{id}/attachments/{attachmentId}")
+    public FeedbackTicketResponse deleteAttachment(@PathVariable UUID id, @PathVariable UUID attachmentId) {
+        return feedbackService.deleteAttachment(SecurityUtils.getCurrentUser(), id, attachmentId);
     }
 
     @GetMapping("/{id}/attachments/{attachmentId}")

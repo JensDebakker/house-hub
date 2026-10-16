@@ -9,6 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AdminApiKeyFilterTest {
@@ -40,9 +42,19 @@ class AdminApiKeyFilterTest {
     }
 
     @Test
-    void nonGetRequestIsIgnoredEvenWithCorrectKey() throws Exception {
+    void deletingAFeedbackTicketIsAllowed() throws Exception {
+        String path = "/admin/feedback/" + UUID.randomUUID();
+        assertThat(run(new AdminApiKeyFilter(KEY), request("DELETE", path, KEY))).isNotNull();
+    }
+
+    @Test
+    void otherWritesAreIgnoredEvenWithCorrectKey() throws Exception {
+        String ticket = "/admin/feedback/" + UUID.randomUUID();
         assertThat(run(new AdminApiKeyFilter(KEY), request("PATCH", "/admin/users/1", KEY))).isNull();
-        assertThat(run(new AdminApiKeyFilter(KEY), request("DELETE", "/admin/households/1", KEY))).isNull();
+        assertThat(run(new AdminApiKeyFilter(KEY), request("PATCH", ticket, KEY))).isNull();
+        assertThat(run(new AdminApiKeyFilter(KEY), request("DELETE", "/admin/households/" + UUID.randomUUID(), KEY))).isNull();
+        assertThat(run(new AdminApiKeyFilter(KEY), request("DELETE", ticket + "/attachments/" + UUID.randomUUID(), KEY))).isNull();
+        assertThat(run(new AdminApiKeyFilter(KEY), request("DELETE", "/feedback/" + UUID.randomUUID(), KEY))).isNull();
     }
 
     @Test

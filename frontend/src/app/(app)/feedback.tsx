@@ -1,4 +1,6 @@
 import { Picker } from '@react-native-picker/picker';
+import { useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import * as DocumentPicker from 'expo-document-picker';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import { useState } from 'react';
@@ -7,42 +9,263 @@ import { FeedbackAttachmentThumbnail } from '@/components/FeedbackAttachmentThum
 import { FeedbackStatusBadge } from '@/components/FeedbackStatusBadge';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTranslation, type TranslationKey } from '@/i18n';
+import { translate, useTranslation, type TranslationKey } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
-import { useCreateFeedbackMutation, useFeedbackListQuery } from '@/lib/useFeedback';
+import { confirmDestructive } from '@/lib/confirm';
+import {
+  MAX_FEEDBACK_ATTACHMENTS,
+  feedbackQueryKey,
+  useAddFeedbackAttachmentsMutation,
+  useCreateFeedbackMutation,
+  useDeleteFeedbackAttachmentMutation,
+  useFeedbackListQuery,
+  useUpdateFeedbackMutation,
+} from '@/lib/useFeedback';
 import { inputStyle } from '@/lib/formStyles';
-import type { FeedbackTicket, FeedbackType } from '@/types';
+import type { FeedbackAttachment, FeedbackTicket, FeedbackType } from '@/types';
 
 const FEEDBACK_COLOR = '#f97316';
-const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENTS = MAX_FEEDBACK_ATTACHMENTS;
+/** Matches the backend's @Size(max = 2000) on the feedback description. */
+const MAX_DESCRIPTION_LENGTH = 2000;
 
 const TYPE_OPTIONS: { value: FeedbackType; label: TranslationKey }[] = [
   { value: 'BUG', label: 'app.feedback.types.BUG' },
   { value: 'SUGGESTION', label: 'app.feedback.types.SUGGESTION' },
 ];
 
-function TicketRow({ ticket }: { ticket: FeedbackTicket }) {
-  const { t, locale } = useTranslation();
+/**
+ * The backend only allows edits while a ticket is OPEN and answers 409 otherwise (e.g. an
+ * admin moved it to IN_PROGRESS since this list was loaded) - turn that into a readable
+ * message instead of a generic failure.
+ */
+function editErrorMessage(err: unknown, fallback: string): string {
+  if (isAxiosError(err) && err.response?.status === 409) {
+    return translate('app.feedback.edit.notOpen');
+  }
+  return getErrorMessage(err, fallback);
+}
+
+function SmallButton({
+  label,
+  onPress,
+  disabled,
+  variant = 'default',
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  variant?: 'default' | 'primary';
+}) {
+  const primary = variant === 'primary';
   return (
-    <View style={{ gap: 6, padding: 12, borderRadius: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee' }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={{ fontWeight: '700' }}>{t(`app.feedback.types.${ticket.type}`)}</Text>
-        <FeedbackStatusBadge status={ticket.status} />
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={{
+        borderWidth: 1,
+        borderColor: primary ? '#2563eb' : '#ccc',
+        backgroundColor: primary ? '#2563eb' : 'white',
+        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <Text style={{ color: primary ? 'white' : '#111827', fontWeight: primary ? '600' : '400', fontSize: 13 }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function TicketRow({ ticket, userId }: { ticket: FeedbackTicket; userId: string | undefined }) {
+  const queryClient = useQueryClient();
+  const updateFeedback = useUpdateFeedbackMutation(userId);
+  const addAttachments = useAddFeedbackAttachmentsMutation(userId);
+  const deleteAttachment = useDeleteFeedbackAttachmentMutation(userId);
+  const { t, locale } = useTranslation();
+
+  const [editing, setEditing] = useState(false);
+  const [draftType, setDraftType] = useState<FeedbackType>(ticket.type);
+  const [draftDescription, setDraftDescription] = useState(ticket.description);
+  const [rowError, setRowError] = useState<string | null>(null);
+
+  const isOpen = ticket.status === 'OPEN';
+  const canEdit = isOpen && editing;
+  const busy = updateFeedback.isPending || addAttachments.isPending || deleteAttachment.isPending;
+  const remainingSlots = MAX_FEEDBACK_ATTACHMENTS - ticket.attachments.length;
+
+  const handleError = (err: unknown, fallback: string) => {
+    setRowError(editErrorMessage(err, fallback));
+    if (isAxiosError(err) && err.response?.status === 409) {
+      // Pull the ticket's real (non-OPEN) status so the edit controls disappear.
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: feedbackQueryKey(userId ?? '') });
+    }
+  };
+
+  const startEditing = () => {
+    setDraftType(ticket.type);
+    setDraftDescription(ticket.description);
+    setRowError(null);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setRowError(null);
+    setEditing(false);
+  };
+
+  const save = () => {
+    const description = draftDescription.trim();
+    if (!description) return;
+    setRowError(null);
+    updateFeedback.mutate(
+      { ticketId: ticket.id, type: draftType, description },
+      {
+        onSuccess: () => setEditing(false),
+        onError: (err) => handleError(err, t('app.feedback.edit.saveFailed')),
+      },
+    );
+  };
+
+  const addImages = async () => {
+    setRowError(null);
+    if (remainingSlots <= 0) {
+      setRowError(t('app.feedback.edit.maxImages', { max: MAX_FEEDBACK_ATTACHMENTS }));
+      return;
+    }
+    const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true, multiple: true });
+    if (result.canceled || !result.assets || result.assets.length === 0) return;
+    const picked = result.assets.slice(0, remainingSlots);
+    addAttachments.mutate(
+      { ticketId: ticket.id, files: picked },
+      {
+        onSuccess: () => {
+          if (result.assets.length > remainingSlots) {
+            setRowError(t('app.feedback.attachmentsTruncated', { count: remainingSlots, max: MAX_FEEDBACK_ATTACHMENTS }));
+          }
+        },
+        onError: (err) => handleError(err, t('app.feedback.edit.addImagesFailed')),
+      },
+    );
+  };
+
+  const removeAttachment = (attachment: FeedbackAttachment) => {
+    confirmDestructive({
+      title: t('app.feedback.edit.removeTitle'),
+      message: t('app.feedback.edit.removeMessage', { filename: attachment.originalFilename }),
+      confirmLabel: t('common.remove'),
+      onConfirm: () => {
+        setRowError(null);
+        deleteAttachment.mutate(
+          { ticketId: ticket.id, attachmentId: attachment.id },
+          { onError: (err) => handleError(err, t('app.feedback.edit.removeFailed')) },
+        );
+      },
+    });
+  };
+
+  return (
+    <View
+      testID={`feedback-ticket-${ticket.id}`}
+      style={{ gap: 6, padding: 12, borderRadius: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee' }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        {canEdit ? (
+          <View style={{ flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, backgroundColor: 'white' }}>
+            <Picker selectedValue={draftType} onValueChange={(v: FeedbackType) => setDraftType(v)} enabled={!busy}>
+              {TYPE_OPTIONS.map((opt) => (
+                <Picker.Item key={opt.value} label={t(opt.label)} value={opt.value} />
+              ))}
+            </Picker>
+          </View>
+        ) : (
+          <Text style={{ fontWeight: '700' }}>{t(`app.feedback.types.${ticket.type}`)}</Text>
+        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <FeedbackStatusBadge status={ticket.status} />
+          {isOpen && !editing ? <SmallButton label={t('common.edit')} onPress={startEditing} /> : null}
+        </View>
       </View>
-      <Text style={{ color: '#374151' }}>{ticket.description}</Text>
+
+      {rowError ? <Text style={{ color: '#c62828' }}>{rowError}</Text> : null}
+
+      {canEdit ? (
+        <TextInput
+          value={draftDescription}
+          onChangeText={setDraftDescription}
+          editable={!busy}
+          multiline
+          numberOfLines={4}
+          maxLength={MAX_DESCRIPTION_LENGTH}
+          style={[inputStyle, { minHeight: 90, textAlignVertical: 'top', backgroundColor: 'white' }]}
+        />
+      ) : (
+        <Text style={{ color: '#374151' }}>{ticket.description}</Text>
+      )}
+
       {ticket.attachments.length > 0 ? (
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
           {ticket.attachments.map((a) => (
-            <FeedbackAttachmentThumbnail
-              key={a.id}
-              url={`/feedback/${ticket.id}/attachments/${a.id}`}
-              filename={a.originalFilename}
-            />
+            <View key={a.id}>
+              <FeedbackAttachmentThumbnail url={`/feedback/${ticket.id}/attachments/${a.id}`} filename={a.originalFilename} />
+              {canEdit ? (
+                <Pressable
+                  onPress={() => removeAttachment(a)}
+                  disabled={busy}
+                  accessibilityLabel={t('app.feedback.edit.removeImageA11y', { filename: a.originalFilename })}
+                  hitSlop={6}
+                  style={{
+                    position: 'absolute',
+                    top: -6,
+                    right: -6,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: '#c62828',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: busy ? 0.5 : 1,
+                  }}
+                >
+                  <Text style={{ color: 'white', fontWeight: '700', fontSize: 12, lineHeight: 14 }}>×</Text>
+                </Pressable>
+              ) : null}
+            </View>
           ))}
         </View>
       ) : null}
+
+      {canEdit ? (
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <SmallButton
+            label={addAttachments.isPending ? t('app.feedback.edit.uploading') : t('app.feedback.edit.addImage', { count: ticket.attachments.length, max: MAX_FEEDBACK_ATTACHMENTS })}
+            onPress={addImages}
+            disabled={busy || remainingSlots <= 0}
+          />
+          <View style={{ flex: 1 }} />
+          <SmallButton label={t('common.cancel')} onPress={cancelEditing} disabled={updateFeedback.isPending} />
+          <SmallButton
+            label={updateFeedback.isPending ? t('common.saving') : t('common.save')}
+            onPress={save}
+            disabled={busy || !draftDescription.trim()}
+            variant="primary"
+          />
+        </View>
+      ) : null}
+      {canEdit ? (
+        <Text style={{ color: '#9ca3af', fontSize: 11 }}>
+          {t('app.feedback.edit.hint')}
+        </Text>
+      ) : null}
+
       <Text style={{ color: '#9ca3af', fontSize: 12 }}>
         {t('app.feedback.submittedAt', { date: new Date(ticket.createdAt).toLocaleString(locale) })}
+        {ticket.updatedAt && ticket.updatedAt !== ticket.createdAt
+          ? t('app.feedback.updatedAt', { date: new Date(ticket.updatedAt).toLocaleString(locale) })
+          : ''}
       </Text>
     </View>
   );
@@ -185,7 +408,7 @@ export default function FeedbackScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ gap: 8, paddingTop: 4, paddingBottom: 16 }}
           ListEmptyComponent={<Text style={{ color: '#999' }}>{t('app.feedback.empty')}</Text>}
-          renderItem={({ item }) => <TicketRow ticket={item} />}
+          renderItem={({ item }) => <TicketRow ticket={item} userId={user?.id} />}
         />
       )}
     </Module>
