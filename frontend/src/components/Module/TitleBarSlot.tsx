@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Animated, Pressable, View } from 'react-native';
+import { widthChanged } from '@/lib/widthChanged';
 
 /**
  * A title-bar display or action slot. `transform: scale` (used to visually shrink this
@@ -58,7 +59,11 @@ export const TitleBarSlot = ({
         pointerEvents="none"
         onLayout={(e) => {
           const { width, height } = e.nativeEvent.layout;
-          setNaturalSize((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
+          setNaturalSize((prev) =>
+            prev && !widthChanged(prev.width, width) && !widthChanged(prev.height, height)
+              ? prev
+              : { width, height },
+          );
           onNaturalWidth?.(width);
         }}
       >
