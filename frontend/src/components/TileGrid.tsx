@@ -38,7 +38,22 @@ export const TileGrid = ({ children }: { children: ReactNode }) => {
   };
 
   const columns = BREAKPOINTS.find((b) => width >= b.minWidth)?.columns ?? 2;
-  const tileWidth = width > 0 ? (width - (columns - 1) * GAP) / columns : undefined;
+  // Floored, not the exact quotient - confirmed via a real device (Android, devicePixelRatio
+  // 2.8125) that computing an EXACT fit here is fragile: the browser's own sub-pixel
+  // rounding/snapping of each tile's rendered width (CSS px -> physical px at a non-integer
+  // DPR) can round the *sum* of `columns` tiles' widths plus their gaps up past the
+  // container's own (separately rounded) width by a fraction of a pixel - e.g. measured on
+  // that device, two 145.5px tiles + one 14px gap summed to 305.0px, 0.11px more than the
+  // container's own measured 304.89px. `flex-wrap` takes that at face value and wraps the
+  // second tile onto its own row instead of trusting it "basically" fits, collapsing the
+  // whole grid to one column. This isn't reproducible in desktop Chromium (even with a
+  // matching deviceScaleFactor set via Playwright) - real mobile sub-pixel layout snapping
+  // apparently isn't faithfully emulated there, so this was only caught via the live device
+  // itself (chrome://inspect). Flooring sacrifices at most ~1px of unused space per tile at
+  // the row's right edge, in exchange for the total width of a full row always summing to
+  // strictly less than the container's own width, regardless of how any one browser rounds
+  // the individual pieces.
+  const tileWidth = width > 0 ? Math.floor((width - (columns - 1) * GAP) / columns) : undefined;
 
   return (
     <View onLayout={onLayout} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GAP }}>
