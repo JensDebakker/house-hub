@@ -4,12 +4,16 @@ import { DayCell } from './DayCell';
 import { dateKey } from './dateKey';
 import { getMonthGridDays } from './getMonthGridDays';
 import { isSameDay } from './isSameDay';
-import { WEEKDAY_LABELS } from './weekdayLabels';
 
-export { dateKey } from './dateKey';
-export { isSameDay } from './isSameDay';
+export { dateKey, isSameDay, getMonthGridDays };
 export { parseDateKey } from './parseDateKey';
-export { getMonthGridDays } from './getMonthGridDays';
+
+// A known Sunday (2023-01-01) used purely to read locale-appropriate short weekday labels
+// in Sun..Sat order, without hardcoding English names. Local to this file only (unlike the
+// extracted date helpers above), so it stays inline rather than its own file.
+const WEEKDAY_LABELS = Array.from({ length: 7 }, (_, i) =>
+  new Date(2023, 0, 1 + i).toLocaleDateString(undefined, { weekday: 'short' }),
+);
 
 export const MonthGrid = ({
   year,

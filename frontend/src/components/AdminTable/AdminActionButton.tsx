@@ -1,5 +1,5 @@
 import { Pressable, Text, type StyleProp, type ViewStyle } from 'react-native';
-import { saveButtonStyle } from './styles';
+import { saveButtonStyle } from './tableStyles';
 
 /**
  * Covers every row/detail action button across the admin screens: a filled "Save"-style
