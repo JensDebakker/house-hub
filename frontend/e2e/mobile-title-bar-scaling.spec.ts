@@ -240,4 +240,65 @@ test.describe('mobile title bar / tile grid scaling', () => {
     expect(boxesOverlap(titleBox!, badgeBox!)).toBe(false);
     expect(badgeBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height - 2);
   });
+
+  test('opened Screensaver section uses the same two-column tile grid and keeps a Start action in its header', async ({
+    page,
+  }) => {
+    await mockBackend(page);
+    await login(page);
+    await page.waitForURL('**/house/h1/dashboard');
+    await page.getByText('Screensaver').click();
+    await page.waitForURL('**/house/h1/screensaver**');
+    await page.waitForTimeout(500);
+
+    // Three "Start" text matches exist on this screen, not two: the grid's own "Start" tile
+    // (its *title*, not a badge - fontSize 17, the tile title font) happens to literally be
+    // the word "Start" too, plus the header's action chip (fontSize 11) which itself renders
+    // a hidden shadow-measurement copy alongside its real visible one (see TitleBarSlot) -
+    // so picking by DOM order (.first()/.last()) doesn't reliably land on the right one.
+    // Font size (17 for the tile title, 11 for the header chip) unambiguously does.
+    const starts = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('div'))
+        .filter((el) => el.textContent?.trim() === 'Start' && el.children.length === 0)
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          return { x: r.x, y: r.y, w: r.width, h: r.height, fontSize: parseFloat(getComputedStyle(el).fontSize) };
+        });
+    });
+    const startTileBox = starts.find((s) => s.fontSize === 17);
+    // Of the two fontSize-11 (header chip) matches, the real visible one is the one that
+    // isn't flush against x=0-ish (the hidden shadow copy, an absolutely-positioned sibling
+    // with no explicit left offset, ends up positioned by the row's own flow rather than
+    // where the real chip visually sits).
+    const headerStartCandidates = starts.filter((s) => s.fontSize === 11);
+    const headerStartBox = headerStartCandidates.reduce((a, b) => (b.x > a.x ? b : a));
+    const layoutBox = await page.getByText('Layout').boundingBox();
+    const autoStartBox = await page.getByText('AutoStart').boundingBox();
+    expect(startTileBox).toBeTruthy();
+    expect(headerStartCandidates.length).toBe(2);
+    expect(layoutBox).not.toBeNull();
+    expect(autoStartBox).not.toBeNull();
+
+    // Was a hand-rolled `flexBasis: '31%'` row (always ~3 per row, regardless of screen
+    // width) instead of the shared TileGrid every other tile grid in the app uses - on a
+    // phone-width screen that's inconsistent with the rest of the app's 2-column layout.
+    // "Start" and "Layout" should now sit side by side (TileGrid's own 2-column breakpoint),
+    // with "AutoStart" wrapping to its own row underneath rather than squeezing a third tile
+    // into the first row.
+    expect(Math.abs(startTileBox!.y - layoutBox!.y)).toBeLessThan(5);
+    expect(autoStartBox!.y).toBeGreaterThan(startTileBox!.y + startTileBox!.h - 5);
+
+    // The card header's own "Start" shortcut (distinct from the "Start" tile in the grid
+    // above - same destination, but available without scrolling/looking for the tile) used
+    // to be entirely absent once a user had actually opened into the Screensaver section
+    // (this card's Module never passed titleBarActions at all) - it's expected top-right,
+    // next to the "Screensaver" title.
+    const title = page.getByText('Screensaver', { exact: true }).last();
+    await expect(title).toBeVisible();
+    const titleBox2 = await title.boundingBox();
+    expect(titleBox2).not.toBeNull();
+    // Top-right of the header: right of the title, same row (roughly equal y).
+    expect(headerStartBox.x).toBeGreaterThan(titleBox2!.x + titleBox2!.width - 5);
+    expect(Math.abs(headerStartBox.y - titleBox2!.y)).toBeLessThan(20);
+  });
 });

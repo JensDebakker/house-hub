@@ -1,5 +1,7 @@
 import { router, Slot, useLocalSearchParams, usePathname } from 'expo-router';
-import { Module, navigateBackFromCard } from '@/components/Module';
+import { Text } from 'react-native';
+import { Module, navigateBackFromCard, TitleBarChip } from '@/components/Module';
+import { navigateToHref } from '@/lib/navigation';
 
 const SCREENSAVER_COLOR = '#7c3aed';
 
@@ -13,6 +15,15 @@ export default function HouseScreensaverLayout() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const pathname = usePathname();
   const basePath = `/house/${householdId}/screensaver`;
+  // Same "Start" shortcut the Houses dashboard's own Screensaver tile offers, kept available
+  // here too - previously this card's own header had no titleBarActions at all, so once a
+  // user had actually opened into the Screensaver section (rather than tapping Start
+  // straight from the dashboard tile), there was no way to launch the kiosk display without
+  // first collapsing back out to the dashboard. See dashboard.tsx's own openScreensaver for
+  // why navigateToHref (not a plain router.replace) and the returnTo param.
+  const openScreensaver = () => {
+    navigateToHref(`/screensaver/${householdId}/start`, { returnTo: pathname });
+  };
 
   return (
     <Module
@@ -21,6 +32,11 @@ export default function HouseScreensaverLayout() {
       collapsed={pathname !== basePath}
       onCollapsedPress={() =>
         navigateBackFromCard(() => router.replace({ pathname: `/house/${householdId}/screensaver/index` as never }))
+      }
+      titleBarActions={
+        <TitleBarChip color={SCREENSAVER_COLOR} onPress={openScreensaver}>
+          <Text style={{ color: SCREENSAVER_COLOR, fontSize: 11, fontWeight: '700' }}>Start</Text>
+        </TitleBarChip>
       }
     >
       <Slot />
