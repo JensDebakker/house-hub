@@ -292,6 +292,19 @@ public class AdminService {
         return toAdminFeedbackResponse(feedbackTicketRepository.save(ticket));
     }
 
+    @Transactional
+    public void deleteFeedback(UUID ticketId) {
+        FeedbackTicket ticket = findFeedbackTicket(ticketId);
+        List<String> storageKeys = ticket.getAttachments().stream()
+                .map(a -> a.getStorageKey())
+                .toList();
+        // Attachment rows cascade (CascadeType.ALL + orphanRemoval on FeedbackTicket.attachments).
+        feedbackTicketRepository.delete(ticket);
+        feedbackTicketRepository.flush();
+        // Blobs are removed only after the row deletes have been flushed successfully.
+        storageKeys.forEach(fileStorageService::delete);
+    }
+
     public FeedbackAttachmentFile downloadFeedbackAttachment(UUID ticketId, UUID attachmentId) {
         FeedbackTicket ticket = findFeedbackTicket(ticketId);
         var attachment = feedbackAttachmentRepository.findByIdAndTicketId(attachmentId, ticket.getId())

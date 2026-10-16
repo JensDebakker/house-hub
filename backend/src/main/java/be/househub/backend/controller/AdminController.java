@@ -172,6 +172,12 @@ public class AdminController {
         return adminService.updateFeedback(id, request);
     }
 
+    @DeleteMapping("/feedback/{id}")
+    public ResponseEntity<Void> deleteFeedback(@PathVariable UUID id) {
+        adminService.deleteFeedback(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/feedback/{id}/attachments/{attachmentId}")
     public ResponseEntity<InputStreamResource> downloadFeedbackAttachment(@PathVariable UUID id, @PathVariable UUID attachmentId) {
         var file = adminService.downloadFeedbackAttachment(id, attachmentId);
