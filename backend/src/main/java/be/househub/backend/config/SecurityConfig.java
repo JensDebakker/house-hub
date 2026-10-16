@@ -1,5 +1,6 @@
 package be.househub.backend.config;
 
+import be.househub.backend.security.AdminApiKeyFilter;
 import be.househub.backend.security.CustomUserDetailsService;
 import be.househub.backend.security.JwtAuthenticationFilter;
 import be.househub.backend.security.RestAccessDeniedHandler;
@@ -51,6 +52,9 @@ public class SecurityConfig {
     @Value("${cors.allowed-origins}")
     private List<String> allowedOrigins;
 
+    @Value("${app.admin-api-key:}")
+    private String adminApiKey;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -78,7 +82,9 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Not a @Component on purpose: Boot would also register it as a plain servlet filter.
+                .addFilterAfter(new AdminApiKeyFilter(adminApiKey), JwtAuthenticationFilter.class);
 
         return http.build();
     }
