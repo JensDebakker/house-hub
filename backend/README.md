@@ -141,8 +141,8 @@ Admin (`ROLE_ADMIN` only):
 - `GET /admin/feedback/{id}` — single ticket detail, any user's → `AdminFeedbackResponse`
 - `PATCH /admin/feedback/{id}` — `{ status }` only → updated `AdminFeedbackResponse`
 - `DELETE /admin/feedback/{id}` — 204; permanently deletes the ticket, its attachment rows
-  and their stored images (any status). 404 for an unknown id. Requires an admin JWT (the
-  API key below is GET-only)
+  and their stored images (any status). 404 for an unknown id. Also accepted with the API
+  key below
 - `GET /admin/feedback/{id}/attachments/{attachmentId}` — streams image bytes for any
   ticket (ownership bypassed)
 
@@ -151,9 +151,9 @@ userEmail, userDisplayName, attachments: [{ id, contentType, originalFilename }]
 
 **Admin API key (for tools/agents).** Besides an admin user's JWT, every `GET /admin/**`
 endpoint also accepts the header `X-Admin-Api-Key: <ADMIN_API_KEY>` — e.g.
-`curl -H "X-Admin-Api-Key: $KEY" https://jensdebakker.com/api/admin/feedback`. Read-only by
-design: the key never authenticates a non-GET request or anything outside `/admin/**`
-(those get 401). Configured via the `ADMIN_API_KEY` env var (`app.admin-api-key`); blank or
+`curl -H "X-Admin-Api-Key: $KEY" https://jensdebakker.com/api/admin/feedback`. The only write
+it allows is `DELETE /admin/feedback/{id}` (spam cleanup); every other non-GET request, and
+anything outside `/admin/**`, gets 401 with the key. Configured via the `ADMIN_API_KEY` env var (`app.admin-api-key`); blank or
 unset disables it. Rotate by setting a new value in the VPS `.env` and restarting the backend.
 
 ## Notes
