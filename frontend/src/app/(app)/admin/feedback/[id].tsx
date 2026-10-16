@@ -1,11 +1,17 @@
 import { Picker } from '@react-native-picker/picker';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
+import { AdminActionButton } from '@/components/AdminTable';
 import { FeedbackAttachmentThumbnail } from '@/components/FeedbackAttachmentThumbnail';
 import { FeedbackStatusBadge } from '@/components/FeedbackStatusBadge';
 import { Module } from '@/components/Module';
 import { getErrorMessage } from '@/lib/api';
-import { useAdminFeedbackQuery, useUpdateAdminFeedbackStatusMutation } from '@/lib/useAdminFeedback';
+import { confirmDestructive } from '@/lib/confirm';
+import {
+  useAdminFeedbackQuery,
+  useDeleteAdminFeedbackMutation,
+  useUpdateAdminFeedbackStatusMutation,
+} from '@/lib/useAdminFeedback';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { FeedbackStatus } from '@/types';
 
@@ -17,6 +23,7 @@ export default function AdminFeedbackDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ticketQuery = useAdminFeedbackQuery(isAdmin, id);
   const updateStatus = useUpdateAdminFeedbackStatusMutation();
+  const deleteTicket = useDeleteAdminFeedbackMutation();
 
   if (!isAdmin) {
     return (
@@ -40,13 +47,38 @@ export default function AdminFeedbackDetailScreen() {
     );
   }
 
-  const errorMessage = updateStatus.isError ? getErrorMessage(updateStatus.error, 'Failed to update status.') : null;
+  const errorMessage = deleteTicket.isError
+    ? getErrorMessage(deleteTicket.error, 'Failed to delete ticket.')
+    : updateStatus.isError
+      ? getErrorMessage(updateStatus.error, 'Failed to update status.')
+      : null;
+
+  const confirmDelete = () => {
+    const from = ticket.userDisplayName || ticket.userEmail;
+    confirmDestructive({
+      title: 'Permanently delete ticket?',
+      message: `Permanently delete this ${ticket.type === 'BUG' ? 'bug report' : 'suggestion'} from ${from}, including its attachments? This cannot be undone.`,
+      onConfirm: () =>
+        deleteTicket.mutate(ticket.id, {
+          onSuccess: () => router.replace('/admin/feedback'),
+        }),
+    });
+  };
 
   return (
     <Module title={ticket.type === 'BUG' ? 'Bug report' : 'Suggestion'} color={FEEDBACK_COLOR}>
-      <Link href="/admin/feedback" style={{ color: '#2563eb' }}>
-        ← Back to feedback
-      </Link>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Link href="/admin/feedback" style={{ color: '#2563eb' }}>
+          ← Back to feedback
+        </Link>
+        <AdminActionButton
+          label="Delete ticket"
+          variant="danger"
+          onPress={confirmDelete}
+          busy={deleteTicket.isPending}
+          busyLabel="Deleting…"
+        />
+      </View>
 
       <View style={{ gap: 4 }}>
         <Text style={{ color: '#666' }}>
