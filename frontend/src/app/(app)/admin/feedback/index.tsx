@@ -5,6 +5,7 @@ import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { FeedbackStatusBadge } from '@/components/FeedbackStatusBadge';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { useAdminFeedbackListQuery } from '@/lib/useAdminFeedback';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
@@ -25,6 +26,7 @@ const COLS = {
 const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
 export default function AdminFeedbackListScreen() {
+  const { t, locale } = useTranslation();
   const isAdmin = useRequireAdmin();
   const feedbackQuery = useAdminFeedbackListQuery(isAdmin);
 
@@ -49,20 +51,20 @@ export default function AdminFeedbackListScreen() {
 
   if (!isAdmin) {
     return (
-      <Module title="Feedback" color={FEEDBACK_COLOR}>
-        <Text>You don&apos;t have access to this page.</Text>
+      <Module title={t('admin.feedback.title')} color={FEEDBACK_COLOR}>
+        <Text>{t('admin.noAccess')}</Text>
       </Module>
     );
   }
 
-  const errorMessage = feedbackQuery.isError ? getErrorMessage(feedbackQuery.error, 'Failed to load feedback.') : null;
+  const errorMessage = feedbackQuery.isError ? getErrorMessage(feedbackQuery.error, t('admin.feedback.loadFailed')) : null;
 
   return (
-    <Module title="Feedback" color={FEEDBACK_COLOR}>
+    <Module title={t('admin.feedback.title')} color={FEEDBACK_COLOR}>
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Search description or submitter…"
+        placeholder={t('admin.feedback.searchPlaceholder')}
         style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, backgroundColor: 'white' }}
       />
 
@@ -70,14 +72,14 @@ export default function AdminFeedbackListScreen() {
         <View style={{ flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 6 }}>
           <Picker selectedValue={statusFilter} onValueChange={(v: FeedbackStatus | 'ALL') => setStatusFilter(v)}>
             {STATUS_FILTERS.map((s) => (
-              <Picker.Item key={s} label={s === 'ALL' ? 'All statuses' : s.replace('_', ' ')} value={s} />
+              <Picker.Item key={s} label={s === 'ALL' ? t('admin.feedback.allStatuses') : t(`admin.feedback.status.${s}`)} value={s} />
             ))}
           </Picker>
         </View>
         <View style={{ flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 6 }}>
           <Picker selectedValue={typeFilter} onValueChange={(v: FeedbackType | 'ALL') => setTypeFilter(v)}>
-            {TYPE_FILTERS.map((t) => (
-              <Picker.Item key={t} label={t === 'ALL' ? 'All types' : t === 'BUG' ? 'Bug report' : 'Suggestion'} value={t} />
+            {TYPE_FILTERS.map((type) => (
+              <Picker.Item key={type} label={type === 'ALL' ? t('admin.feedback.allTypes') : t(`admin.feedback.typeFilter.${type}`)} value={type} />
             ))}
           </Picker>
         </View>
@@ -90,31 +92,31 @@ export default function AdminFeedbackListScreen() {
       ) : (
         <TableContainer width={TABLE_WIDTH}>
           <HeaderRow>
-            <HeaderCell width={COLS.submitter}>Submitter</HeaderCell>
-            <HeaderCell width={COLS.type}>Type</HeaderCell>
-            <HeaderCell width={COLS.description}>Description</HeaderCell>
-            <HeaderCell width={COLS.status}>Status</HeaderCell>
-            <HeaderCell width={COLS.created}>Submitted</HeaderCell>
+            <HeaderCell width={COLS.submitter}>{t('admin.feedback.columns.submitter')}</HeaderCell>
+            <HeaderCell width={COLS.type}>{t('admin.feedback.columns.type')}</HeaderCell>
+            <HeaderCell width={COLS.description}>{t('admin.feedback.columns.description')}</HeaderCell>
+            <HeaderCell width={COLS.status}>{t('admin.feedback.columns.status')}</HeaderCell>
+            <HeaderCell width={COLS.created}>{t('admin.feedback.columns.submitted')}</HeaderCell>
           </HeaderRow>
 
-          {filtered.map((t, index) => (
-            <Row key={t.id} index={index}>
+          {filtered.map((ticket, index) => (
+            <Row key={ticket.id} index={index}>
               <Cell width={COLS.submitter}>
-                <Link href={`/admin/feedback/${t.id}`} style={{ color: '#2563eb' }} numberOfLines={1}>
-                  {t.userDisplayName || t.userEmail}
+                <Link href={`/admin/feedback/${ticket.id}`} style={{ color: '#2563eb' }} numberOfLines={1}>
+                  {ticket.userDisplayName || ticket.userEmail}
                 </Link>
               </Cell>
               <Cell width={COLS.type}>
-                <Text>{t.type === 'BUG' ? 'Bug' : 'Suggestion'}</Text>
+                <Text>{t(`admin.feedback.type.${ticket.type}`)}</Text>
               </Cell>
               <Cell width={COLS.description}>
-                <Text numberOfLines={2} style={{ color: '#666' }}>{t.description}</Text>
+                <Text numberOfLines={2} style={{ color: '#666' }}>{ticket.description}</Text>
               </Cell>
               <Cell width={COLS.status}>
-                <FeedbackStatusBadge status={t.status} />
+                <FeedbackStatusBadge status={ticket.status} />
               </Cell>
               <Cell width={COLS.created}>
-                <Text style={{ color: '#666' }}>{new Date(t.createdAt).toLocaleDateString()}</Text>
+                <Text style={{ color: '#666' }}>{new Date(ticket.createdAt).toLocaleDateString(locale)}</Text>
               </Cell>
             </Row>
           ))}

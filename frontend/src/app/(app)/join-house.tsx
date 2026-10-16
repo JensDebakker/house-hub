@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
 import { extractInviteCode } from '@/lib/invite';
@@ -12,6 +13,7 @@ const JOIN_HOUSE_COLOR = '#2563eb';
 
 export default function JoinHouseScreen() {
   const { refreshUser } = useAuth();
+  const { t } = useTranslation();
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,18 +33,18 @@ export default function JoinHouseScreen() {
       // household's dynamic segment (see lib/navigation.ts).
       navigateToHref(`/house/${data.id}/view`);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to join house. Check the invite code and try again.'));
+      setError(getErrorMessage(err, t('app.joinHouse.failed')));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Module title="Join House" color={JOIN_HOUSE_COLOR}>
-      <Text style={{ color: '#666' }}>Enter the invite code or paste the invite link you were given.</Text>
+    <Module title={t('app.joinHouse.title')} color={JOIN_HOUSE_COLOR}>
+      <Text style={{ color: '#666' }}>{t('app.joinHouse.intro')}</Text>
 
       <TextInput
-        placeholder="Invite code or link"
+        placeholder={t('app.joinHouse.codePlaceholder')}
         autoCapitalize="none"
         autoCorrect={false}
         value={inviteCode}
@@ -62,7 +64,7 @@ export default function JoinHouseScreen() {
         ]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
-          {isSubmitting ? 'Joining…' : 'Join house'}
+          {isSubmitting ? t('app.joinHouse.submitting') : t('app.joinHouse.submit')}
         </Text>
       </Pressable>
     </Module>

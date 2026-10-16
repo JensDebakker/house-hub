@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Module } from '@/components/Module';
+import { useTranslation, type TranslationKey } from '@/i18n';
 import {
   loadScreensaverLayoutPrefs,
   saveScreensaverLayoutPrefs,
@@ -11,18 +12,18 @@ import {
 
 const LAYOUT_COLOR = '#9333ea';
 
-const ELEMENTS: { id: ScreensaverElementId; label: string }[] = [
-  { id: 'time', label: 'Time' },
-  { id: 'date', label: 'Date' },
-  { id: 'calendar', label: 'Calendar' },
-  { id: 'chat', label: 'House Chat' },
+const ELEMENTS: { id: ScreensaverElementId; label: TranslationKey }[] = [
+  { id: 'time', label: 'screensaver.elements.time' },
+  { id: 'date', label: 'screensaver.elements.date' },
+  { id: 'calendar', label: 'screensaver.elements.calendar' },
+  { id: 'chat', label: 'screensaver.elements.chat' },
 ];
 
-const CORNERS: { id: ScreensaverCorner; label: string }[] = [
-  { id: 'top-left', label: 'Top left' },
-  { id: 'top-right', label: 'Top right' },
-  { id: 'bottom-left', label: 'Bottom left' },
-  { id: 'bottom-right', label: 'Bottom right' },
+const CORNERS: { id: ScreensaverCorner; label: TranslationKey }[] = [
+  { id: 'top-left', label: 'screensaver.corners.topLeft' },
+  { id: 'top-right', label: 'screensaver.corners.topRight' },
+  { id: 'bottom-left', label: 'screensaver.corners.bottomLeft' },
+  { id: 'bottom-right', label: 'screensaver.corners.bottomRight' },
 ];
 
 /** Styled Pressable toggle, matching the rest of this app's form controls (no `Switch`
@@ -60,6 +61,7 @@ function CornerPicker({
   value: ScreensaverCorner;
   onChange: (corner: ScreensaverCorner) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
       {CORNERS.map((c) => (
@@ -76,7 +78,7 @@ function CornerPicker({
           }}
         >
           <Text style={{ fontSize: 12, color: value === c.id ? LAYOUT_COLOR : '#6b7280', fontWeight: value === c.id ? '700' : '400' }}>
-            {c.label}
+            {t(c.label)}
           </Text>
         </Pressable>
       ))}
@@ -85,6 +87,7 @@ function CornerPicker({
 }
 
 export default function ScreensaverLayoutScreen() {
+  const { t } = useTranslation();
   const [prefs, setPrefs] = useState<ScreensaverLayoutPrefs | null>(null);
 
   useEffect(() => {
@@ -104,11 +107,11 @@ export default function ScreensaverLayoutScreen() {
   };
 
   if (!prefs) {
-    return <Module title="Layout" color={LAYOUT_COLOR} />;
+    return <Module title={t('screensaver.layout.title')} color={LAYOUT_COLOR} />;
   }
 
   return (
-    <Module title="Layout" color={LAYOUT_COLOR}>
+    <Module title={t('screensaver.layout.title')} color={LAYOUT_COLOR}>
       {ELEMENTS.map(({ id, label }) => {
         const config = prefs.elements[id];
         return (
@@ -123,7 +126,7 @@ export default function ScreensaverLayoutScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 16, fontWeight: '600' }}>{label}</Text>
+              <Text style={{ fontSize: 16, fontWeight: '600' }}>{t(label)}</Text>
               <Toggle value={config.enabled} onToggle={() => update(id, { enabled: !config.enabled })} />
             </View>
             <CornerPicker value={config.corner} onChange={(corner) => update(id, { corner })} />

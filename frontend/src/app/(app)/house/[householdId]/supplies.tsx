@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateSupplyMutation, useDeleteSupplyMutation, useSuppliesQuery } from '@/lib/useSupplies';
 
@@ -23,6 +24,7 @@ function statusColor(dateStr: string): string {
 
 export default function SuppliesScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const { t } = useTranslation();
 
   const suppliesQuery = useSuppliesQuery(householdId);
   const createSupply = useCreateSupplyMutation(householdId);
@@ -45,30 +47,30 @@ export default function SuppliesScreen() {
   };
 
   const errorMessage = suppliesQuery.isError
-    ? getErrorMessage(suppliesQuery.error, 'Failed to load supplies.')
+    ? getErrorMessage(suppliesQuery.error, t('house.supplies.loadFailed'))
     : createSupply.isError
-      ? getErrorMessage(createSupply.error, 'Failed to add supply.')
+      ? getErrorMessage(createSupply.error, t('house.supplies.addFailed'))
       : deleteSupply.isError
-        ? getErrorMessage(deleteSupply.error, 'Failed to remove supply.')
+        ? getErrorMessage(deleteSupply.error, t('house.supplies.removeFailed'))
         : null;
 
   return (
-    <Module title="Medical Supplies" color={SUPPLIES_COLOR} scroll={false}>
+    <Module title={t('house.supplies.title')} color={SUPPLIES_COLOR} scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
-        Long-press an item to remove it. Yellow = expiring within {WARNING_WINDOW_DAYS} days, red = expired.
+        {t('house.supplies.hint', { days: WARNING_WINDOW_DAYS })}
       </Text>
 
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
-          placeholder="Name"
+          placeholder={t('house.supplies.namePlaceholder')}
           value={name}
           onChangeText={setName}
           style={{ flex: 2, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 }}
         />
         <TextInput
-          placeholder="Qty"
+          placeholder={t('house.supplies.quantityPlaceholder')}
           value={quantity}
           onChangeText={setQuantity}
           keyboardType="numeric"
@@ -77,7 +79,7 @@ export default function SuppliesScreen() {
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
-          placeholder="Expiry date (YYYY-MM-DD)"
+          placeholder={t('house.supplies.expiryPlaceholder')}
           value={expiryDate}
           onChangeText={setExpiryDate}
           style={{ flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 }}
@@ -87,7 +89,7 @@ export default function SuppliesScreen() {
           disabled={createSupply.isPending}
           style={{ backgroundColor: '#2563eb', borderRadius: 8, padding: 12, justifyContent: 'center', opacity: createSupply.isPending ? 0.6 : 1 }}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>Add</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{t('common.add')}</Text>
         </Pressable>
       </View>
 
@@ -98,7 +100,7 @@ export default function SuppliesScreen() {
           data={suppliesQuery.data ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: 8, paddingTop: 8 }}
-          ListEmptyComponent={<Text style={{ color: '#999' }}>No supplies tracked yet.</Text>}
+          ListEmptyComponent={<Text style={{ color: '#999' }}>{t('house.supplies.empty')}</Text>}
           renderItem={({ item }) => (
             <Pressable
               onLongPress={() => removeSupply(item.id)}

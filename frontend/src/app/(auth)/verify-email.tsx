@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { resolveDefaultHousehold } from '@/lib/households';
 import { navigateToHref } from '@/lib/navigation';
@@ -13,6 +14,7 @@ const VERIFY_EMAIL_COLOR = '#2563eb';
 export default function VerifyEmailScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
   const { verifyEmail, refreshUser } = useAuth();
+  const { t } = useTranslation();
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const requestedTokenRef = useRef<string | null>(null);
 
@@ -39,28 +41,28 @@ export default function VerifyEmailScreen() {
         }
       })
       .catch((err) => {
-        setVerifyError(getErrorMessage(err, 'This verification link is invalid or has expired.'));
+        setVerifyError(getErrorMessage(err, t('app.verifyEmail.failed')));
       });
     // verifyEmail triggers a login (setUser), which would re-fire this effect on a stale token
     // if included as a dep - this is meant to run once per token, not once per auth state change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const error = token ? verifyError : 'No verification token in this link.';
+  const error = token ? verifyError : t('app.verifyEmail.noToken');
 
   return (
-    <Module title="Verify email" color={VERIFY_EMAIL_COLOR}>
+    <Module title={t('app.verifyEmail.title')} color={VERIFY_EMAIL_COLOR}>
       {error ? (
         <>
           <Text style={{ color: '#c62828' }}>{error}</Text>
           <Link href="/(auth)/login" style={{ textAlign: 'center', marginTop: 8 }}>
-            Go to login
+            {t('app.auth.goToLogin')}
           </Link>
         </>
       ) : (
         <>
           <ActivityIndicator />
-          <Text style={{ color: '#666' }}>Verifying and logging you in…</Text>
+          <Text style={{ color: '#666' }}>{t('app.verifyEmail.verifying')}</Text>
         </>
       )}
     </Module>

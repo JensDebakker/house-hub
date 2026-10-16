@@ -1,6 +1,7 @@
 import { router, usePathname } from 'expo-router';
 import { type RefObject } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from '@/i18n';
 import { oppositeCorners } from '@/lib/color';
 import { navigateToHref } from '@/lib/navigation';
 import { cardSurface } from './cardSurface';
@@ -45,6 +46,7 @@ export const ModuleTile = ({
   disabled?: boolean;
 } & TitleBarContent) => {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const onTilePress = () => {
     if (disabled || !href) return;
@@ -100,7 +102,7 @@ export const ModuleTile = ({
           {disabled ? (
             <TitleBarChip color="#6b7280">
               <Text numberOfLines={1} style={{ color: '#6b7280', fontSize: CORNER_BADGE_FONT_SIZE, fontWeight: '700' }}>
-                Coming soon
+                {t('house.module.comingSoon')}
               </Text>
             </TitleBarChip>
           ) : titleBarDisplays ? (

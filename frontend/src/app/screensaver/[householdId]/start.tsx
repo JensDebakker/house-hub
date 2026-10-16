@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Platform, Pressable, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { api } from '@/lib/api';
 import { navigateToHref } from '@/lib/navigation';
 import {
@@ -42,23 +43,26 @@ function OverlayCard({ children }: { children: React.ReactNode }) {
 }
 
 function TimeWidget({ now }: { now: Date }) {
+  const { locale } = useTranslation();
   return (
     <Text style={{ color: 'white', fontSize: 48, fontWeight: '700' }}>
-      {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      {now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
     </Text>
   );
 }
 
 function DateWidget({ now }: { now: Date }) {
+  const { locale } = useTranslation();
   return (
     <Text style={{ color: 'white', fontSize: 18 }}>
-      {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+      {now.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}
     </Text>
   );
 }
 
 function CalendarWidget({ householdId, now }: { householdId: string | undefined; now: Date }) {
   const { data: events } = useCalendarEventsQuery(householdId);
+  const { t, locale } = useTranslation();
 
   const upcoming = useMemo(() => {
     // Compare by calendar day, not exact instant - events are created from a plain
@@ -77,10 +81,10 @@ function CalendarWidget({ householdId, now }: { householdId: string | undefined;
 
   return (
     <OverlayCard>
-      <Text style={{ color: 'white', fontWeight: '700', fontSize: 14, marginBottom: 6 }}>Upcoming</Text>
+      <Text style={{ color: 'white', fontWeight: '700', fontSize: 14, marginBottom: 6 }}>{t('screensaver.kiosk.upcoming')}</Text>
       {upcoming.map((e) => (
         <Text key={e.id} style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13 }} numberOfLines={1}>
-          {new Date(e.start).toLocaleDateString([], { month: 'short', day: 'numeric' })} · {e.title}
+          {new Date(e.start).toLocaleDateString(locale, { month: 'short', day: 'numeric' })} · {e.title}
         </Text>
       ))}
     </OverlayCard>
@@ -89,13 +93,14 @@ function CalendarWidget({ householdId, now }: { householdId: string | undefined;
 
 function ChatWidget({ householdId }: { householdId: string | undefined }) {
   const { data: messages } = useChatMessagesQuery(householdId);
+  const { t } = useTranslation();
   const recent = (messages ?? []).slice(0, 4);
 
   if (recent.length === 0) return null;
 
   return (
     <OverlayCard>
-      <Text style={{ color: 'white', fontWeight: '700', fontSize: 14, marginBottom: 6 }}>House Chat</Text>
+      <Text style={{ color: 'white', fontWeight: '700', fontSize: 14, marginBottom: 6 }}>{t('screensaver.kiosk.chat')}</Text>
       {recent.map((m) => (
         <Text key={m.id} style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13 }} numberOfLines={1}>
           {m.senderDisplayName}: {m.text}
@@ -124,6 +129,7 @@ export default function ScreensaverStartScreen() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [now, setNow] = useState(new Date());
   const [layoutPrefs, setLayoutPrefs] = useState<ScreensaverLayoutPrefs | null>(null);
+  const { t } = useTranslation();
 
   // Touching anywhere on the kiosk display dismisses it back to wherever the user was when
   // it started - whether that was a manual "Start" tap or the idle-timeout auto-launch (see
@@ -204,7 +210,7 @@ export default function ScreensaverStartScreen() {
   }, [layoutPrefs]);
 
   return (
-    <Module fullscreen title="Screensaver" color={SCREENSAVER_COLOR}>
+    <Module fullscreen title={t('screensaver.title')} color={SCREENSAVER_COLOR}>
       <Pressable style={{ flex: 1, backgroundColor: FALLBACK_BACKGROUND }} onPress={dismiss}>
         <StatusBar hidden />
 

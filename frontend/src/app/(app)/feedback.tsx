@@ -7,6 +7,7 @@ import { FeedbackAttachmentThumbnail } from '@/components/FeedbackAttachmentThum
 import { FeedbackStatusBadge } from '@/components/FeedbackStatusBadge';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation, type TranslationKey } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateFeedbackMutation, useFeedbackListQuery } from '@/lib/useFeedback';
 import { inputStyle } from '@/lib/formStyles';
@@ -15,16 +16,17 @@ import type { FeedbackTicket, FeedbackType } from '@/types';
 const FEEDBACK_COLOR = '#f97316';
 const MAX_ATTACHMENTS = 5;
 
-const TYPE_OPTIONS: { value: FeedbackType; label: string }[] = [
-  { value: 'BUG', label: 'Bug report' },
-  { value: 'SUGGESTION', label: 'Suggestion' },
+const TYPE_OPTIONS: { value: FeedbackType; label: TranslationKey }[] = [
+  { value: 'BUG', label: 'app.feedback.types.BUG' },
+  { value: 'SUGGESTION', label: 'app.feedback.types.SUGGESTION' },
 ];
 
 function TicketRow({ ticket }: { ticket: FeedbackTicket }) {
+  const { t, locale } = useTranslation();
   return (
     <View style={{ gap: 6, padding: 12, borderRadius: 8, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee' }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={{ fontWeight: '700' }}>{ticket.type === 'BUG' ? 'Bug report' : 'Suggestion'}</Text>
+        <Text style={{ fontWeight: '700' }}>{t(`app.feedback.types.${ticket.type}`)}</Text>
         <FeedbackStatusBadge status={ticket.status} />
       </View>
       <Text style={{ color: '#374151' }}>{ticket.description}</Text>
@@ -40,7 +42,7 @@ function TicketRow({ ticket }: { ticket: FeedbackTicket }) {
         </View>
       ) : null}
       <Text style={{ color: '#9ca3af', fontSize: 12 }}>
-        Submitted {new Date(ticket.createdAt).toLocaleString()}
+        {t('app.feedback.submittedAt', { date: new Date(ticket.createdAt).toLocaleString(locale) })}
       </Text>
     </View>
   );
@@ -48,6 +50,7 @@ function TicketRow({ ticket }: { ticket: FeedbackTicket }) {
 
 export default function FeedbackScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const feedbackQuery = useFeedbackListQuery(user?.id);
   const createFeedback = useCreateFeedbackMutation(user?.id);
 
@@ -60,14 +63,14 @@ export default function FeedbackScreen() {
     setPickerError(null);
     const remaining = MAX_ATTACHMENTS - attachments.length;
     if (remaining <= 0) {
-      setPickerError(`You can attach up to ${MAX_ATTACHMENTS} images.`);
+      setPickerError(t('app.feedback.maxAttachments', { max: MAX_ATTACHMENTS }));
       return;
     }
     const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true, multiple: true });
     if (result.canceled || !result.assets) return;
     const picked = result.assets.slice(0, remaining);
     if (result.assets.length > remaining) {
-      setPickerError(`Only the first ${remaining} image(s) were added - max ${MAX_ATTACHMENTS} per ticket.`);
+      setPickerError(t('app.feedback.attachmentsTruncated', { count: remaining, max: MAX_ATTACHMENTS }));
     }
     setAttachments((prev) => [...prev, ...picked]);
   };
@@ -90,17 +93,17 @@ export default function FeedbackScreen() {
   };
 
   const errorMessage = feedbackQuery.isError
-    ? getErrorMessage(feedbackQuery.error, 'Failed to load your feedback.')
+    ? getErrorMessage(feedbackQuery.error, t('app.feedback.loadFailed'))
     : createFeedback.isError
-      ? getErrorMessage(createFeedback.error, 'Failed to submit feedback.')
+      ? getErrorMessage(createFeedback.error, t('app.feedback.submitFailed'))
       : pickerError;
 
   const tickets = feedbackQuery.data ?? [];
 
   return (
-    <Module title="Feedback" color={FEEDBACK_COLOR} scroll={false}>
+    <Module title={t('app.feedback.title')} color={FEEDBACK_COLOR} scroll={false}>
       <Text style={{ color: '#666', fontSize: 13 }}>
-        Report a bug or suggest an improvement. You&apos;ll only see your own submitted tickets here.
+        {t('app.feedback.intro')}
       </Text>
 
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
@@ -109,13 +112,13 @@ export default function FeedbackScreen() {
         <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8 }}>
           <Picker selectedValue={type} onValueChange={(v: FeedbackType) => setType(v)}>
             {TYPE_OPTIONS.map((opt) => (
-              <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
+              <Picker.Item key={opt.value} label={t(opt.label)} value={opt.value} />
             ))}
           </Picker>
         </View>
 
         <TextInput
-          placeholder="Describe the bug or suggestion…"
+          placeholder={t('app.feedback.descriptionPlaceholder')}
           value={description}
           onChangeText={setDescription}
           multiline
@@ -148,7 +151,7 @@ export default function FeedbackScreen() {
               opacity: attachments.length >= MAX_ATTACHMENTS ? 0.5 : 1,
             }}
           >
-            <Text>Attach image ({attachments.length}/{MAX_ATTACHMENTS})</Text>
+            <Text>{t('app.feedback.attachImage', { count: attachments.length, max: MAX_ATTACHMENTS })}</Text>
           </Pressable>
           <Pressable
             onPress={submit}
@@ -162,16 +165,16 @@ export default function FeedbackScreen() {
             }}
           >
             <Text style={{ color: 'white', fontWeight: '600' }}>
-              {createFeedback.isPending ? 'Submitting…' : 'Submit'}
+              {createFeedback.isPending ? t('app.feedback.submitting') : t('app.feedback.submit')}
             </Text>
           </Pressable>
         </View>
         {attachments.length > 0 ? (
-          <Text style={{ color: '#9ca3af', fontSize: 11 }}>Long-press an attachment to remove it.</Text>
+          <Text style={{ color: '#9ca3af', fontSize: 11 }}>{t('app.feedback.longPressToRemove')}</Text>
         ) : null}
       </View>
 
-      <Text style={{ fontWeight: '700', marginTop: 8 }}>Your tickets</Text>
+      <Text style={{ fontWeight: '700', marginTop: 8 }}>{t('app.feedback.yourTickets')}</Text>
 
       {feedbackQuery.isLoading ? (
         <ActivityIndicator style={{ marginTop: 16 }} />
@@ -181,7 +184,7 @@ export default function FeedbackScreen() {
           keyExtractor={(item) => item.id}
           style={{ flex: 1 }}
           contentContainerStyle={{ gap: 8, paddingTop: 4, paddingBottom: 16 }}
-          ListEmptyComponent={<Text style={{ color: '#999' }}>You haven&apos;t submitted any feedback yet.</Text>}
+          ListEmptyComponent={<Text style={{ color: '#999' }}>{t('app.feedback.empty')}</Text>}
           renderItem={({ item }) => <TicketRow ticket={item} />}
         />
       )}

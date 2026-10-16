@@ -4,6 +4,7 @@ import { Pressable, Text, TextInput } from 'react-native';
 import { Module } from '@/components/Module';
 import { InviteLinkButton } from '@/components/InviteLinkButton';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
 import { navigateToHref } from '@/lib/navigation';
@@ -13,6 +14,7 @@ const CREATE_HOUSE_COLOR = '#c026d3';
 
 export default function CreateHouseScreen() {
   const { refreshUser } = useAuth();
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,7 +28,7 @@ export default function CreateHouseScreen() {
       await refreshUser();
       setCreated(data);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to create house.'));
+      setError(getErrorMessage(err, t('app.createHouse.failed')));
     } finally {
       setIsSubmitting(false);
     }
@@ -34,9 +36,9 @@ export default function CreateHouseScreen() {
 
   if (created) {
     return (
-      <Module title="Create House" color={CREATE_HOUSE_COLOR}>
-        <Text style={{ fontSize: 20, fontWeight: '700' }}>{created.name} is ready!</Text>
-        <Text style={{ color: '#666' }}>Share this invite code so others can join:</Text>
+      <Module title={t('app.createHouse.title')} color={CREATE_HOUSE_COLOR}>
+        <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('app.createHouse.ready', { name: created.name })}</Text>
+        <Text style={{ color: '#666' }}>{t('app.createHouse.shareCode')}</Text>
         <Text style={{ fontSize: 28, fontWeight: '700', letterSpacing: 2 }}>{created.inviteCode}</Text>
         <InviteLinkButton inviteCode={created.inviteCode} color={CREATE_HOUSE_COLOR} />
 
@@ -46,24 +48,24 @@ export default function CreateHouseScreen() {
           onPress={() => navigateToHref(`/house/${created.id}/view`)}
           style={({ pressed }) => [buttonStyle(CREATE_HOUSE_COLOR), pressed && { opacity: 0.8 }]}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>View house</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{t('app.createHouse.viewHouse')}</Text>
         </Pressable>
         <Pressable
           onPress={() => router.replace('/dashboard')}
           style={({ pressed }) => [buttonStyle('#e5e7eb'), pressed && { opacity: 0.8 }]}
         >
-          <Text style={{ color: '#111827', fontWeight: '600' }}>Back to houses overview</Text>
+          <Text style={{ color: '#111827', fontWeight: '600' }}>{t('app.createHouse.backToOverview')}</Text>
         </Pressable>
       </Module>
     );
   }
 
   return (
-    <Module title="Create House" color={CREATE_HOUSE_COLOR}>
-      <Text style={{ color: '#666' }}>Give your new house a name.</Text>
+    <Module title={t('app.createHouse.title')} color={CREATE_HOUSE_COLOR}>
+      <Text style={{ color: '#666' }}>{t('app.createHouse.intro')}</Text>
 
       <TextInput
-        placeholder="House name"
+        placeholder={t('app.createHouse.namePlaceholder')}
         value={name}
         onChangeText={setName}
         style={inputStyle}
@@ -81,7 +83,7 @@ export default function CreateHouseScreen() {
         ]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
-          {isSubmitting ? 'Creating…' : 'Create house'}
+          {isSubmitting ? t('app.createHouse.submitting') : t('app.createHouse.submit')}
         </Text>
       </Pressable>
     </Module>

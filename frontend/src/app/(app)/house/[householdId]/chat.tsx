@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { findHouseholdMembership } from '@/lib/households';
 import { useChatMessagesQuery, useDeleteChatMessage, useSendChatMessage } from '@/lib/useChatMessages';
@@ -10,12 +11,13 @@ import type { ChatMessage } from '@/types';
 
 const CHAT_COLOR = '#db2777';
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+function formatTime(iso: string, locale: string): string {
+  return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
 
 export default function ChatScreen() {
   const { user } = useAuth();
+  const { t, locale } = useTranslation();
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
 
   const messagesQuery = useChatMessagesQuery(householdId);
@@ -48,11 +50,11 @@ export default function ChatScreen() {
   const deleteMessage = (message: ChatMessage) => {
     deleteChatMessage.mutate(message.id, {
       onError: (err) => {
-        const errorMessage = getErrorMessage(err, 'Failed to delete message.');
+        const errorMessage = getErrorMessage(err, t('house.chat.deleteFailed'));
         if (Platform.OS === 'web') {
           window.alert(errorMessage);
         } else {
-          Alert.alert('Delete failed', errorMessage);
+          Alert.alert(t('house.chat.deleteFailedTitle'), errorMessage);
         }
       },
     });
@@ -60,23 +62,23 @@ export default function ChatScreen() {
 
   const confirmDelete = (message: ChatMessage) => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Delete this message?')) {
+      if (window.confirm(t('house.chat.confirmDeleteWeb'))) {
         deleteMessage(message);
       }
       return;
     }
-    Alert.alert('Delete message?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMessage(message) },
+    Alert.alert(t('house.chat.confirmDeleteTitle'), t('house.chat.confirmDeleteMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => deleteMessage(message) },
     ]);
   };
 
   const errorMessage = messagesQuery.isError
-    ? getErrorMessage(messagesQuery.error, 'Failed to load chat history.')
+    ? getErrorMessage(messagesQuery.error, t('house.chat.loadFailed'))
     : null;
 
   return (
-    <Module title="Chat" color={CHAT_COLOR} scroll={false}>
+    <Module title={t('house.chat.title')} color={CHAT_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       {messagesQuery.isLoading ? (
@@ -88,7 +90,7 @@ export default function ChatScreen() {
           keyExtractor={(item) => item.id}
           style={{ flex: 1 }}
           contentContainerStyle={{ gap: 8, paddingTop: 8, paddingBottom: 8 }}
-          ListEmptyComponent={<Text style={{ color: '#999' }}>No messages yet - say hello.</Text>}
+          ListEmptyComponent={<Text style={{ color: '#999' }}>{t('house.chat.empty')}</Text>}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           renderItem={({ item }) => {
             const isMine = item.senderId === user?.id;
@@ -105,7 +107,7 @@ export default function ChatScreen() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
                   <Text style={{ fontWeight: '700', fontSize: 12, color: '#555' }}>{item.senderDisplayName}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 11, color: '#999' }}>{formatTime(item.createdAt)}</Text>
+                    <Text style={{ fontSize: 11, color: '#999' }}>{formatTime(item.createdAt, locale)}</Text>
                     {canDelete(item) ? (
                       <Pressable onPress={() => confirmDelete(item)} hitSlop={8} style={{ padding: 2 }}>
                         <Text style={{ fontSize: 14, color: '#999', fontWeight: '700' }}>⋯</Text>
@@ -122,7 +124,7 @@ export default function ChatScreen() {
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
-          placeholder="Message…"
+          placeholder={t('house.chat.placeholder')}
           value={text}
           onChangeText={setText}
           onSubmitEditing={handleSend}
@@ -139,7 +141,7 @@ export default function ChatScreen() {
             opacity: !text.trim() ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>Send</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{t('house.chat.send')}</Text>
         </Pressable>
       </View>
     </Module>

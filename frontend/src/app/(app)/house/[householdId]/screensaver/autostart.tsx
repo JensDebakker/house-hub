@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import {
   loadScreensaverAutoStartPrefs,
   saveScreensaverAutoStartPrefs,
@@ -45,6 +46,7 @@ function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
 }
 
 export default function ScreensaverAutoStartScreen() {
+  const { t } = useTranslation();
   const [prefs, setPrefs] = useState<ScreensaverAutoStartPrefs | null>(null);
   const [minutesText, setMinutesText] = useState('');
 
@@ -68,11 +70,11 @@ export default function ScreensaverAutoStartScreen() {
   };
 
   if (!prefs) {
-    return <Module title="AutoStart" color={AUTOSTART_COLOR} />;
+    return <Module title={t('screensaver.autostart.title')} color={AUTOSTART_COLOR} />;
   }
 
   return (
-    <Module title="AutoStart" color={AUTOSTART_COLOR}>
+    <Module title={t('screensaver.autostart.title')} color={AUTOSTART_COLOR}>
       <View
         style={{
           borderWidth: 1,
@@ -84,16 +86,16 @@ export default function ScreensaverAutoStartScreen() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600' }}>Auto-start when idle</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600' }}>{t('screensaver.autostart.enabledLabel')}</Text>
             <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-              Launch the screensaver automatically after a period of inactivity.
+              {t('screensaver.autostart.enabledHint')}
             </Text>
           </View>
           <Toggle value={prefs.enabled} onToggle={() => save({ ...prefs, enabled: !prefs.enabled })} />
         </View>
 
         <View style={{ opacity: prefs.enabled ? 1 : 0.4, gap: 6 }}>
-          <Text style={{ fontSize: 14, fontWeight: '600' }}>Idle timeout (minutes)</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600' }}>{t('screensaver.autostart.idleTimeout')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Pressable
               disabled={!prefs.enabled}

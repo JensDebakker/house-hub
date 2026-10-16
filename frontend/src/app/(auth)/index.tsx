@@ -23,19 +23,19 @@ export default function AuthLandingScreen() {
   return (
     <>
       <Text style={{ color: '#666', paddingHorizontal: 4 }}>
-        Manage your house — tasks, shopping, supplies, and more.
+        {t('app.authLanding.tagline')}
       </Text>
 
       {hasPendingInvite ? (
         <Text style={{ color: LOGIN_COLOR, fontWeight: '600', paddingHorizontal: 4 }}>
-          Sign in or register to join the house you were invited to.
+          {t('app.authLanding.pendingInvite')}
         </Text>
       ) : null}
 
       <TileGrid>
-        <Module tile title="Log in" subtitle="Already have an account?" href="/(auth)/login" color={LOGIN_COLOR} />
-        <Module tile title="Register" subtitle="New here? Create one" href="/(auth)/register" color={REGISTER_COLOR} />
-        <Module tile title="App" subtitle="Install & app info" href="/app" color={APP_COLOR} />
+        <Module tile title={t('app.tiles.login.title')} subtitle={t('app.tiles.login.subtitle')} href="/(auth)/login" color={LOGIN_COLOR} />
+        <Module tile title={t('app.tiles.register.title')} subtitle={t('app.tiles.register.subtitle')} href="/(auth)/register" color={REGISTER_COLOR} />
+        <Module tile title={t('app.tiles.app.title')} subtitle={t('app.tiles.app.subtitle')} href="/app" color={APP_COLOR} />
         <Module tile title={t('language.title')} subtitle={t('language.subtitle')} href="/language" color={LANGUAGE_COLOR} />
       </TileGrid>
     </>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, Text } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { isIOS, isIOSSafari, isRunningStandalone, useInstallPrompt } from '@/lib/installPrompt';
 import { PushNotificationSettings } from './PushNotificationSettings';
 
@@ -12,6 +13,7 @@ const APP_COLOR = '#0ea5e9';
  * Hub before ever signing in, not just from inside the authenticated dashboard. */
 export const AppModuleCard = () => {
   const { isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   const { available, promptInstall } = useInstallPrompt();
   // Distinguishes "the prompt is gone because the user already acted on it" from "the
   // prompt was never available in the first place" - both leave `available` false, but
@@ -21,8 +23,8 @@ export const AppModuleCard = () => {
 
   if (Platform.OS !== 'web') {
     return (
-      <Module title="App" color={APP_COLOR}>
-        <Text style={{ color: '#475569' }}>You&apos;re using the House Hub app.</Text>
+      <Module title={t('app.installApp.title')} color={APP_COLOR}>
+        <Text style={{ color: '#475569' }}>{t('app.installApp.nativeApp')}</Text>
       </Module>
     );
   }
@@ -35,19 +37,19 @@ export const AppModuleCard = () => {
   };
 
   const message = alreadyInstalled
-    ? 'House Hub is installed on this device.'
+    ? t('app.installApp.installed')
     : available
-      ? 'Install House Hub for quicker access from your home screen.'
+      ? t('app.installApp.available')
       : outcome === 'dismissed'
-        ? "You can install House Hub later from this browser's menu."
+        ? t('app.installApp.dismissed')
         : isIOSSafari()
-          ? 'Tap the Share icon in Safari, then "Add to Home Screen".'
+          ? t('app.installApp.iosSafari')
           : isIOS()
-            ? "Open this page in Safari to install it - other browsers on iPhone/iPad can't add it to your home screen."
-            : 'This browser doesn\'t support one-tap install here - look for "Add to Home Screen" or "Install app" in its menu.';
+            ? t('app.installApp.iosOther')
+            : t('app.installApp.unsupported');
 
   return (
-    <Module title="App" color={APP_COLOR}>
+    <Module title={t('app.installApp.title')} color={APP_COLOR}>
       <Text style={{ color: '#475569' }}>{message}</Text>
       {!alreadyInstalled && available ? (
         <Pressable
@@ -60,7 +62,7 @@ export const AppModuleCard = () => {
             alignSelf: 'flex-start',
           }}
         >
-          <Text style={{ color: 'white', fontWeight: '700' }}>Install app</Text>
+          <Text style={{ color: 'white', fontWeight: '700' }}>{t('app.installApp.install')}</Text>
         </Pressable>
       ) : null}
       {isAuthenticated ? <PushNotificationSettings /> : null}

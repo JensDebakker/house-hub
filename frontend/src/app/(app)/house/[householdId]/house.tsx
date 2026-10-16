@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { Module } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
+import { useTranslation } from '@/i18n';
 
 const HOUSE_COLOR = '#dc2626';
 
@@ -12,13 +13,14 @@ const HOUSE_COLOR = '#dc2626';
 // that collapsed frame.
 export default function HouseScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const { t } = useTranslation();
 
   return (
-    <Module title="House" color={HOUSE_COLOR}>
+    <Module title={t('house.house.title')} color={HOUSE_COLOR}>
       <TileGrid>
-        <Module tile title="View house" subtitle="Details & invite code" href={`/house/${householdId}/view`} color="#db2777" />
-        <Module tile title="Manage house" subtitle="Members & roles" href={`/house/${householdId}/manage`} color="#0f766e" />
-        <Module tile title="Leave house" subtitle="Remove yourself" href={`/house/${householdId}/leave`} color="#e11d48" />
+        <Module tile title={t('house.house.viewTitle')} subtitle={t('house.house.viewSubtitle')} href={`/house/${householdId}/view`} color="#db2777" />
+        <Module tile title={t('house.house.manageTitle')} subtitle={t('house.house.manageSubtitle')} href={`/house/${householdId}/manage`} color="#0f766e" />
+        <Module tile title={t('house.house.leaveTitle')} subtitle={t('house.house.leaveSubtitle')} href={`/house/${householdId}/leave`} color="#e11d48" />
       </TileGrid>
     </Module>
   );
