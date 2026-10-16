@@ -10,10 +10,11 @@ export interface PushPreferences {
   notifyOnChatMessage: boolean;
 }
 
-// Both default to on when a subscription is first created - "push notifications: on"
-// reads most naturally as "notify me about things", with the two sub-toggles there for
-// opting back out of a specific type rather than opting into each from a cold start.
-const DEFAULT_PREFS: PushPreferences = { notifyOnVersion: true, notifyOnChatMessage: true };
+// notifyOnChatMessage defaults on when a subscription is first created - "push
+// notifications: on" reads most naturally as "notify me about things". notifyOnVersion
+// defaults off instead: a new-version push fires on every deploy, which is frequent
+// enough that most people would rather opt in deliberately than opt back out of it.
+const DEFAULT_PREFS: PushPreferences = { notifyOnVersion: false, notifyOnChatMessage: true };
 
 /** True once Chrome/Android (or any browser with the standard Push API) can actually
  * subscribe this page to push. iOS Safari only gets here once installed to the home
