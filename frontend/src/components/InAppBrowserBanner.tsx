@@ -16,7 +16,7 @@ type Status = 'idle' | 'copied' | 'failed';
  * even though "web" in general can't assume that. Falls back to copy-link, and if even that
  * fails, to the same "•••" menu instructions the original version always showed - this must
  * never leave the user with strictly less help than before. */
-export function InAppBrowserBanner() {
+export const InAppBrowserBanner = () => {
   const [visible, setVisible] = useState(() => Platform.OS === 'web' && isInAppBrowser());
   const [status, setStatus] = useState<Status>('idle');
 
@@ -77,4 +77,4 @@ export function InAppBrowserBanner() {
       </Pressable>
     </View>
   );
-}
+};

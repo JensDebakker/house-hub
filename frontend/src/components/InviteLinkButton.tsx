@@ -5,7 +5,7 @@ import { buildInviteLink } from '@/lib/invite';
 
 /** Shares or copies a house's invite link. Native hands off to the OS share sheet; web has
  * no share sheet to hand off to, so it copies to the clipboard instead. */
-export function InviteLinkButton({ inviteCode, color }: { inviteCode: string; color: string }) {
+export const InviteLinkButton = ({ inviteCode, color }: { inviteCode: string; color: string }) => {
   const [status, setStatus] = useState<string | null>(null);
   const link = buildInviteLink(inviteCode);
 
@@ -35,4 +35,4 @@ export function InviteLinkButton({ inviteCode, color }: { inviteCode: string; co
       {status ? <Text style={{ color: '#666', textAlign: 'center' }}>{status}</Text> : null}
     </>
   );
-}
+};
