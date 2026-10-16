@@ -2,7 +2,6 @@ import { useLocalSearchParams, usePathname } from 'expo-router';
 import { Text } from 'react-native';
 import { Module, TitleBarChip } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
-import { useAuth } from '@/contexts/AuthContext';
 import { navigateToHref } from '@/lib/navigation';
 
 const SCREENSAVER_COLOR = '#7c3aed';
@@ -10,10 +9,14 @@ const SCREENSAVER_COLOR = '#7c3aed';
 // The house's own feature tile grid - Level 2 of the card stack, open whenever this is
 // exactly house/[householdId]/dashboard (house/[householdId]/_layout.tsx collapses into a
 // frame around it otherwise). This is the same flat grid every house used to land on
-// directly off login before the Houses overview existed one level up.
+// directly off login before the Houses overview existed one level up. Account/Feedback/Admin
+// used to be tiles here too - moved up to the Houses overview (app)/dashboard.tsx since
+// they're app-level concerns, not scoped to any one house, and living here meant they were
+// duplicated across every house's dashboard and jumped the user clean out of this house's
+// own card stack (they aren't routed under house/[householdId]/ at all) instead of going
+// one level deeper into it.
 export default function HouseDashboardScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
-  const { user } = useAuth();
   const pathname = usePathname();
   // The tile's own tap-to-open (via Module's onTilePress) goes here - a normal nested
   // settings screen under this house's own route, same as Files/Chat, so it opens "in" the
@@ -53,11 +56,6 @@ export default function HouseDashboardScreen() {
       <Module tile title="Files" subtitle="Shared uploads" href={`/house/${householdId}/files`} color="#ca8a04" />
       <Module tile title="Chat" subtitle="Household messages" href={`/house/${householdId}/chat`} color="#db2777" />
       <Module tile title="House" subtitle="View, leave, or manage" href={`/house/${householdId}/house`} color="#dc2626" />
-      <Module tile title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
-      <Module tile title="Feedback" subtitle="Report a bug or idea" href="/feedback" color="#f97316" />
-      {user?.role === 'ADMIN' ? (
-        <Module tile title="Admin" subtitle="Manage everything" href="/admin" color="#6b7280" />
-      ) : null}
 
       {/* Coming soon - kept behind the implemented cards above. */}
       <Module tile title="Tasks" subtitle="Routine chores" href={`/house/${householdId}/tasks`} color="#dc2626" disabled />
