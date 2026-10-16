@@ -1,65 +1,15 @@
-import { useState } from 'react';
-import { Pressable, Text, TextInput } from 'react-native';
-import { Module } from '@/components/Module';
-import { useAuth } from '@/contexts/AuthContext';
-import { api, getErrorMessage } from '@/lib/api';
-import { buttonStyle, inputStyle } from '@/lib/formStyles';
-import { navigateToHref } from '@/lib/navigation';
-import type { Household, HouseholdJoinRequest } from '@/types';
+import { Redirect } from 'expo-router';
 
-const JOIN_HOUSE_COLOR = '#2563eb';
-
-export default function JoinHouseScreen() {
-  const { refreshUser } = useAuth();
-  const [inviteCode, setInviteCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const onSubmit = async () => {
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      const { data } = await api.post<Household>('/households/join', {
-        inviteCode: inviteCode.trim(),
-      } satisfies HouseholdJoinRequest);
-      await refreshUser();
-      // navigateToHref, not a plain router.replace - fresh mount of the joined
-      // household's dynamic segment (see lib/navigation.ts).
-      navigateToHref(`/house/${data.id}/view`);
-    } catch (err) {
-      setError(getErrorMessage(err, 'Failed to join house. Check the invite code and try again.'));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <Module title="Join House" color={JOIN_HOUSE_COLOR}>
-      <Text style={{ color: '#666' }}>Enter the invite code you were given.</Text>
-
-      <TextInput
-        placeholder="Invite code"
-        autoCapitalize="characters"
-        value={inviteCode}
-        onChangeText={setInviteCode}
-        style={inputStyle}
-      />
-
-      {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
-
-      <Pressable
-        onPress={onSubmit}
-        disabled={isSubmitting || !inviteCode.trim()}
-        style={({ pressed }) => [
-          buttonStyle(JOIN_HOUSE_COLOR),
-          (isSubmitting || !inviteCode.trim()) && { opacity: 0.6 },
-          pressed && { opacity: 0.8 },
-        ]}
-      >
-        <Text style={{ color: 'white', fontWeight: '600' }}>
-          {isSubmitting ? 'Joining…' : 'Join house'}
-        </Text>
-      </Pressable>
-    </Module>
-  );
+// This screen moved to (app)/join-house.tsx (not house-scoped - see that file and
+// dashboard.tsx's own comment). Kept as a redirect stub, same reasoning as house/index.tsx:
+// an old bookmark/deep link to "/house/join" should still land somewhere useful instead of
+// 404ing. A declarative <Redirect> (not navigateToHref, unlike house/index.tsx) is enough
+// here - the target isn't under house/ or screensaver/, so none of the
+// first-entry-into-that-route-group workaround in components/Module/routeGroup.ts applies.
+//
+// Not to be confused with the public /join?code=... deep-link landing page (src/app/join.tsx,
+// outside both auth-gated groups) - that handles an invite link; this only redirects an old
+// bookmark of the in-app join *form* itself.
+export default function JoinHouseRedirect() {
+  return <Redirect href="/join-house" />;
 }

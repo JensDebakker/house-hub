@@ -16,9 +16,8 @@ const HOUSEHOLD_ROUTE_GROUPS = ['house', 'screensaver'];
  * the dynamic segment's placeholder name, not its value), so checking that the segment
  * right after "house" or "screensaver" is literally "[householdId]" tells us structurally
  * whether we're actually inside one of those dynamic routes - true for any house feature
- * screen or any screensaver screen, false for a static sibling under the same "house/"
- * prefix (house/create, house/join, or any future one) *and* for every other top-level
- * route (settings, admin, feedback, ...), without having to hand-maintain a blocklist of
+ * screen or any screensaver screen, false for every other top-level route (settings, admin,
+ * feedback, create-house, join-house, ...), without having to hand-maintain a blocklist of
  * every non-household sibling that needs excluding as more get added. Once that's
  * confirmed, the actual id is read off the pathname at the same position - segments don't
  * carry resolved param values, only the placeholder name. */
@@ -71,7 +70,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   // whichever house is actually being viewed right now - derived from the route, not a
   // fixed "household 0" convention, now that the Houses overview lets a user be on no
   // house's route at all (and multiple houses exist to switch between). No socket is
-  // held open while on that overview, house/create, house/join, or any other top-level
+  // held open while on that overview, create-house, join-house, or any other top-level
   // route outside a specific house (settings, admin, feedback, ...): see the early
   // return below.
   const householdId = useActiveHouseholdId();
@@ -153,7 +152,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   // not just when `isAuthenticated` flips - navigating between houses (or to/from the
   // Houses overview, which has none) must immediately swap or drop the connection rather
   // than waiting out whatever backoff had accumulated for the previous house. No
-  // `householdId` (Houses overview, house/create, house/join) means no socket at all:
+  // `householdId` (Houses overview, create-house, join-house) means no socket at all:
   // this effect's own cleanup (below) already closed whatever was open for the
   // previously active house, if any, by the time this run's early return is reached.
   useEffect(() => {
