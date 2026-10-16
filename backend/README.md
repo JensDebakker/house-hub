@@ -133,6 +133,13 @@ Admin (`ROLE_ADMIN` only):
 `AdminFeedbackResponse`: `{ id, type, description, status, createdAt, updatedAt, userId,
 userEmail, userDisplayName, attachments: [{ id, contentType, originalFilename }] }`.
 
+**Admin API key (for tools/agents).** Besides an admin user's JWT, every `GET /admin/**`
+endpoint also accepts the header `X-Admin-Api-Key: <ADMIN_API_KEY>` — e.g.
+`curl -H "X-Admin-Api-Key: $KEY" https://jensdebakker.com/api/admin/feedback`. Read-only by
+design: the key never authenticates a non-GET request or anything outside `/admin/**`
+(those get 401). Configured via the `ADMIN_API_KEY` env var (`app.admin-api-key`); blank or
+unset disables it. Rotate by setting a new value in the VPS `.env` and restarting the backend.
+
 ## Notes
 
 - Error responses are a consistent JSON shape: `{ timestamp, status, error, message, path, fieldErrors }`.
