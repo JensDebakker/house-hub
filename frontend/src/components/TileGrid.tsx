@@ -29,7 +29,7 @@ const BREAKPOINTS = [
  * to fill the remaining space, so it reads as a real grid with blank slots left over, not a
  * row that reflows to fit however many tiles happen to be left.
  */
-export function TileGrid({ children }: { children: ReactNode }) {
+export const TileGrid = ({ children }: { children: ReactNode }) => {
   const [width, setWidth] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -53,4 +53,4 @@ export function TileGrid({ children }: { children: ReactNode }) {
       })}
     </View>
   );
-}
+};
