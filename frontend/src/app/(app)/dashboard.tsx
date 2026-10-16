@@ -24,10 +24,11 @@ function DefaultHouseMarker({ isDefault, onPress, busy }: { isDefault: boolean; 
   );
 }
 
-// Level 0 of the card stack: one tile per house the user belongs to, plus a tile to join
-// another one (creating a brand new house is its own global flow, see house/create.tsx),
-// and the app-level (not house-scoped) tiles - Account, Feedback, and (for admins) Admin -
-// that used to live duplicated on every house's own dashboard instead.
+// Level 0 of the card stack: one tile per house the user belongs to, plus the app-level
+// (not house-scoped) tiles - Create house, Join house, App, Account, Feedback, and (for
+// admins) Admin. Create/Join house live as flat (app)-level routes (create-house.tsx,
+// join-house.tsx), not nested under house/, for the same reason Account/Feedback/Admin do:
+// neither is about an existing specific house, so there's nothing for them to nest under.
 export default function DashboardScreen() {
   const { user, setHouseholds } = useAuth();
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
@@ -76,8 +77,8 @@ export default function DashboardScreen() {
             }
           />
         ))}
-        <Module tile title="Create house" subtitle="Start a new house" href="/house/create" color="#c026d3" />
-        <Module tile title="Join house" subtitle="Use an invite code" href="/house/join" color="#2563eb" />
+        <Module tile title="Create house" subtitle="Start a new house" href="/create-house" color="#c026d3" />
+        <Module tile title="Join house" subtitle="Use an invite code" href="/join-house" color="#2563eb" />
         <Module tile title="App" subtitle="Install & app info" href="/app" color="#0ea5e9" />
         <Module tile title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
         <Module tile title="Feedback" subtitle="Report a bug or idea" href="/feedback" color="#f97316" />
