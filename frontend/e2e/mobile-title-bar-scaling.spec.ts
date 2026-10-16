@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // Visual regression coverage for three mobile-responsiveness bugs fixed together (see
-// Module.tsx and TileGrid.tsx): a phone-width tile grid wrapping to one column instead of
+// components/Module/ and TileGrid.tsx): a phone-width tile grid wrapping to one column instead of
 // two, a title-bar badge/button overlapping its title text, and a long title hard-
 // truncating instead of shrinking to fit. Run at a phone-ish width (390px, roughly an
 // iPhone) since none of these reproduced at tablet/desktop widths.
@@ -119,8 +119,9 @@ async function login(page: Page) {
   await page.getByPlaceholder('Email').fill(USER.email);
   await page.getByPlaceholder('Password').fill('password123');
   // .last(): the open card's header also renders a hidden shadow copy of its own title
-  // ("Log in") to measure natural width (see Module.tsx) - the real, visible submit button
-  // is the last "Log in" match in DOM order, after both the shadow copy and the real title.
+  // ("Log in") to measure natural width (see components/Module/ModuleTitleBar.tsx) - the
+  // real, visible submit button is the last "Log in" match in DOM order, after both the
+  // shadow copy and the real title.
   await page.getByText('Log in', { exact: true }).last().click();
 }
 
@@ -131,8 +132,8 @@ test.describe('mobile title bar / tile grid scaling', () => {
     await mockBackend(page);
     await login(page);
     await page.waitForURL('**/house/h1/dashboard');
-    // The last() of each pair below is the real, visible/rendered copy - Module.tsx also
-    // renders a hidden (opacity: 0) shadow copy of title/badge content to measure natural
+    // The last() of each pair below is the real, visible/rendered copy - components/Module
+    // also renders a hidden (opacity: 0) shadow copy of title/badge content to measure natural
     // size for its shrink-to-fit math (see TitleBarSlot/ModuleTitleBar/tile-mode comments),
     // which getByText would otherwise also match.
     await expect(page.getByText('Screensaver').last()).toBeVisible();
