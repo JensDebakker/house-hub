@@ -2,6 +2,7 @@ import { useLocalSearchParams, usePathname } from 'expo-router';
 import { Text } from 'react-native';
 import { Module, TitleBarChip } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
+import { useTranslation } from '@/i18n';
 import { navigateToHref } from '@/lib/navigation';
 
 const SCREENSAVER_COLOR = '#7c3aed';
@@ -18,6 +19,7 @@ const SCREENSAVER_COLOR = '#7c3aed';
 export default function HouseDashboardScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const pathname = usePathname();
+  const { t } = useTranslation();
   // The tile's own tap-to-open (via Module's onTilePress) goes here - a normal nested
   // settings screen under this house's own route, same as Files/Chat, so it opens "in" the
   // house card's own frame instead of jumping out to a different screen entirely.
@@ -43,25 +45,25 @@ export default function HouseDashboardScreen() {
     <TileGrid>
       <Module
         tile
-        title="Screensaver"
-        subtitle="Kiosk slideshow"
+        title={t('house.dashboard.screensaverTitle')}
+        subtitle={t('house.dashboard.screensaverSubtitle')}
         href={screensaverHref}
         color={SCREENSAVER_COLOR}
         titleBarActions={
           <TitleBarChip color={SCREENSAVER_COLOR} onPress={openScreensaver}>
-            <Text style={{ color: SCREENSAVER_COLOR, fontSize: 11, fontWeight: '700' }}>Start</Text>
+            <Text style={{ color: SCREENSAVER_COLOR, fontSize: 11, fontWeight: '700' }}>{t('house.dashboard.screensaverStart')}</Text>
           </TitleBarChip>
         }
       />
-      <Module tile title="Files" subtitle="Shared uploads" href={`/house/${householdId}/files`} color="#ca8a04" />
-      <Module tile title="Chat" subtitle="Household messages" href={`/house/${householdId}/chat`} color="#db2777" />
-      <Module tile title="House" subtitle="View, leave, or manage" href={`/house/${householdId}/house`} color="#dc2626" />
+      <Module tile title={t('house.dashboard.filesTitle')} subtitle={t('house.dashboard.filesSubtitle')} href={`/house/${householdId}/files`} color="#ca8a04" />
+      <Module tile title={t('house.dashboard.chatTitle')} subtitle={t('house.dashboard.chatSubtitle')} href={`/house/${householdId}/chat`} color="#db2777" />
+      <Module tile title={t('house.dashboard.houseTitle')} subtitle={t('house.dashboard.houseSubtitle')} href={`/house/${householdId}/house`} color="#dc2626" />
 
       {/* Coming soon - kept behind the implemented cards above. */}
-      <Module tile title="Tasks" subtitle="Routine chores" href={`/house/${householdId}/tasks`} color="#dc2626" disabled />
-      <Module tile title="Shopping" subtitle="Lists" href={`/house/${householdId}/shopping`} color="#059669" disabled />
-      <Module tile title="Supplies" subtitle="Medical & stock" href={`/house/${householdId}/supplies`} color="#0891b2" disabled />
-      <Module tile title="Calendar" subtitle="House events" href={`/house/${householdId}/calendar`} color="#4f46e5" disabled />
+      <Module tile title={t('house.dashboard.tasksTitle')} subtitle={t('house.dashboard.tasksSubtitle')} href={`/house/${householdId}/tasks`} color="#dc2626" disabled />
+      <Module tile title={t('house.dashboard.shoppingTitle')} subtitle={t('house.dashboard.shoppingSubtitle')} href={`/house/${householdId}/shopping`} color="#059669" disabled />
+      <Module tile title={t('house.dashboard.suppliesTitle')} subtitle={t('house.dashboard.suppliesSubtitle')} href={`/house/${householdId}/supplies`} color="#0891b2" disabled />
+      <Module tile title={t('house.dashboard.calendarTitle')} subtitle={t('house.dashboard.calendarSubtitle')} href={`/house/${householdId}/calendar`} color="#4f46e5" disabled />
     </TileGrid>
   );
 }

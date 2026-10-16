@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household, HouseholdRole, UserDetail } from '@/types';
@@ -12,6 +13,7 @@ const USERS_COLOR = '#2563eb';
 const HOUSEHOLD_ROLES: HouseholdRole[] = ['OWNER', 'MEMBER'];
 
 export default function AdminUserDetailScreen() {
+  const { t, locale } = useTranslation();
   const isAdmin = useRequireAdmin();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<UserDetail | null>(null);
@@ -30,9 +32,9 @@ export default function AdminUserDetailScreen() {
       setDetail(detailRes.data);
       setAllHouseholds(householdsRes.data);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load user.'));
+      setError(getErrorMessage(err, t('admin.userDetail.loadFailed')));
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     if (!isAdmin || !id) return;
@@ -43,16 +45,16 @@ export default function AdminUserDetailScreen() {
 
   if (!isAdmin) {
     return (
-      <Module title="User" color={USERS_COLOR}>
-        <Text>You don&apos;t have access to this page.</Text>
+      <Module title={t('admin.userDetail.title')} color={USERS_COLOR}>
+        <Text>{t('admin.noAccess')}</Text>
       </Module>
     );
   }
 
   if (!detail) {
     return (
-      <Module title="User" color={USERS_COLOR}>
-        {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : <Text>Loading…</Text>}
+      <Module title={t('admin.userDetail.title')} color={USERS_COLOR}>
+        {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : <Text>{t('common.loading')}</Text>}
       </Module>
     );
   }
@@ -65,7 +67,7 @@ export default function AdminUserDetailScreen() {
       await api.post(`/admin/households/${newHouseholdId}/members`, { userId: id, role: newRole });
       await load();
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to add house membership.'));
+      setError(getErrorMessage(err, t('admin.userDetail.addMembershipFailed')));
     } finally {
       setBusy(false);
     }
@@ -78,7 +80,7 @@ export default function AdminUserDetailScreen() {
       await api.delete(`/admin/households/${householdId}/members/${id}`);
       await load();
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to remove house membership.'));
+      setError(getErrorMessage(err, t('admin.userDetail.removeMembershipFailed')));
     } finally {
       setBusy(false);
     }
@@ -90,23 +92,26 @@ export default function AdminUserDetailScreen() {
   return (
     <Module title={detail.displayName} color={USERS_COLOR}>
       <View>
-        <Text style={{ color: '#666' }}>{detail.email} · {detail.role}</Text>
+        <Text style={{ color: '#666' }}>{detail.email} · {t(`admin.roles.${detail.role}`)}</Text>
         <Text style={{ color: '#666' }}>
-          Verified: {detail.emailVerified ? 'Yes' : 'No'} · Joined {new Date(detail.createdAt).toLocaleDateString()}
+          {t('admin.userDetail.verifiedJoined', {
+            verified: detail.emailVerified ? t('common.yes') : t('common.no'),
+            date: new Date(detail.createdAt).toLocaleDateString(locale),
+          })}
         </Text>
         <Link href="/admin/users" style={{ color: '#2563eb' }}>
-          ← Back to users
+          {t('admin.userDetail.backToUsers')}
         </Link>
       </View>
 
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600' }}>Houses</Text>
+        <Text style={{ fontSize: 18, fontWeight: '600' }}>{t('admin.userDetail.housesHeading')}</Text>
         <TableContainer width={440}>
           <HeaderRow>
-            <HeaderCell width={220}>House</HeaderCell>
-            <HeaderCell width={110}>Role</HeaderCell>
+            <HeaderCell width={220}>{t('admin.userDetail.columns.house')}</HeaderCell>
+            <HeaderCell width={110}>{t('admin.userDetail.columns.role')}</HeaderCell>
             <HeaderCell width={110}>-</HeaderCell>
           </HeaderRow>
           {detail.households.map((h, index) => (
@@ -116,9 +121,9 @@ export default function AdminUserDetailScreen() {
                   {h.householdName}
                 </Link>
               </Cell>
-              <Cell width={110}><Text>{h.role}</Text></Cell>
+              <Cell width={110}><Text>{t(`admin.householdRoles.${h.role}`)}</Text></Cell>
               <Cell width={110}>
-                <AdminActionButton label="Remove" variant="danger" onPress={() => removeFromHousehold(h.householdId)} disabled={busy} />
+                <AdminActionButton label={t('common.remove')} variant="danger" onPress={() => removeFromHousehold(h.householdId)} disabled={busy} />
               </Cell>
             </Row>
           ))}
@@ -126,33 +131,33 @@ export default function AdminUserDetailScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
           <Picker selectedValue={newHouseholdId} onValueChange={setNewHouseholdId} style={{ width: 220 }}>
-            <Picker.Item label="Select a house…" value="" />
+            <Picker.Item label={t('admin.userDetail.selectHouse')} value="" />
             {joinableHouseholds.map((h) => (
               <Picker.Item key={h.id} label={h.name} value={h.id} />
             ))}
           </Picker>
           <Picker selectedValue={newRole} onValueChange={setNewRole} style={{ width: 130 }}>
             {HOUSEHOLD_ROLES.map((r) => (
-              <Picker.Item key={r} label={r} value={r} />
+              <Picker.Item key={r} label={t(`admin.householdRoles.${r}`)} value={r} />
             ))}
           </Picker>
-          <AdminActionButton label="Add to house" onPress={addToHousehold} disabled={busy || !newHouseholdId} />
+          <AdminActionButton label={t('admin.userDetail.addToHouse')} onPress={addToHousehold} disabled={busy || !newHouseholdId} />
         </View>
       </View>
 
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600' }}>Assigned tasks</Text>
+        <Text style={{ fontSize: 18, fontWeight: '600' }}>{t('admin.userDetail.assignedTasksHeading')}</Text>
         <TableContainer width={340}>
           <HeaderRow>
-            <HeaderCell width={220}>Title</HeaderCell>
-            <HeaderCell width={60}>Done</HeaderCell>
-            <HeaderCell width={60}>Due</HeaderCell>
+            <HeaderCell width={220}>{t('admin.userDetail.columns.title')}</HeaderCell>
+            <HeaderCell width={60}>{t('admin.userDetail.columns.done')}</HeaderCell>
+            <HeaderCell width={60}>{t('admin.userDetail.columns.due')}</HeaderCell>
           </HeaderRow>
-          {detail.assignedTasks.map((t, index) => (
-            <Row key={t.id} index={index}>
-              <Cell width={220}><Text numberOfLines={1}>{t.title}</Text></Cell>
-              <Cell width={60}><Text>{t.done ? 'Yes' : 'No'}</Text></Cell>
-              <Cell width={60}><Text>{t.dueDate ?? '-'}</Text></Cell>
+          {detail.assignedTasks.map((task, index) => (
+            <Row key={task.id} index={index}>
+              <Cell width={220}><Text numberOfLines={1}>{task.title}</Text></Cell>
+              <Cell width={60}><Text>{task.done ? t('common.yes') : t('common.no')}</Text></Cell>
+              <Cell width={60}><Text>{task.dueDate ?? '-'}</Text></Cell>
             </Row>
           ))}
         </TableContainer>

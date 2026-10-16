@@ -1,4 +1,5 @@
 import { Alert, Platform } from 'react-native';
+import { translate } from '@/i18n';
 
 /**
  * Cross-platform destructive-action confirmation. `Alert.alert` with buttons is a no-op on
@@ -8,7 +9,7 @@ import { Alert, Platform } from 'react-native';
 export function confirmDestructive({
   title,
   message,
-  confirmLabel = 'Delete',
+  confirmLabel = translate('common.delete'),
   onConfirm,
 }: {
   title: string;
@@ -23,7 +24,7 @@ export function confirmDestructive({
     return;
   }
   Alert.alert(title, message, [
-    { text: 'Cancel', style: 'cancel' },
+    { text: translate('common.cancel'), style: 'cancel' },
     { text: confirmLabel, style: 'destructive', onPress: onConfirm },
   ]);
 }

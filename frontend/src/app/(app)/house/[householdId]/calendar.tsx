@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { dateKey, MonthGrid, parseDateKey } from '@/components/MonthGrid';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { useCalendarEventsQuery, useCreateCalendarEventMutation, useDeleteCalendarEventMutation } from '@/lib/useCalendarEvents';
 import type { CalendarEvent } from '@/types';
@@ -18,6 +19,7 @@ function startOfMonth(date: Date): Date {
 
 export default function CalendarScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const { t, locale } = useTranslation();
 
   const calendarEventsQuery = useCalendarEventsQuery(householdId);
   const createEvent = useCreateCalendarEventMutation(householdId);
@@ -76,22 +78,22 @@ export default function CalendarScreen() {
   };
 
   const errorMessage = calendarEventsQuery.isError
-    ? getErrorMessage(calendarEventsQuery.error, 'Failed to load calendar events.')
+    ? getErrorMessage(calendarEventsQuery.error, t('house.calendar.loadFailed'))
     : createEvent.isError
-      ? getErrorMessage(createEvent.error, 'Failed to add event.')
+      ? getErrorMessage(createEvent.error, t('house.calendar.addFailed'))
       : deleteEvent.isError
-        ? getErrorMessage(deleteEvent.error, 'Failed to remove event.')
+        ? getErrorMessage(deleteEvent.error, t('house.calendar.removeFailed'))
         : null;
 
-  const monthLabel = viewDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  const selectedDateLabel = selectedDate.toLocaleDateString(undefined, {
+  const monthLabel = viewDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  const selectedDateLabel = selectedDate.toLocaleDateString(locale, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   });
 
   return (
-    <Module title="House Calendar" color={CALENDAR_COLOR} scroll={false}>
+    <Module title={t('house.calendar.title')} color={CALENDAR_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -103,7 +105,7 @@ export default function CalendarScreen() {
         </Pressable>
         <Pressable onPress={goToToday} style={{ alignItems: 'center' }}>
           <Text style={{ fontSize: 15, fontWeight: '700' }}>{monthLabel}</Text>
-          <Text style={{ fontSize: 11, color: CALENDAR_COLOR, fontWeight: '600' }}>Today</Text>
+          <Text style={{ fontSize: 11, color: CALENDAR_COLOR, fontWeight: '600' }}>{t('house.calendar.today')}</Text>
         </Pressable>
         <Pressable
           onPress={() => changeMonth(1)}
@@ -128,14 +130,14 @@ export default function CalendarScreen() {
 
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
-              placeholder="Event title"
+              placeholder={t('house.calendar.titlePlaceholder')}
               value={title}
               onChangeText={setTitle}
               onSubmitEditing={addEvent}
               style={{ flex: 2, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 }}
             />
             <TextInput
-              placeholder="YYYY-MM-DD"
+              placeholder={t('house.calendar.datePlaceholder')}
               value={dateInput}
               onChangeText={setDateInput}
               style={{ flex: 1, borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12 }}
@@ -145,7 +147,7 @@ export default function CalendarScreen() {
               disabled={createEvent.isPending}
               style={{ backgroundColor: '#2563eb', borderRadius: 8, padding: 12, justifyContent: 'center', opacity: createEvent.isPending ? 0.6 : 1 }}
             >
-              <Text style={{ color: 'white', fontWeight: '600' }}>Add</Text>
+              <Text style={{ color: 'white', fontWeight: '600' }}>{t('common.add')}</Text>
             </Pressable>
           </View>
 
@@ -162,7 +164,7 @@ export default function CalendarScreen() {
             keyExtractor={(item) => item.id}
             style={{ flex: 1 }}
             contentContainerStyle={{ gap: 8 }}
-            ListEmptyComponent={<Text style={{ color: '#999' }}>No events on this day.</Text>}
+            ListEmptyComponent={<Text style={{ color: '#999' }}>{t('house.calendar.empty')}</Text>}
             renderItem={({ item }) => (
               <View
                 style={{
@@ -179,7 +181,7 @@ export default function CalendarScreen() {
                   onPress={() => removeEvent(item.id)}
                   style={{ paddingHorizontal: 8, paddingVertical: 4 }}
                 >
-                  <Text style={{ color: '#c62828', fontWeight: '700' }}>Remove</Text>
+                  <Text style={{ color: '#c62828', fontWeight: '700' }}>{t('common.remove')}</Text>
                 </Pressable>
               </View>
             )}

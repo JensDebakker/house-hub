@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import { translate } from '@/i18n';
 import { api } from '@/lib/api';
 
 const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? '';
@@ -176,7 +177,7 @@ export function usePushNotifications() {
       // explanation - confirmed via a real failure during manual testing, not a
       // hypothetical: Chromium's Push API throws exactly this way when it refuses to
       // subscribe for reasons `Notification.requestPermission()` alone doesn't surface.
-      setError('Could not enable push notifications. Please try again.');
+      setError(translate('app.push.enableFailed'));
       // Best-effort cleanup: if the browser-side subscribe() succeeded but the backend
       // POST failed, don't leave an orphaned subscription the UI has no way to show or
       // retry from - unsubscribe so the next attempt starts clean.

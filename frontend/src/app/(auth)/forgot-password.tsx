@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
 
@@ -10,6 +11,7 @@ const FORGOT_PASSWORD_COLOR = '#2563eb';
 
 export default function ForgotPasswordScreen() {
   const { forgotPassword } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,20 +25,20 @@ export default function ForgotPasswordScreen() {
       const msg = await forgotPassword(email.trim());
       setMessage(msg);
     } catch (err) {
-      setError(getErrorMessage(err, 'Something went wrong. Try again.'));
+      setError(getErrorMessage(err, t('app.forgotPassword.failed')));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Module title="Forgot password" color={FORGOT_PASSWORD_COLOR}>
+    <Module title={t('app.forgotPassword.title')} color={FORGOT_PASSWORD_COLOR}>
       <Text style={{ color: '#666' }}>
-        Enter your account email and we&apos;ll send you a link to reset your password.
+        {t('app.forgotPassword.intro')}
       </Text>
 
       <TextInput
-        placeholder="Email"
+        placeholder={t('app.auth.emailPlaceholder')}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -53,12 +55,12 @@ export default function ForgotPasswordScreen() {
         style={({ pressed }) => [buttonStyle(FORGOT_PASSWORD_COLOR), pressed && { opacity: 0.8 }]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
-          {isSubmitting ? 'Sending…' : 'Send reset link'}
+          {isSubmitting ? t('app.forgotPassword.submitting') : t('app.forgotPassword.submit')}
         </Text>
       </Pressable>
 
       <Link href="/(auth)/login" style={{ textAlign: 'center', marginTop: 8 }}>
-        Back to login
+        {t('app.auth.backToLogin')}
       </Link>
     </Module>
   );

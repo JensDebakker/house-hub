@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { navigateToHref } from '@/lib/navigation';
 import { joinPendingHousehold } from '@/lib/pendingInvite';
 import { savePendingInviteCode } from '@/lib/storage';
@@ -14,6 +15,7 @@ import { savePendingInviteCode } from '@/lib/storage';
 export default function JoinLinkScreen() {
   const { code } = useLocalSearchParams<{ code?: string }>();
   const { isAuthenticated, refreshUser } = useAuth();
+  const { t } = useTranslation();
   const handled = useRef(false);
 
   useEffect(() => {
@@ -54,10 +56,10 @@ export default function JoinLinkScreen() {
       {code ? (
         <>
           <ActivityIndicator />
-          <Text style={{ color: '#666' }}>Joining house…</Text>
+          <Text style={{ color: '#666' }}>{t('app.join.joining')}</Text>
         </>
       ) : (
-        <Text style={{ color: '#c62828' }}>This invite link is missing a code.</Text>
+        <Text style={{ color: '#c62828' }}>{t('app.join.missingCode')}</Text>
       )}
     </ScreenContainer>
   );

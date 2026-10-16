@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { AdminUser, Role } from '@/types';
@@ -22,6 +23,7 @@ const COLS = {
 const TABLE_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
 export default function AdminUsersScreen() {
+  const { t } = useTranslation();
   const isAdmin = useRequireAdmin();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [edits, setEdits] = useState<Record<string, Role>>({});
@@ -38,10 +40,10 @@ export default function AdminUsersScreen() {
         setUsers(data);
         setEdits(Object.fromEntries(data.map((u) => [u.id, u.role])));
       } catch (err) {
-        setError(getErrorMessage(err, 'Failed to load users.'));
+        setError(getErrorMessage(err, t('admin.users.loadFailed')));
       }
     })();
-  }, [isAdmin]);
+  }, [isAdmin, t]);
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -53,8 +55,8 @@ export default function AdminUsersScreen() {
 
   if (!isAdmin) {
     return (
-      <Module title="Users" color={USERS_COLOR}>
-        <Text>You don&apos;t have access to this page.</Text>
+      <Module title={t('admin.users.title')} color={USERS_COLOR}>
+        <Text>{t('admin.noAccess')}</Text>
       </Module>
     );
   }
@@ -66,18 +68,18 @@ export default function AdminUsersScreen() {
       const { data } = await api.patch<AdminUser>(`/admin/users/${userId}`, { role: edits[userId] });
       setUsers((prev) => prev.map((u) => (u.id === userId ? data : u)));
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update user.'));
+      setError(getErrorMessage(err, t('admin.users.updateFailed')));
     } finally {
       setSavingId(null);
     }
   };
 
   return (
-    <Module title="Users" color={USERS_COLOR}>
+    <Module title={t('admin.users.title')} color={USERS_COLOR}>
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Search by name or email…"
+        placeholder={t('admin.users.searchPlaceholder')}
         style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, backgroundColor: 'white' }}
       />
 
@@ -85,11 +87,11 @@ export default function AdminUsersScreen() {
 
       <TableContainer width={TABLE_WIDTH}>
         <HeaderRow>
-          <HeaderCell width={COLS.name}>Name</HeaderCell>
-          <HeaderCell width={COLS.email}>Email</HeaderCell>
-          <HeaderCell width={COLS.verified}>Verified</HeaderCell>
-          <HeaderCell width={COLS.role}>Role</HeaderCell>
-          <HeaderCell width={COLS.households}>Houses</HeaderCell>
+          <HeaderCell width={COLS.name}>{t('admin.users.columns.name')}</HeaderCell>
+          <HeaderCell width={COLS.email}>{t('admin.users.columns.email')}</HeaderCell>
+          <HeaderCell width={COLS.verified}>{t('admin.users.columns.verified')}</HeaderCell>
+          <HeaderCell width={COLS.role}>{t('admin.users.columns.role')}</HeaderCell>
+          <HeaderCell width={COLS.households}>{t('admin.users.columns.houses')}</HeaderCell>
           <HeaderCell width={COLS.save} />
         </HeaderRow>
 
@@ -105,7 +107,7 @@ export default function AdminUsersScreen() {
             </Cell>
             <Cell width={COLS.verified}>
               <Text style={{ color: u.emailVerified ? '#2e7d32' : '#c62828' }}>
-                {u.emailVerified ? 'Yes' : 'No'}
+                {u.emailVerified ? t('common.yes') : t('common.no')}
               </Text>
             </Cell>
             <Cell width={COLS.role}>
@@ -115,7 +117,7 @@ export default function AdminUsersScreen() {
                 style={{ width: COLS.role }}
               >
                 {ROLES.map((r) => (
-                  <Picker.Item key={r} label={r} value={r} />
+                  <Picker.Item key={r} label={t(`admin.roles.${r}`)} value={r} />
                 ))}
               </Picker>
             </Cell>
@@ -123,13 +125,13 @@ export default function AdminUsersScreen() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {u.households.map((h) => (
                   <Link key={h.householdId} href={`/admin/houses/${h.householdId}`} style={chipStyle}>
-                    {h.householdName} ({h.role})
+                    {h.householdName} ({t(`admin.householdRoles.${h.role}`)})
                   </Link>
                 ))}
               </View>
             </Cell>
             <Cell width={COLS.save}>
-              <AdminActionButton label="Save" onPress={() => save(u.id)} busy={savingId === u.id} small />
+              <AdminActionButton label={t('common.save')} onPress={() => save(u.id)} busy={savingId === u.id} small />
             </Cell>
           </Row>
         ))}

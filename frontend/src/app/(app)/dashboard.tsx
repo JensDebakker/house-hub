@@ -3,7 +3,9 @@ import { Text } from 'react-native';
 import { Module, TitleBarChip } from '@/components/Module';
 import { OnlineBadge } from '@/components/OnlineBadge';
 import { TileGrid } from '@/components/TileGrid';
+import { LANGUAGE_COLOR } from '@/components/LanguageModuleCard';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { formatMemberCount } from '@/lib/houseStatus';
 import { assignHouseColors } from '@/lib/houseColors';
@@ -31,6 +33,7 @@ function DefaultHouseMarker({ isDefault, onPress, busy }: { isDefault: boolean; 
 // neither is about an existing specific house, so there's nothing for them to nest under.
 export default function DashboardScreen() {
   const { user, setHouseholds } = useAuth();
+  const { t } = useTranslation();
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +52,7 @@ export default function DashboardScreen() {
       const households = await setDefaultHousehold(householdId);
       setHouseholds(households);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to set default house.'));
+      setError(getErrorMessage(err, t('app.dashboard.setDefaultFailed')));
     } finally {
       setSettingDefaultId(null);
     }
@@ -77,13 +80,14 @@ export default function DashboardScreen() {
             }
           />
         ))}
-        <Module tile title="Create house" subtitle="Start a new house" href="/create-house" color="#c026d3" />
-        <Module tile title="Join house" subtitle="Use an invite code" href="/join-house" color="#2563eb" />
-        <Module tile title="App" subtitle="Install & app info" href="/app" color="#0ea5e9" />
-        <Module tile title="Account" subtitle="Profile & password" href="/settings" color="#64748b" />
-        <Module tile title="Feedback" subtitle="Report a bug or idea" href="/feedback" color="#f97316" />
+        <Module tile title={t('app.tiles.createHouse.title')} subtitle={t('app.tiles.createHouse.subtitle')} href="/create-house" color="#c026d3" />
+        <Module tile title={t('app.tiles.joinHouse.title')} subtitle={t('app.tiles.joinHouse.subtitle')} href="/join-house" color="#2563eb" />
+        <Module tile title={t('app.tiles.app.title')} subtitle={t('app.tiles.app.subtitle')} href="/app" color="#0ea5e9" />
+        <Module tile title={t('language.title')} subtitle={t('language.subtitle')} href="/language" color={LANGUAGE_COLOR} />
+        <Module tile title={t('app.tiles.account.title')} subtitle={t('app.tiles.account.subtitle')} href="/settings" color="#64748b" />
+        <Module tile title={t('app.tiles.feedback.title')} subtitle={t('app.tiles.feedback.subtitle')} href="/feedback" color="#f97316" />
         {user?.role === 'ADMIN' ? (
-          <Module tile title="Admin" subtitle="Manage everything" href="/admin" color="#6b7280" />
+          <Module tile title={t('app.tiles.admin.title')} subtitle={t('app.tiles.admin.subtitle')} href="/admin" color="#6b7280" />
         ) : null}
       </TileGrid>
     </>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
+import { useTranslation } from '@/i18n';
 import { isInAppBrowser } from '@/lib/inAppBrowser';
 
 type Status = 'idle' | 'copied' | 'failed';
@@ -17,6 +18,7 @@ type Status = 'idle' | 'copied' | 'failed';
  * fails, to the same "•••" menu instructions the original version always showed - this must
  * never leave the user with strictly less help than before. */
 export const InAppBrowserBanner = () => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(() => Platform.OS === 'web' && isInAppBrowser());
   const [status, setStatus] = useState<Status>('idle');
 
@@ -54,8 +56,8 @@ export const InAppBrowserBanner = () => {
     >
       <Text style={{ color: '#92400e', flex: 1 }}>
         {status === 'failed'
-          ? 'Tap the ••• menu and choose "Open in Safari/Chrome" instead.'
-          : 'This page can get stuck loading in here.'}
+          ? t('app.inAppBrowser.fallback')
+          : t('app.inAppBrowser.stuck')}
       </Text>
       {status === 'failed' ? null : (
         <Pressable
@@ -68,7 +70,7 @@ export const InAppBrowserBanner = () => {
           }}
         >
           <Text style={{ color: 'white', fontWeight: '700' }}>
-            {status === 'copied' ? 'Link copied!' : 'Open in browser'}
+            {status === 'copied' ? t('app.inAppBrowser.copied') : t('app.inAppBrowser.open')}
           </Text>
         </Pressable>
       )}

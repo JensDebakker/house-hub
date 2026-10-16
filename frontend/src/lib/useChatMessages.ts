@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWebSocketChannel, useWebSocketSend } from '@/contexts/WebSocketContext';
+import { translate } from '@/i18n';
 import { api } from '@/lib/api';
 import type { ChatMessage, ChatMessageDeletedEvent } from '@/types';
 
@@ -87,7 +88,7 @@ export function useSendChatMessage(householdId: string | undefined) {
         id: `${OPTIMISTIC_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}`,
         householdId,
         senderId: user?.id ?? '',
-        senderDisplayName: user?.displayName ?? 'You',
+        senderDisplayName: user?.displayName ?? translate('house.chat.you'),
         text: trimmed,
         createdAt: new Date().toISOString(),
       };

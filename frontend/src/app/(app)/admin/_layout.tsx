@@ -1,5 +1,6 @@
 import { router, Slot, usePathname } from 'expo-router';
 import { Module, navigateBackFromCard } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 
 const ADMIN_COLOR = '#6b7280';
 
@@ -7,12 +8,13 @@ const ADMIN_COLOR = '#6b7280';
 // open, and collapses into a gray frame around Users/Houses (and their own nested detail
 // screens, which carry on collapsing the same way one level further via their own cards).
 export default function AdminLayout() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const collapsed = pathname !== '/admin';
 
   return (
     <Module
-      title="Admin"
+      title={t('admin.title')}
       color={ADMIN_COLOR}
       collapsed={collapsed}
       onCollapsedPress={() => navigateBackFromCard(() => router.replace('/admin'))}

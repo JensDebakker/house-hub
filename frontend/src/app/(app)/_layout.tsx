@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { Module, navigateBackFromCard } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { resolveDefaultHousehold } from '@/lib/households';
 import { navigateToHref } from '@/lib/navigation';
 import { loadScreensaverAutoStartPrefs } from '@/lib/storage';
@@ -84,13 +85,14 @@ function useIdleScreensaverRedirect() {
 // single global one.
 export default function AppStackLayout() {
   useIdleScreensaverRedirect();
+  const { t } = useTranslation();
   const pathname = usePathname();
   const collapsed = pathname !== '/dashboard';
 
   return (
     <View style={{ flex: 1, backgroundColor: '#e5e7eb' }}>
       <Module
-        title="Dashboard"
+        title={t('app.dashboard.title')}
         color={DASHBOARD_COLOR}
         collapsed={collapsed}
         onCollapsedPress={() => navigateBackFromCard(() => router.replace('/dashboard'))}

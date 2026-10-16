@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { AdminActionButton, Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type {
@@ -26,7 +27,7 @@ import type {
 const HOUSES_COLOR = '#0f766e';
 const HOUSEHOLD_ROLES: HouseholdRole[] = ['OWNER', 'MEMBER'];
 
-const DATABASE_TABS = ['Members', 'Tasks', 'Supplies', 'Shopping Lists', 'Calendar', 'Files'] as const;
+const DATABASE_TABS = ['members', 'tasks', 'supplies', 'shoppingLists', 'calendar', 'files'] as const;
 type DatabaseTab = (typeof DATABASE_TABS)[number];
 
 function formatBytes(bytes: number): string {
@@ -66,6 +67,7 @@ function fromAdminCalendarEvent(e: AdminCalendarEvent): CalendarEvent {
  * inside the detail card - local state, not routed, since they're all views over the
  * one already-loaded HouseholdDetail payload rather than separate screens. */
 function DatabaseTabBar({ active, onChange }: { active: DatabaseTab; onChange: (tab: DatabaseTab) => void }) {
+  const { t } = useTranslation();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
       {DATABASE_TABS.map((tab) => {
@@ -84,7 +86,7 @@ function DatabaseTabBar({ active, onChange }: { active: DatabaseTab; onChange: (
             }}
           >
             <Text style={{ fontSize: 14, fontWeight: '600', color: isActive ? 'white' : HOUSES_COLOR }}>
-              {tab}
+              {t(`admin.houseDetail.tabs.${tab}`)}
             </Text>
           </Pressable>
         );
@@ -94,12 +96,13 @@ function DatabaseTabBar({ active, onChange }: { active: DatabaseTab; onChange: (
 }
 
 export default function AdminHouseDetailScreen() {
+  const { t } = useTranslation();
   const isAdmin = useRequireAdmin();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<HouseholdDetail | null>(null);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<DatabaseTab>('Members');
+  const [tab, setTab] = useState<DatabaseTab>('members');
 
   const [limitGb, setLimitGb] = useState('');
   const [newMemberId, setNewMemberId] = useState('');
@@ -138,9 +141,9 @@ export default function AdminHouseDetailScreen() {
         ),
       );
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load house.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.load')));
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     if (!isAdmin || !id) return;
@@ -151,16 +154,16 @@ export default function AdminHouseDetailScreen() {
 
   if (!isAdmin) {
     return (
-      <Module title="House" color={HOUSES_COLOR}>
-        <Text>You don&apos;t have access to this page.</Text>
+      <Module title={t('admin.houseDetail.title')} color={HOUSES_COLOR}>
+        <Text>{t('admin.noAccess')}</Text>
       </Module>
     );
   }
 
   if (!detail) {
     return (
-      <Module title="House" color={HOUSES_COLOR}>
-        {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : <Text>Loading…</Text>}
+      <Module title={t('admin.houseDetail.title')} color={HOUSES_COLOR}>
+        {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : <Text>{t('common.loading')}</Text>}
       </Module>
     );
   }
@@ -175,7 +178,7 @@ export default function AdminHouseDetailScreen() {
       const { data } = await api.patch<Household>(`/admin/households/${id}`, { storageLimitBytes: bytes });
       setDetail((prev) => prev && { ...prev, household: data });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update storage limit.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.updateStorageLimit')));
     } finally {
       setBusy(false);
     }
@@ -188,22 +191,22 @@ export default function AdminHouseDetailScreen() {
       await api.delete(`/admin/households/${id}`);
       router.replace('/admin/houses');
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete house.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.deleteHouse')));
       setBusy(false);
     }
   };
 
   const confirmDeleteHousehold = () => {
-    const message = `Delete "${household.name}" and everything in it (tasks, supplies, shopping lists, calendar events, chat, files)? This cannot be undone.`;
+    const message = t('admin.houseDetail.deleteConfirmMessage', { name: household.name });
     if (Platform.OS === 'web') {
       if (window.confirm(message)) {
         deleteHousehold();
       }
       return;
     }
-    Alert.alert('Delete house?', message, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: deleteHousehold },
+    Alert.alert(t('admin.houseDetail.deleteConfirmTitle'), message, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: deleteHousehold },
     ]);
   };
 
@@ -222,7 +225,7 @@ export default function AdminHouseDetailScreen() {
       }
       setNewMemberId('');
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to add member.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.addMember')));
     } finally {
       setBusy(false);
     }
@@ -235,7 +238,7 @@ export default function AdminHouseDetailScreen() {
       await api.delete(`/admin/households/${id}/members/${userId}`);
       setDetail((prev) => prev && { ...prev, members: prev.members.filter((m) => m.userId !== userId) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to remove member.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.removeMember')));
     } finally {
       setBusy(false);
     }
@@ -263,7 +266,7 @@ export default function AdminHouseDetailScreen() {
         household: { ...prev.household, storageUsedBytes: prev.household.storageUsedBytes + data.sizeBytes, fileCount: prev.household.fileCount + 1 },
       });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to upload file.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.uploadFile')));
     } finally {
       setBusy(false);
     }
@@ -286,7 +289,7 @@ export default function AdminHouseDetailScreen() {
         };
       });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete file.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.deleteFile')));
     } finally {
       setBusy(false);
     }
@@ -304,7 +307,7 @@ export default function AdminHouseDetailScreen() {
       });
       setDetail((prev) => prev && { ...prev, tasks: prev.tasks.map((t) => (t.id === taskId ? fromAdminTask(data) : t)) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update task.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.updateTask')));
     } finally {
       setRowBusyId(null);
     }
@@ -317,7 +320,7 @@ export default function AdminHouseDetailScreen() {
       const { data } = await api.patch<AdminTask>(`/admin/tasks/${taskId}`, { done: !done });
       setDetail((prev) => prev && { ...prev, tasks: prev.tasks.map((t) => (t.id === taskId ? fromAdminTask(data) : t)) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update task.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.updateTask')));
     } finally {
       setRowBusyId(null);
     }
@@ -330,7 +333,7 @@ export default function AdminHouseDetailScreen() {
       await api.delete(`/admin/tasks/${taskId}`);
       setDetail((prev) => prev && { ...prev, tasks: prev.tasks.filter((t) => t.id !== taskId) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete task.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.deleteTask')));
     } finally {
       setRowBusyId(null);
     }
@@ -348,7 +351,7 @@ export default function AdminHouseDetailScreen() {
       });
       setDetail((prev) => prev && { ...prev, supplies: prev.supplies.map((s) => (s.id === supplyId ? fromAdminSupply(data) : s)) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update supply.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.updateSupply')));
     } finally {
       setRowBusyId(null);
     }
@@ -361,7 +364,7 @@ export default function AdminHouseDetailScreen() {
       await api.delete(`/admin/supplies/${supplyId}`);
       setDetail((prev) => prev && { ...prev, supplies: prev.supplies.filter((s) => s.id !== supplyId) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete supply.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.deleteSupply')));
     } finally {
       setRowBusyId(null);
     }
@@ -374,7 +377,7 @@ export default function AdminHouseDetailScreen() {
       const { data } = await api.patch<AdminShoppingList>(`/admin/shopping-lists/${listId}`, { name: shoppingEdits[listId] });
       setDetail((prev) => prev && { ...prev, shoppingLists: prev.shoppingLists.map((l) => (l.id === listId ? fromAdminShoppingList(data) : l)) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update shopping list.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.updateShoppingList')));
     } finally {
       setRowBusyId(null);
     }
@@ -387,7 +390,7 @@ export default function AdminHouseDetailScreen() {
       await api.delete(`/admin/shopping-lists/${listId}`);
       setDetail((prev) => prev && { ...prev, shoppingLists: prev.shoppingLists.filter((l) => l.id !== listId) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete shopping list.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.deleteShoppingList')));
     } finally {
       setRowBusyId(null);
     }
@@ -405,7 +408,7 @@ export default function AdminHouseDetailScreen() {
       });
       setDetail((prev) => prev && { ...prev, calendarEvents: prev.calendarEvents.map((e) => (e.id === eventId ? fromAdminCalendarEvent(data) : e)) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to update event.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.updateEvent')));
     } finally {
       setRowBusyId(null);
     }
@@ -418,7 +421,7 @@ export default function AdminHouseDetailScreen() {
       await api.delete(`/admin/calendar-events/${eventId}`);
       setDetail((prev) => prev && { ...prev, calendarEvents: prev.calendarEvents.filter((e) => e.id !== eventId) });
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete event.'));
+      setError(getErrorMessage(err, t('admin.houseDetail.errors.deleteEvent')));
     } finally {
       setRowBusyId(null);
     }
@@ -431,27 +434,27 @@ export default function AdminHouseDetailScreen() {
     <Module title={household.name} color={HOUSES_COLOR}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
-          <Text style={{ color: '#666' }}>Invite code: {household.inviteCode}</Text>
+          <Text style={{ color: '#666' }}>{t('admin.houseDetail.inviteCode', { code: household.inviteCode })}</Text>
           <Link href="/admin/houses" style={{ color: '#2563eb' }}>
-            ← Back to houses
+            {t('admin.houseDetail.backToHouses')}
           </Link>
         </View>
-        <AdminActionButton label="Delete house" variant="danger" onPress={confirmDeleteHousehold} disabled={busy} />
+        <AdminActionButton label={t('admin.houseDetail.deleteHouse')} variant="danger" onPress={confirmDeleteHousehold} disabled={busy} />
       </View>
 
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <Text>Storage limit (GB):</Text>
+        <Text>{t('admin.houseDetail.storageLimit')}</Text>
         <TextInput
           value={limitGb}
           onChangeText={setLimitGb}
           keyboardType="numeric"
           style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 6, width: 80, backgroundColor: 'white' }}
         />
-        <AdminActionButton label="Save" onPress={saveLimit} disabled={busy} />
+        <AdminActionButton label={t('common.save')} onPress={saveLimit} disabled={busy} />
         <Text style={{ color: '#666' }}>
-          Used: {formatBytes(household.storageUsedBytes)} / {formatBytes(household.storageLimitBytes)}
+          {t('admin.houseDetail.storageUsed', { used: formatBytes(household.storageUsedBytes), limit: formatBytes(household.storageLimitBytes) })}
         </Text>
       </View>
 
@@ -465,12 +468,12 @@ export default function AdminHouseDetailScreen() {
         }}
       />
 
-      {tab === 'Members' ? (
+      {tab === 'members' ? (
         <View style={{ gap: 8 }}>
           <TableContainer width={430}>
             <HeaderRow>
-              <HeaderCell width={180}>Name</HeaderCell>
-              <HeaderCell width={110}>Role</HeaderCell>
+              <HeaderCell width={180}>{t('admin.houseDetail.columns.name')}</HeaderCell>
+              <HeaderCell width={110}>{t('admin.houseDetail.columns.role')}</HeaderCell>
               <HeaderCell width={140}>-</HeaderCell>
             </HeaderRow>
             {members.map((m, index) => (
@@ -478,9 +481,9 @@ export default function AdminHouseDetailScreen() {
                 <Cell width={180}>
                   <Link href={`/admin/users/${m.userId}`} style={{ color: '#2563eb' }}>{m.displayName}</Link>
                 </Cell>
-                <Cell width={110}><Text>{m.role}</Text></Cell>
+                <Cell width={110}><Text>{t(`admin.householdRoles.${m.role}`)}</Text></Cell>
                 <Cell width={140}>
-                  <AdminActionButton label="Remove" variant="danger" onPress={() => removeMember(m.userId)} disabled={busy} />
+                  <AdminActionButton label={t('common.remove')} variant="danger" onPress={() => removeMember(m.userId)} disabled={busy} />
                 </Cell>
               </Row>
             ))}
@@ -488,48 +491,48 @@ export default function AdminHouseDetailScreen() {
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             <Picker selectedValue={newMemberId} onValueChange={setNewMemberId} style={{ width: 220 }}>
-              <Picker.Item label="Select a user…" value="" />
+              <Picker.Item label={t('admin.houseDetail.selectUser')} value="" />
               {addableUsers.map((u) => (
                 <Picker.Item key={u.id} label={`${u.displayName} (${u.email})`} value={u.id} />
               ))}
             </Picker>
             <Picker selectedValue={newMemberRole} onValueChange={setNewMemberRole} style={{ width: 130 }}>
               {HOUSEHOLD_ROLES.map((r) => (
-                <Picker.Item key={r} label={r} value={r} />
+                <Picker.Item key={r} label={t(`admin.householdRoles.${r}`)} value={r} />
               ))}
             </Picker>
-            <AdminActionButton label="Add member" onPress={addMember} disabled={busy || !newMemberId} />
+            <AdminActionButton label={t('admin.houseDetail.addMember')} onPress={addMember} disabled={busy || !newMemberId} />
           </View>
         </View>
       ) : null}
 
-      {tab === 'Tasks' ? (
+      {tab === 'tasks' ? (
         <TableContainer width={660}>
           <HeaderRow>
-            <HeaderCell width={200}>Title</HeaderCell>
-            <HeaderCell width={170}>Assigned to</HeaderCell>
-            <HeaderCell width={130}>Due</HeaderCell>
-            <HeaderCell width={70}>Done</HeaderCell>
+            <HeaderCell width={200}>{t('admin.houseDetail.columns.title')}</HeaderCell>
+            <HeaderCell width={170}>{t('admin.houseDetail.columns.assignedTo')}</HeaderCell>
+            <HeaderCell width={130}>{t('admin.houseDetail.columns.due')}</HeaderCell>
+            <HeaderCell width={70}>{t('admin.houseDetail.columns.done')}</HeaderCell>
             <HeaderCell width={90} />
           </HeaderRow>
-          {tasks.map((t, index) => (
-            <Row key={t.id} index={index}>
+          {tasks.map((task, index) => (
+            <Row key={task.id} index={index}>
               <Cell width={200}>
                 <TextInput
-                  value={taskEdits[t.id]?.title ?? ''}
-                  onChangeText={(v) => setTaskEdits((prev) => ({ ...prev, [t.id]: { ...prev[t.id], title: v } }))}
+                  value={taskEdits[task.id]?.title ?? ''}
+                  onChangeText={(v) => setTaskEdits((prev) => ({ ...prev, [task.id]: { ...prev[task.id], title: v } }))}
                   style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 6, backgroundColor: 'white' }}
                 />
               </Cell>
               <Cell width={170}>
                 <Picker
-                  selectedValue={taskEdits[t.id]?.assignedToId ?? ''}
+                  selectedValue={taskEdits[task.id]?.assignedToId ?? ''}
                   onValueChange={(v: string) =>
-                    setTaskEdits((prev) => ({ ...prev, [t.id]: { ...prev[t.id], assignedToId: v } }))
+                    setTaskEdits((prev) => ({ ...prev, [task.id]: { ...prev[task.id], assignedToId: v } }))
                   }
                   style={{ width: 170 }}
                 >
-                  <Picker.Item label="Unassigned" value="" />
+                  <Picker.Item label={t('admin.houseDetail.unassigned')} value="" />
                   {members.map((m) => (
                     <Picker.Item key={m.userId} label={m.displayName} value={m.userId} />
                   ))}
@@ -537,21 +540,21 @@ export default function AdminHouseDetailScreen() {
               </Cell>
               <Cell width={130}>
                 <TextInput
-                  value={taskEdits[t.id]?.dueDate ?? ''}
-                  onChangeText={(v) => setTaskEdits((prev) => ({ ...prev, [t.id]: { ...prev[t.id], dueDate: v } }))}
+                  value={taskEdits[task.id]?.dueDate ?? ''}
+                  onChangeText={(v) => setTaskEdits((prev) => ({ ...prev, [task.id]: { ...prev[task.id], dueDate: v } }))}
                   placeholder="YYYY-MM-DD"
                   style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 6, backgroundColor: 'white' }}
                 />
               </Cell>
               <Cell width={70}>
-                <Pressable onPress={() => toggleTaskDone(t.id, t.done)} disabled={rowBusyId === t.id}>
-                  <Text style={{ color: t.done ? '#2e7d32' : '#c62828' }}>{t.done ? 'Yes' : 'No'}</Text>
+                <Pressable onPress={() => toggleTaskDone(task.id, task.done)} disabled={rowBusyId === task.id}>
+                  <Text style={{ color: task.done ? '#2e7d32' : '#c62828' }}>{task.done ? t('common.yes') : t('common.no')}</Text>
                 </Pressable>
               </Cell>
               <Cell width={90}>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <AdminActionButton label="Save" onPress={() => saveTask(t.id)} busy={rowBusyId === t.id} small />
-                  <AdminActionButton label="Delete" variant="danger" onPress={() => deleteTask(t.id)} disabled={rowBusyId === t.id} small />
+                  <AdminActionButton label={t('common.save')} onPress={() => saveTask(task.id)} busy={rowBusyId === task.id} small />
+                  <AdminActionButton label={t('common.delete')} variant="danger" onPress={() => deleteTask(task.id)} disabled={rowBusyId === task.id} small />
                 </View>
               </Cell>
             </Row>
@@ -559,12 +562,12 @@ export default function AdminHouseDetailScreen() {
         </TableContainer>
       ) : null}
 
-      {tab === 'Supplies' ? (
+      {tab === 'supplies' ? (
         <TableContainer width={560}>
           <HeaderRow>
-            <HeaderCell width={220}>Name</HeaderCell>
-            <HeaderCell width={80}>Qty</HeaderCell>
-            <HeaderCell width={120}>Expiry</HeaderCell>
+            <HeaderCell width={220}>{t('admin.houseDetail.columns.name')}</HeaderCell>
+            <HeaderCell width={80}>{t('admin.houseDetail.columns.quantity')}</HeaderCell>
+            <HeaderCell width={120}>{t('admin.houseDetail.columns.expiry')}</HeaderCell>
             <HeaderCell width={140} />
           </HeaderRow>
           {supplies.map((s, index) => (
@@ -594,8 +597,8 @@ export default function AdminHouseDetailScreen() {
               </Cell>
               <Cell width={140}>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <AdminActionButton label="Save" onPress={() => saveSupply(s.id)} busy={rowBusyId === s.id} small />
-                  <AdminActionButton label="Delete" variant="danger" onPress={() => deleteSupply(s.id)} disabled={rowBusyId === s.id} small />
+                  <AdminActionButton label={t('common.save')} onPress={() => saveSupply(s.id)} busy={rowBusyId === s.id} small />
+                  <AdminActionButton label={t('common.delete')} variant="danger" onPress={() => deleteSupply(s.id)} disabled={rowBusyId === s.id} small />
                 </View>
               </Cell>
             </Row>
@@ -603,11 +606,11 @@ export default function AdminHouseDetailScreen() {
         </TableContainer>
       ) : null}
 
-      {tab === 'Shopping Lists' ? (
+      {tab === 'shoppingLists' ? (
         <TableContainer width={520}>
           <HeaderRow>
-            <HeaderCell width={220}>Name</HeaderCell>
-            <HeaderCell width={160}>Items</HeaderCell>
+            <HeaderCell width={220}>{t('admin.houseDetail.columns.name')}</HeaderCell>
+            <HeaderCell width={160}>{t('admin.houseDetail.columns.items')}</HeaderCell>
             <HeaderCell width={140} />
           </HeaderRow>
           {shoppingLists.map((l, index) => {
@@ -622,12 +625,12 @@ export default function AdminHouseDetailScreen() {
                   />
                 </Cell>
                 <Cell width={160}>
-                  <Text>{checked}/{l.items.length} checked</Text>
+                  <Text>{t('admin.houseDetail.itemsChecked', { checked, total: l.items.length })}</Text>
                 </Cell>
                 <Cell width={140}>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <AdminActionButton label="Save" onPress={() => saveShoppingList(l.id)} busy={rowBusyId === l.id} small />
-                    <AdminActionButton label="Delete" variant="danger" onPress={() => deleteShoppingList(l.id)} disabled={rowBusyId === l.id} small />
+                    <AdminActionButton label={t('common.save')} onPress={() => saveShoppingList(l.id)} busy={rowBusyId === l.id} small />
+                    <AdminActionButton label={t('common.delete')} variant="danger" onPress={() => deleteShoppingList(l.id)} disabled={rowBusyId === l.id} small />
                   </View>
                 </Cell>
               </Row>
@@ -636,12 +639,12 @@ export default function AdminHouseDetailScreen() {
         </TableContainer>
       ) : null}
 
-      {tab === 'Calendar' ? (
+      {tab === 'calendar' ? (
         <TableContainer width={660}>
           <HeaderRow>
-            <HeaderCell width={180}>Title</HeaderCell>
-            <HeaderCell width={170}>Start</HeaderCell>
-            <HeaderCell width={170}>End</HeaderCell>
+            <HeaderCell width={180}>{t('admin.houseDetail.columns.title')}</HeaderCell>
+            <HeaderCell width={170}>{t('admin.houseDetail.columns.start')}</HeaderCell>
+            <HeaderCell width={170}>{t('admin.houseDetail.columns.end')}</HeaderCell>
             <HeaderCell width={140} />
           </HeaderRow>
           {calendarEvents.map((e, index) => (
@@ -671,8 +674,8 @@ export default function AdminHouseDetailScreen() {
               </Cell>
               <Cell width={140}>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <AdminActionButton label="Save" onPress={() => saveCalendarEvent(e.id)} busy={rowBusyId === e.id} small />
-                  <AdminActionButton label="Delete" variant="danger" onPress={() => deleteCalendarEvent(e.id)} disabled={rowBusyId === e.id} small />
+                  <AdminActionButton label={t('common.save')} onPress={() => saveCalendarEvent(e.id)} busy={rowBusyId === e.id} small />
+                  <AdminActionButton label={t('common.delete')} variant="danger" onPress={() => deleteCalendarEvent(e.id)} disabled={rowBusyId === e.id} small />
                 </View>
               </Cell>
             </Row>
@@ -680,13 +683,13 @@ export default function AdminHouseDetailScreen() {
         </TableContainer>
       ) : null}
 
-      {tab === 'Files' ? (
+      {tab === 'files' ? (
         <View style={{ gap: 8 }}>
           <TableContainer width={520}>
             <HeaderRow>
-              <HeaderCell width={200}>Filename</HeaderCell>
-              <HeaderCell width={80}>Size</HeaderCell>
-              <HeaderCell width={120}>Uploaded by</HeaderCell>
+              <HeaderCell width={200}>{t('admin.houseDetail.columns.filename')}</HeaderCell>
+              <HeaderCell width={80}>{t('admin.houseDetail.columns.size')}</HeaderCell>
+              <HeaderCell width={120}>{t('admin.houseDetail.columns.uploadedBy')}</HeaderCell>
               <HeaderCell width={120} />
             </HeaderRow>
             {files.map((f, index) => (
@@ -696,15 +699,15 @@ export default function AdminHouseDetailScreen() {
                 <Cell width={120}><Text numberOfLines={1}>{f.uploadedByName ?? '-'}</Text></Cell>
                 <Cell width={120}>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <AdminActionButton label="Download" variant="link" onPress={() => downloadFile(id, f.id, f.filename)} />
-                    <AdminActionButton label="Delete" variant="danger" onPress={() => deleteFile(f.id)} disabled={busy} />
+                    <AdminActionButton label={t('admin.houseDetail.download')} variant="link" onPress={() => downloadFile(id, f.id, f.filename)} />
+                    <AdminActionButton label={t('common.delete')} variant="danger" onPress={() => deleteFile(f.id)} disabled={busy} />
                   </View>
                 </Cell>
               </Row>
             ))}
           </TableContainer>
           <AdminActionButton
-            label="Upload file"
+            label={t('admin.houseDetail.uploadFile')}
             onPress={uploadFile}
             disabled={busy}
             style={{ marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 16 }}

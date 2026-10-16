@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { useTranslation } from '@/i18n';
 import type { FeedbackStatus } from '@/types';
 
 const STATUS_COLORS: Record<FeedbackStatus, { bg: string; fg: string }> = {
@@ -11,10 +12,11 @@ const STATUS_COLORS: Record<FeedbackStatus, { bg: string; fg: string }> = {
 /** Shared small status pill, used on both the user's own ticket list and the admin
  * list/detail screens so the color coding stays consistent across both. */
 export const FeedbackStatusBadge = ({ status }: { status: FeedbackStatus }) => {
+  const { t } = useTranslation();
   const { bg, fg } = STATUS_COLORS[status];
   return (
     <View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
-      <Text style={{ color: fg, fontSize: 11, fontWeight: '700' }}>{status.replace('_', ' ')}</Text>
+      <Text style={{ color: fg, fontSize: 11, fontWeight: '700' }}>{t(`app.feedback.statuses.${status}`)}</Text>
     </View>
   );
 };

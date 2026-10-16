@@ -1,3 +1,5 @@
+import { translate } from '@/i18n';
+
 /**
  * Formats the "N members" line shown under a house tile's title on the Houses overview.
  * Online count used to be folded into this same string ("N members · N online") since a
@@ -8,5 +10,5 @@
  * fixed, leaving this to format member count alone.
  */
 export function formatMemberCount(memberCount: number): string {
-  return `${memberCount} member${memberCount === 1 ? '' : 's'}`;
+  return translate('app.dashboard.memberCount', { count: memberCount });
 }

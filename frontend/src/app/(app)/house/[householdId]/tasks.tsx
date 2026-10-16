@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import { useCreateTaskMutation, useDeleteTaskMutation, useTasksQuery, useUpdateTaskMutation } from '@/lib/useTasks';
 import type { Task } from '@/types';
@@ -10,6 +11,7 @@ const TASKS_COLOR = '#dc2626';
 
 export default function TasksScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const { t } = useTranslation();
 
   const tasksQuery = useTasksQuery(householdId);
   const createTask = useCreateTaskMutation(householdId);
@@ -36,22 +38,22 @@ export default function TasksScreen() {
   };
 
   const errorMessage = tasksQuery.isError
-    ? getErrorMessage(tasksQuery.error, 'Failed to load tasks.')
+    ? getErrorMessage(tasksQuery.error, t('house.tasks.loadFailed'))
     : createTask.isError
-      ? getErrorMessage(createTask.error, 'Failed to add task.')
+      ? getErrorMessage(createTask.error, t('house.tasks.addFailed'))
       : updateTask.isError
-        ? getErrorMessage(updateTask.error, 'Failed to update task.')
+        ? getErrorMessage(updateTask.error, t('house.tasks.updateFailed'))
         : deleteTask.isError
-          ? getErrorMessage(deleteTask.error, 'Failed to remove task.')
+          ? getErrorMessage(deleteTask.error, t('house.tasks.removeFailed'))
           : null;
 
   return (
-    <Module title="Routine Tasks" color={TASKS_COLOR} scroll={false}>
+    <Module title={t('house.tasks.title')} color={TASKS_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
-          placeholder="Add a task…"
+          placeholder={t('house.tasks.placeholder')}
           value={title}
           onChangeText={setTitle}
           onSubmitEditing={addTask}
@@ -62,7 +64,7 @@ export default function TasksScreen() {
           disabled={createTask.isPending}
           style={{ backgroundColor: '#2563eb', borderRadius: 8, padding: 12, justifyContent: 'center', opacity: createTask.isPending ? 0.6 : 1 }}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>Add</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{t('common.add')}</Text>
         </Pressable>
       </View>
 
@@ -73,7 +75,7 @@ export default function TasksScreen() {
           data={tasksQuery.data ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: 8, paddingTop: 8 }}
-          ListEmptyComponent={<Text style={{ color: '#999' }}>No tasks yet.</Text>}
+          ListEmptyComponent={<Text style={{ color: '#999' }}>{t('house.tasks.empty')}</Text>}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => toggleTask(item)}

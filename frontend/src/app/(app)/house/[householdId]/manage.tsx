@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { findHouseholdMembership } from '@/lib/households';
 import type { HouseholdMember } from '@/types';
@@ -11,6 +12,7 @@ const MANAGE_HOUSE_COLOR = '#0f766e';
 
 export default function ManageHouseScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const myRole = findHouseholdMembership(user, householdId)?.role;
   const isOwner = myRole === 'OWNER';
@@ -25,9 +27,9 @@ export default function ManageHouseScreen() {
       const { data } = await api.get<HouseholdMember[]>(`/households/${householdId}/members`);
       setMembers(data);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to load members.'));
+      setError(getErrorMessage(err, t('house.manage.loadFailed')));
     }
-  }, [householdId]);
+  }, [householdId, t]);
 
   useEffect(() => {
     (async () => {
@@ -43,7 +45,7 @@ export default function ManageHouseScreen() {
       await api.delete(`/households/${householdId}/members/${userId}`);
       await loadMembers();
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to remove member.'));
+      setError(getErrorMessage(err, t('house.manage.removeFailed')));
     } finally {
       setBusyUserId(null);
     }
@@ -51,28 +53,28 @@ export default function ManageHouseScreen() {
 
   const confirmRemove = (member: HouseholdMember) => {
     Alert.alert(
-      'Remove member?',
-      `Remove ${member.displayName} from this house? They'll lose access to its tasks, supplies, and files.`,
+      t('house.manage.removeTitle'),
+      t('house.manage.removeMessage', { name: member.displayName }),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => removeMember(member.userId) },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.remove'), style: 'destructive', onPress: () => removeMember(member.userId) },
       ],
     );
   };
 
   if (!householdId) {
     return (
-      <Module title="Manage House" color={MANAGE_HOUSE_COLOR}>
-        <Text style={{ color: '#999' }}>You&apos;re not currently in a house.</Text>
+      <Module title={t('house.manage.title')} color={MANAGE_HOUSE_COLOR}>
+        <Text style={{ color: '#999' }}>{t('house.manage.notInHouse')}</Text>
       </Module>
     );
   }
 
   return (
-    <Module title="Manage House" color={MANAGE_HOUSE_COLOR}>
+    <Module title={t('house.manage.title')} color={MANAGE_HOUSE_COLOR}>
       {error ? <Text style={{ color: '#c62828' }}>{error}</Text> : null}
 
-      {members.length === 0 && !error ? <Text style={{ color: '#999' }}>Loading…</Text> : null}
+      {members.length === 0 && !error ? <Text style={{ color: '#999' }}>{t('common.loading')}</Text> : null}
 
       {members.map((member) => {
         const isSelf = member.userId === user?.id;
@@ -91,7 +93,7 @@ export default function ManageHouseScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '600' }}>
                 {member.displayName}
-                {isSelf ? ' (you)' : ''}
+                {isSelf ? t('house.manage.you') : ''}
               </Text>
               <Text style={{ color: '#666', fontSize: 13 }}>{member.email}</Text>
             </View>
@@ -105,7 +107,7 @@ export default function ManageHouseScreen() {
                 marginRight: isOwner && !isSelf ? 10 : 0,
               }}
             >
-              <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{member.role}</Text>
+              <Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{member.role === 'OWNER' ? t('house.manage.roleOwner') : t('house.manage.roleMember')}</Text>
             </View>
 
             {isOwner && !isSelf ? (
@@ -123,7 +125,7 @@ export default function ManageHouseScreen() {
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>Remove</Text>
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>{t('common.remove')}</Text>
               </Pressable>
             ) : null}
           </View>
@@ -137,7 +139,7 @@ export default function ManageHouseScreen() {
           pressed && { opacity: 0.8 },
         ]}
       >
-        <Text style={{ color: 'white', fontWeight: '600' }}>Leave house</Text>
+        <Text style={{ color: 'white', fontWeight: '600' }}>{t('house.manage.leave')}</Text>
       </Pressable>
     </Module>
   );

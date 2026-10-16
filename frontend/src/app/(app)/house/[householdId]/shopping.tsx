@@ -2,6 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { getErrorMessage } from '@/lib/api';
 import {
   useAddShoppingListItemMutation,
@@ -16,6 +17,7 @@ const SHOPPING_COLOR = '#059669';
 
 export default function ShoppingScreen() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
+  const { t } = useTranslation();
 
   const shoppingListsQuery = useShoppingListsQuery(householdId);
   const createList = useCreateShoppingListMutation(householdId);
@@ -51,26 +53,26 @@ export default function ShoppingScreen() {
   };
 
   const errorMessage = shoppingListsQuery.isError
-    ? getErrorMessage(shoppingListsQuery.error, 'Failed to load shopping list.')
+    ? getErrorMessage(shoppingListsQuery.error, t('house.shopping.loadFailed'))
     : createList.isError
-      ? getErrorMessage(createList.error, 'Failed to create shopping list.')
+      ? getErrorMessage(createList.error, t('house.shopping.createFailed'))
       : addItem.isError
-        ? getErrorMessage(addItem.error, 'Failed to add item.')
+        ? getErrorMessage(addItem.error, t('house.shopping.addFailed'))
         : updateItem.isError
-          ? getErrorMessage(updateItem.error, 'Failed to update item.')
+          ? getErrorMessage(updateItem.error, t('house.shopping.updateFailed'))
           : removeItem.isError
-            ? getErrorMessage(removeItem.error, 'Failed to remove item.')
+            ? getErrorMessage(removeItem.error, t('house.shopping.removeFailed'))
             : null;
 
   const isLoading = shoppingListsQuery.isLoading || (shoppingListsQuery.data?.length === 0 && createList.isPending);
 
   return (
-    <Module title="Shopping List" color={SHOPPING_COLOR} scroll={false}>
+    <Module title={t('house.shopping.title')} color={SHOPPING_COLOR} scroll={false}>
       {errorMessage ? <Text style={{ color: '#c62828' }}>{errorMessage}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
-          placeholder="Add an item…"
+          placeholder={t('house.shopping.placeholder')}
           value={label}
           onChangeText={setLabel}
           onSubmitEditing={addShoppingItem}
@@ -81,7 +83,7 @@ export default function ShoppingScreen() {
           disabled={addItem.isPending || !activeList}
           style={{ backgroundColor: '#2563eb', borderRadius: 8, padding: 12, justifyContent: 'center', opacity: addItem.isPending || !activeList ? 0.6 : 1 }}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>Add</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{t('common.add')}</Text>
         </Pressable>
       </View>
 
@@ -92,7 +94,7 @@ export default function ShoppingScreen() {
           data={activeList?.items ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ gap: 8, paddingTop: 8 }}
-          ListEmptyComponent={<Text style={{ color: '#999' }}>List is empty.</Text>}
+          ListEmptyComponent={<Text style={{ color: '#999' }}>{t('house.shopping.empty')}</Text>}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => toggleItem(item.id, item.checked, item.label)}

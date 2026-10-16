@@ -5,6 +5,7 @@ import { ActivityIndicator, Image, Platform, Pressable, Text, TextInput, View } 
 import { saveButtonStyle } from '@/components/AdminTable';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { useAuthedImage } from '@/lib/useAuthedImage';
 
@@ -35,6 +36,7 @@ function ProfilePicture({ hasProfilePicture, version, busy }: { hasProfilePictur
 
 export default function SettingsScreen() {
   const { user, logout, changePassword, refreshUser } = useAuth();
+  const { t } = useTranslation();
   const [version, setVersion] = useState<string | null>(null);
 
   const [pictureBusy, setPictureBusy] = useState(false);
@@ -73,7 +75,7 @@ export default function SettingsScreen() {
       await refreshUser();
       setPictureVersion((v) => v + 1);
     } catch (err) {
-      setPictureError(getErrorMessage(err, 'Failed to upload profile picture.'));
+      setPictureError(getErrorMessage(err, t('app.account.uploadFailed')));
     } finally {
       setPictureBusy(false);
     }
@@ -86,7 +88,7 @@ export default function SettingsScreen() {
       await api.delete(PROFILE_PICTURE_URL);
       await refreshUser();
     } catch (err) {
-      setPictureError(getErrorMessage(err, 'Failed to remove profile picture.'));
+      setPictureError(getErrorMessage(err, t('app.account.removeFailed')));
     } finally {
       setPictureBusy(false);
     }
@@ -97,11 +99,11 @@ export default function SettingsScreen() {
     setPasswordMessage(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match.');
+      setPasswordError(t('app.account.passwordsDontMatch'));
       return;
     }
     if (newPassword.length < 8) {
-      setPasswordError('New password must be at least 8 characters.');
+      setPasswordError(t('app.account.passwordTooShort'));
       return;
     }
 
@@ -113,58 +115,58 @@ export default function SettingsScreen() {
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setPasswordError(getErrorMessage(err, 'Failed to change password.'));
+      setPasswordError(getErrorMessage(err, t('app.account.changePasswordFailed')));
     } finally {
       setPasswordBusy(false);
     }
   };
 
   return (
-    <Module title="Account" color={ACCOUNT_COLOR}>
+    <Module title={t('app.account.title')} color={ACCOUNT_COLOR}>
       <View style={{ alignItems: 'center', gap: 10 }}>
         <ProfilePicture hasProfilePicture={Boolean(user?.hasProfilePicture)} version={pictureVersion} busy={pictureBusy} />
         <View style={{ flexDirection: 'row', gap: 16 }}>
           <Pressable onPress={uploadPicture} disabled={pictureBusy}>
-            <Text style={{ color: '#2563eb' }}>{user?.hasProfilePicture ? 'Change photo' : 'Add photo'}</Text>
+            <Text style={{ color: '#2563eb' }}>{user?.hasProfilePicture ? t('app.account.changePhoto') : t('app.account.addPhoto')}</Text>
           </Pressable>
           {user?.hasProfilePicture ? (
             <Pressable onPress={removePicture} disabled={pictureBusy}>
-              <Text style={{ color: '#c62828' }}>Remove</Text>
+              <Text style={{ color: '#c62828' }}>{t('common.remove')}</Text>
             </Pressable>
           ) : null}
         </View>
         {pictureError ? <Text style={{ color: '#c62828' }}>{pictureError}</Text> : null}
       </View>
 
-      <Text>Signed in as {user?.email}</Text>
-      <Text style={{ color: '#666' }}>Role: {user?.role}</Text>
+      <Text>{t('app.account.signedInAs', { email: user?.email ?? '' })}</Text>
+      <Text style={{ color: '#666' }}>{t('app.account.role', { role: user ? t(`app.account.roles.${user.role}`) : '' })}</Text>
 
       {user?.role === 'ADMIN' ? (
         <Link href="/(app)/admin" style={{ color: '#2563eb' }}>
-          Admin
+          {t('app.account.admin')}
         </Link>
       ) : null}
 
       <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 16 }}>
-        <Text style={{ fontWeight: '600' }}>Change password</Text>
+        <Text style={{ fontWeight: '600' }}>{t('app.account.changePassword')}</Text>
         <TextInput
           value={currentPassword}
           onChangeText={setCurrentPassword}
-          placeholder="Current password"
+          placeholder={t('app.account.currentPasswordPlaceholder')}
           secureTextEntry
           style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8 }}
         />
         <TextInput
           value={newPassword}
           onChangeText={setNewPassword}
-          placeholder="New password"
+          placeholder={t('app.account.newPasswordPlaceholder')}
           secureTextEntry
           style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8 }}
         />
         <TextInput
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          placeholder="Confirm new password"
+          placeholder={t('app.account.confirmPasswordPlaceholder')}
           secureTextEntry
           style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8 }}
         />
@@ -175,7 +177,7 @@ export default function SettingsScreen() {
           disabled={passwordBusy || !currentPassword || !newPassword || !confirmPassword}
           style={[saveButtonStyle, { alignSelf: 'flex-start', paddingHorizontal: 16 }]}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>{passwordBusy ? 'Saving…' : 'Update password'}</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{passwordBusy ? t('common.saving') : t('app.account.updatePassword')}</Text>
         </Pressable>
       </View>
 
@@ -183,11 +185,11 @@ export default function SettingsScreen() {
         onPress={logout}
         style={{ backgroundColor: '#dc2626', borderRadius: 8, padding: 14, alignItems: 'center' }}
       >
-        <Text style={{ color: 'white', fontWeight: '600' }}>Log out</Text>
+        <Text style={{ color: 'white', fontWeight: '600' }}>{t('app.account.logout')}</Text>
       </Pressable>
 
       {version ? (
-        <Text style={{ color: '#999', fontSize: 12, textAlign: 'center' }}>App version: {version}</Text>
+        <Text style={{ color: '#999', fontSize: 12, textAlign: 'center' }}>{t('app.account.version', { version })}</Text>
       ) : null}
     </Module>
   );

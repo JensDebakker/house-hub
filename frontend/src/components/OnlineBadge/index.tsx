@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import { TitleBarChip } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 
 export { useOnlinePresence } from './useOnlinePresence';
 
@@ -16,12 +17,13 @@ const ONLINE_COLOR = '#16a34a';
  * without pushing the title into one or both corner chips. The member count already spelled
  * out in the subtitle below ("N members") gives the dot+number enough context on its own. */
 export const OnlineBadge = ({ count, compact = false }: { count: number | null; compact?: boolean }) => {
+  const { t } = useTranslation();
   if (count === null) return null;
 
   return (
     <TitleBarChip color={ONLINE_COLOR}>
       <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: ONLINE_COLOR }} />
-      <Text style={{ color: ONLINE_COLOR, fontSize: 13, fontWeight: '700' }}>{compact ? count : `${count} online`}</Text>
+      <Text style={{ color: ONLINE_COLOR, fontSize: 13, fontWeight: '700' }}>{compact ? count : t('app.dashboard.online', { count })}</Text>
     </TitleBarChip>
   );
 };

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation, type TranslationKey } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { buttonStyle, inputStyle } from '@/lib/formStyles';
 import { resolveDefaultHousehold } from '@/lib/households';
@@ -43,14 +44,15 @@ function useConnectionStatus(): [ConnectionStatus, () => void] {
   return [status, retry];
 }
 
-const CONNECTION_STATUS_COPY: Record<ConnectionStatus, { dot: string; text: string; label: string }> = {
-  checking: { dot: '#9ca3af', text: '#666', label: 'Checking connection…' },
-  online: { dot: '#16a34a', text: '#666', label: 'Connected' },
-  offline: { dot: '#dc2626', text: '#b91c1c', label: "Can't reach the server" },
+const CONNECTION_STATUS_COPY: Record<ConnectionStatus, { dot: string; text: string; label: TranslationKey }> = {
+  checking: { dot: '#9ca3af', text: '#666', label: 'app.login.connection.checking' },
+  online: { dot: '#16a34a', text: '#666', label: 'app.login.connection.online' },
+  offline: { dot: '#dc2626', text: '#b91c1c', label: 'app.login.connection.offline' },
 };
 
 export default function LoginScreen() {
   const { login, refreshUser } = useAuth();
+  const { t } = useTranslation();
   const [connectionStatus, retryConnection] = useConnectionStatus();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,15 +81,15 @@ export default function LoginScreen() {
         router.replace('/dashboard');
       }
     } catch (err) {
-      setError(getErrorMessage(err, 'Login failed. Check your email and password.'));
+      setError(getErrorMessage(err, t('app.login.failed')));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Module title="Log in" color={LOGIN_COLOR}>
-      <Text style={{ color: '#666' }}>Log in to your house</Text>
+    <Module title={t('app.login.title')} color={LOGIN_COLOR}>
+      <Text style={{ color: '#666' }}>{t('app.login.intro')}</Text>
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View
@@ -99,17 +101,17 @@ export default function LoginScreen() {
           }}
         />
         <Text style={{ color: CONNECTION_STATUS_COPY[connectionStatus].text, fontSize: 13 }}>
-          {CONNECTION_STATUS_COPY[connectionStatus].label}
+          {t(CONNECTION_STATUS_COPY[connectionStatus].label)}
         </Text>
         {connectionStatus === 'offline' && (
           <Pressable onPress={retryConnection}>
-            <Text style={{ color: LOGIN_COLOR, fontSize: 13, fontWeight: '600' }}>Retry</Text>
+            <Text style={{ color: LOGIN_COLOR, fontSize: 13, fontWeight: '600' }}>{t('common.retry')}</Text>
           </Pressable>
         )}
       </View>
 
       <TextInput
-        placeholder="Email"
+        placeholder={t('app.auth.emailPlaceholder')}
         autoCapitalize="none"
         keyboardType="email-address"
         textContentType="username"
@@ -119,7 +121,7 @@ export default function LoginScreen() {
         style={inputStyle}
       />
       <TextInput
-        placeholder="Password"
+        placeholder={t('app.auth.passwordPlaceholder')}
         secureTextEntry
         textContentType="password"
         autoComplete="current-password"
@@ -136,15 +138,15 @@ export default function LoginScreen() {
         style={({ pressed }) => [buttonStyle(LOGIN_COLOR), pressed && { opacity: 0.8 }]}
       >
         <Text style={{ color: 'white', fontWeight: '600' }}>
-          {isSubmitting ? 'Logging in…' : 'Log in'}
+          {isSubmitting ? t('app.login.submitting') : t('app.login.submit')}
         </Text>
       </Pressable>
 
       <Link href="/(auth)/register" style={{ textAlign: 'center', marginTop: 8 }}>
-        No account yet? Register
+        {t('app.login.noAccount')}
       </Link>
       <Link href="/(auth)/forgot-password" style={{ textAlign: 'center' }}>
-        Forgot your password?
+        {t('app.login.forgotPassword')}
       </Link>
     </Module>
   );

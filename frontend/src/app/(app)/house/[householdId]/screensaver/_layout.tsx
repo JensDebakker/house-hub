@@ -1,6 +1,7 @@
 import { router, Slot, useLocalSearchParams, usePathname } from 'expo-router';
 import { Text } from 'react-native';
 import { Module, navigateBackFromCard, TitleBarChip } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { navigateToHref } from '@/lib/navigation';
 
 const SCREENSAVER_COLOR = '#7c3aed';
@@ -14,6 +15,7 @@ const SCREENSAVER_COLOR = '#7c3aed';
 export default function HouseScreensaverLayout() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const basePath = `/house/${householdId}/screensaver`;
   // Same "Start" shortcut the Houses dashboard's own Screensaver tile offers, kept available
   // here too - previously this card's own header had no titleBarActions at all, so once a
@@ -27,7 +29,7 @@ export default function HouseScreensaverLayout() {
 
   return (
     <Module
-      title="Screensaver"
+      title={t('screensaver.title')}
       color={SCREENSAVER_COLOR}
       collapsed={pathname !== basePath}
       onCollapsedPress={() =>
@@ -35,7 +37,7 @@ export default function HouseScreensaverLayout() {
       }
       titleBarActions={
         <TitleBarChip color={SCREENSAVER_COLOR} onPress={openScreensaver}>
-          <Text style={{ color: SCREENSAVER_COLOR, fontSize: 11, fontWeight: '700' }}>Start</Text>
+          <Text style={{ color: SCREENSAVER_COLOR, fontSize: 11, fontWeight: '700' }}>{t('screensaver.start')}</Text>
         </TitleBarChip>
       }
     >

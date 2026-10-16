@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Module, navigateBackFromCard } from '@/components/Module';
 import { OnlineBadge, useOnlinePresence } from '@/components/OnlineBadge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { getHouseColor } from '@/lib/houseColors';
 import { findHouseholdMembership } from '@/lib/households';
 
@@ -26,6 +27,7 @@ import { findHouseholdMembership } from '@/lib/households';
 export default function HouseLayout() {
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const pathname = usePathname();
   const household = findHouseholdMembership(user, householdId);
   const basePath = `/house/${householdId}`;
@@ -38,7 +40,7 @@ export default function HouseLayout() {
 
   return (
     <Module
-      title={household?.householdName ?? 'House'}
+      title={household?.householdName ?? t('house.layout.fallbackTitle')}
       color={color}
       collapsed={collapsed}
       onCollapsedPress={() => navigateBackFromCard(() => router.replace(`/house/${householdId}/dashboard`))}

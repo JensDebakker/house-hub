@@ -5,6 +5,7 @@ import { Image, Platform, Pressable, Text, TextInput, View } from 'react-native'
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer, saveButtonStyle } from '@/components/AdminTable';
 import { Module } from '@/components/Module';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { findHouseholdMembership } from '@/lib/households';
 import { useAuthedImage } from '@/lib/useAuthedImage';
@@ -28,11 +29,12 @@ function isImage(contentType: string): boolean {
 function FileThumbnail({ householdId, file }: { householdId: string; file: HouseFile }) {
   const url = isImage(file.contentType) ? `/households/${householdId}/files/${file.id}` : null;
   const imageUrl = useAuthedImage(url);
+  const { t } = useTranslation();
 
   if (!isImage(file.contentType)) {
     return (
       <View style={{ width: 36, height: 36, borderRadius: 6, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 10, color: '#999' }}>FILE</Text>
+        <Text style={{ fontSize: 10, color: '#999' }}>{t('house.files.fileBadge')}</Text>
       </View>
     );
   }
@@ -46,6 +48,7 @@ function FileThumbnail({ householdId, file }: { householdId: string; file: House
 
 export default function FilesScreen() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const { householdId } = useLocalSearchParams<{ householdId: string }>();
   const isOwner = findHouseholdMembership(user, householdId)?.role === 'OWNER';
 
@@ -69,10 +72,10 @@ export default function FilesScreen() {
         setFolders(data.folders);
         setFiles(data.files);
       } catch (err) {
-        setError(getErrorMessage(err, 'Failed to load files.'));
+        setError(getErrorMessage(err, t('house.files.loadFailed')));
       }
     },
-    [householdId],
+    [householdId, t],
   );
 
   useEffect(() => {
@@ -83,8 +86,8 @@ export default function FilesScreen() {
 
   if (!householdId) {
     return (
-      <Module title="Files" color={FILES_COLOR}>
-        <Text>You&apos;re not part of a house yet.</Text>
+      <Module title={t('house.files.title')} color={FILES_COLOR}>
+        <Text>{t('house.files.notInHouse')}</Text>
       </Module>
     );
   }
@@ -108,7 +111,7 @@ export default function FilesScreen() {
       setShowNewFolder(false);
       await load(currentFolderId);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to create folder.'));
+      setError(getErrorMessage(err, t('house.files.createFolderFailed')));
     } finally {
       setBusy(false);
     }
@@ -116,7 +119,7 @@ export default function FilesScreen() {
 
   const promptNewFolder = () => {
     if (Platform.OS === 'web') {
-      const name = window.prompt('Folder name');
+      const name = window.prompt(t('house.files.folderName'));
       if (name) {
         void createFolder(name);
       }
@@ -127,7 +130,7 @@ export default function FilesScreen() {
 
   const deleteFolder = async (folder: HouseFolder) => {
     if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`Delete folder "${folder.name}" and everything inside it?`);
+      const confirmed = window.confirm(t('house.files.confirmDeleteFolder', { name: folder.name }));
       if (!confirmed) return;
     }
     setBusy(true);
@@ -136,7 +139,7 @@ export default function FilesScreen() {
       await api.delete(`/households/${householdId}/folders/${folder.id}`);
       await load(currentFolderId);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete folder.'));
+      setError(getErrorMessage(err, t('house.files.deleteFolderFailed')));
     } finally {
       setBusy(false);
     }
@@ -163,7 +166,7 @@ export default function FilesScreen() {
       await api.post(url, formData);
       await load(currentFolderId);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to upload file.'));
+      setError(getErrorMessage(err, t('house.files.uploadFailed')));
     } finally {
       setBusy(false);
     }
@@ -183,7 +186,7 @@ export default function FilesScreen() {
 
   const remove = async (fileId: string, filename: string) => {
     if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`Delete "${filename}"?`);
+      const confirmed = window.confirm(t('house.files.confirmDeleteFile', { name: filename }));
       if (!confirmed) return;
     }
     setBusy(true);
@@ -192,17 +195,16 @@ export default function FilesScreen() {
       await api.delete(`/households/${householdId}/files/${fileId}`);
       await load(currentFolderId);
     } catch (err) {
-      setError(getErrorMessage(err, 'Failed to delete file.'));
+      setError(getErrorMessage(err, t('house.files.deleteFileFailed')));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Module title="Files" color={FILES_COLOR}>
+    <Module title={t('house.files.title')} color={FILES_COLOR}>
       <Text style={{ color: '#666' }}>
-        Shared files and images for your house. Uploaded images (JPEG, PNG, GIF, WebP, …)
-        automatically show up in the screensaver slideshow, no matter which folder they&apos;re in.
+        {t('house.files.intro')}
       </Text>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
@@ -216,7 +218,7 @@ export default function FilesScreen() {
                   fontWeight: index === breadcrumbs.length - 1 ? '600' : '400',
                 }}
               >
-                {crumb.name}
+                {crumb.id === null ? t('house.files.title') : crumb.name}
               </Text>
             </Pressable>
           </View>
@@ -228,9 +230,9 @@ export default function FilesScreen() {
       <TableContainer width={560}>
         <HeaderRow>
           <HeaderCell width={50} />
-          <HeaderCell width={220}>Name</HeaderCell>
-          <HeaderCell width={80}>Size</HeaderCell>
-          <HeaderCell width={120}>By</HeaderCell>
+          <HeaderCell width={220}>{t('house.files.columnName')}</HeaderCell>
+          <HeaderCell width={80}>{t('house.files.columnSize')}</HeaderCell>
+          <HeaderCell width={120}>{t('house.files.columnBy')}</HeaderCell>
           <HeaderCell width={120}>-</HeaderCell>
         </HeaderRow>
         {folders.map((folder, index) => {
@@ -256,7 +258,7 @@ export default function FilesScreen() {
               <Cell width={120}>
                 {canDelete ? (
                   <Pressable onPress={() => deleteFolder(folder)} disabled={busy}>
-                    <Text style={{ color: '#c62828' }}>Delete</Text>
+                    <Text style={{ color: '#c62828' }}>{t('common.delete')}</Text>
                   </Pressable>
                 ) : null}
               </Cell>
@@ -282,11 +284,11 @@ export default function FilesScreen() {
               <Cell width={120}>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <Pressable onPress={() => download(f.id, f.filename)}>
-                    <Text style={{ color: '#2563eb' }}>Download</Text>
+                    <Text style={{ color: '#2563eb' }}>{t('house.files.download')}</Text>
                   </Pressable>
                   {canDelete ? (
                     <Pressable onPress={() => remove(f.id, f.filename)} disabled={busy}>
-                      <Text style={{ color: '#c62828' }}>Delete</Text>
+                      <Text style={{ color: '#c62828' }}>{t('common.delete')}</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -298,14 +300,14 @@ export default function FilesScreen() {
 
       <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
         <Pressable onPress={upload} disabled={busy} style={[saveButtonStyle, { alignSelf: 'flex-start', paddingHorizontal: 16 }]}>
-          <Text style={{ color: 'white', fontWeight: '600' }}>Upload file</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{t('house.files.upload')}</Text>
         </Pressable>
         <Pressable
           onPress={promptNewFolder}
           disabled={busy}
           style={[saveButtonStyle, { alignSelf: 'flex-start', paddingHorizontal: 16, backgroundColor: '#555' }]}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>New folder</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>{t('house.files.newFolder')}</Text>
         </Pressable>
       </View>
 
@@ -314,7 +316,7 @@ export default function FilesScreen() {
           <TextInput
             value={newFolderName}
             onChangeText={setNewFolderName}
-            placeholder="Folder name"
+            placeholder={t('house.files.folderName')}
             style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, width: 200 }}
             autoFocus
           />
@@ -323,7 +325,7 @@ export default function FilesScreen() {
             disabled={busy || !newFolderName.trim()}
             style={[saveButtonStyle, { paddingHorizontal: 16 }]}
           >
-            <Text style={{ color: 'white', fontWeight: '600' }}>Create</Text>
+            <Text style={{ color: 'white', fontWeight: '600' }}>{t('house.files.create')}</Text>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -331,7 +333,7 @@ export default function FilesScreen() {
               setNewFolderName('');
             }}
           >
-            <Text style={{ color: '#666' }}>Cancel</Text>
+            <Text style={{ color: '#666' }}>{t('common.cancel')}</Text>
           </Pressable>
         </View>
       ) : null}

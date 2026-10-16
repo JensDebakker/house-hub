@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Text, TextInput } from 'react-native';
 import { Cell, HeaderCell, HeaderRow, Row, TableContainer } from '@/components/AdminTable';
 import { Module } from '@/components/Module';
+import { useTranslation } from '@/i18n';
 import { api, getErrorMessage } from '@/lib/api';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import type { Household } from '@/types';
@@ -30,6 +31,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function AdminHousesScreen() {
+  const { t, locale } = useTranslation();
   const isAdmin = useRequireAdmin();
   const [households, setHouseholds] = useState<Household[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +44,10 @@ export default function AdminHousesScreen() {
         const { data } = await api.get<Household[]>('/admin/households');
         setHouseholds(data);
       } catch (err) {
-        setError(getErrorMessage(err, 'Failed to load houses.'));
+        setError(getErrorMessage(err, t('admin.houses.loadFailed')));
       }
     })();
-  }, [isAdmin]);
+  }, [isAdmin, t]);
 
   const filteredHouseholds = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -55,18 +57,18 @@ export default function AdminHousesScreen() {
 
   if (!isAdmin) {
     return (
-      <Module title="Houses" color={HOUSES_COLOR}>
-        <Text>You don&apos;t have access to this page.</Text>
+      <Module title={t('admin.houses.title')} color={HOUSES_COLOR}>
+        <Text>{t('admin.noAccess')}</Text>
       </Module>
     );
   }
 
   return (
-    <Module title="Houses" color={HOUSES_COLOR}>
+    <Module title={t('admin.houses.title')} color={HOUSES_COLOR}>
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Search by house name…"
+        placeholder={t('admin.houses.searchPlaceholder')}
         style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, backgroundColor: 'white' }}
       />
 
@@ -74,15 +76,15 @@ export default function AdminHousesScreen() {
 
       <TableContainer width={TABLE_WIDTH}>
         <HeaderRow>
-          <HeaderCell width={COLS.name}>Name</HeaderCell>
-          <HeaderCell width={COLS.members}>Members</HeaderCell>
-          <HeaderCell width={COLS.tasks}>Tasks</HeaderCell>
-          <HeaderCell width={COLS.supplies}>Supplies</HeaderCell>
-          <HeaderCell width={COLS.shopping}>Shopping</HeaderCell>
-          <HeaderCell width={COLS.calendar}>Calendar</HeaderCell>
-          <HeaderCell width={COLS.files}>Files</HeaderCell>
-          <HeaderCell width={COLS.storage}>Storage</HeaderCell>
-          <HeaderCell width={COLS.created}>Created</HeaderCell>
+          <HeaderCell width={COLS.name}>{t('admin.houses.columns.name')}</HeaderCell>
+          <HeaderCell width={COLS.members}>{t('admin.houses.columns.members')}</HeaderCell>
+          <HeaderCell width={COLS.tasks}>{t('admin.houses.columns.tasks')}</HeaderCell>
+          <HeaderCell width={COLS.supplies}>{t('admin.houses.columns.supplies')}</HeaderCell>
+          <HeaderCell width={COLS.shopping}>{t('admin.houses.columns.shopping')}</HeaderCell>
+          <HeaderCell width={COLS.calendar}>{t('admin.houses.columns.calendar')}</HeaderCell>
+          <HeaderCell width={COLS.files}>{t('admin.houses.columns.files')}</HeaderCell>
+          <HeaderCell width={COLS.storage}>{t('admin.houses.columns.storage')}</HeaderCell>
+          <HeaderCell width={COLS.created}>{t('admin.houses.columns.created')}</HeaderCell>
         </HeaderRow>
 
         {filteredHouseholds.map((h, index) => (
@@ -102,7 +104,7 @@ export default function AdminHousesScreen() {
               <Text>{formatBytes(h.storageUsedBytes)} / {formatBytes(h.storageLimitBytes)}</Text>
             </Cell>
             <Cell width={COLS.created}>
-              <Text style={{ color: '#666' }}>{new Date(h.createdAt).toLocaleDateString()}</Text>
+              <Text style={{ color: '#666' }}>{new Date(h.createdAt).toLocaleDateString(locale)}</Text>
             </Cell>
           </Row>
         ))}

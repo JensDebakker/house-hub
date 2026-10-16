@@ -1,4 +1,5 @@
 import { Pressable, Text } from 'react-native';
+import { useTranslation } from '@/i18n';
 import { pastelize } from '@/lib/color';
 import type { CalendarEvent } from '@/types';
 
@@ -21,6 +22,7 @@ export const DayCell = ({
   color: string;
   onSelect: (date: Date) => void;
 }) => {
+  const { t } = useTranslation();
   const extraCount = events.length - MAX_TITLE_PREVIEWS;
 
   return (
@@ -62,7 +64,7 @@ export const DayCell = ({
       ))}
       {extraCount > 0 ? (
         <Text style={{ fontSize: 10, marginTop: 1, color: isSelected ? 'white' : '#6b7280' }}>
-          +{extraCount} more
+          {t('house.calendar.more', { count: extraCount })}
         </Text>
       ) : null}
     </Pressable>
