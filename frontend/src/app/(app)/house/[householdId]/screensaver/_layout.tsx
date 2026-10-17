@@ -32,9 +32,12 @@ export default function HouseScreensaverLayout() {
       title={t('screensaver.title')}
       color={SCREENSAVER_COLOR}
       collapsed={pathname !== basePath}
-      onCollapsedPress={() =>
-        navigateBackFromCard(() => router.replace({ pathname: `/house/${householdId}/screensaver/index` as never }))
-      }
+      // `basePath`, not `${basePath}/index` - expo-router's index-file convention maps
+      // index.tsx to the directory's own path, not a literal "/index" URL segment, so the
+      // old `/house/{id}/screensaver/index` target matched no route at all (confirmed via
+      // Playwright: tapping this collapsed frame from a submodule like Layout landed on
+      // expo-router's own "Unmatched Route" page, not back on the Screensaver section).
+      onCollapsedPress={() => navigateBackFromCard(() => router.replace({ pathname: basePath as never }))}
       titleBarActions={
         <TitleBarChip color={SCREENSAVER_COLOR} onPress={openScreensaver}>
           <Text style={{ color: SCREENSAVER_COLOR, fontSize: 11, fontWeight: '700' }}>{t('screensaver.start')}</Text>

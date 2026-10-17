@@ -8,8 +8,9 @@ const GAP = 14;
 // and a mobile browser as narrow as a phone, so the column count follows the actual
 // rendered space rather than which target built the app. Measured against the grid's own
 // layout width (not the window's), so it already accounts for whatever margin/padding sits
-// between the window edge and the grid itself - no separate chrome-width constant to keep
-// in sync with components/Module's own spacing.
+// between the window edge and the grid itself in the common case - no chrome-width constant
+// to keep in sync with components/Module's own spacing, UNLESS the caller's own card is
+// nested one or more levels deeper than usual (see `extraChromeWidth` below).
 const BREAKPOINTS = [
   { minWidth: 1000, columns: 5 }, // desktop / wide kiosk display
   { minWidth: 700, columns: 3 }, // tablet
@@ -30,7 +31,27 @@ const BREAKPOINTS = [
  * to fill the remaining space, so it reads as a real grid with blank slots left over, not a
  * row that reflows to fit however many tiles happen to be left.
  */
-export const TileGrid = ({ children }: { children: ReactNode }) => {
+export const TileGrid = ({
+  children,
+  extraChromeWidth = 0,
+}: {
+  children: ReactNode;
+  /** How much *narrower* this grid's own measured width is than an equivalent grid sitting
+   * directly in its parent's own open card, purely because of how many collapsed frames
+   * happen to be nested around it right now (see `COLLAPSED_FRAME_CHROME_WIDTH`, which is
+   * the per-level cost to pass here) - used only to decide the column *count*, never to size
+   * the tiles themselves (those still divide the grid's real, un-compensated width, so they
+   * never overflow it). Confirmed via Playwright that without this, two tile grids with
+   * otherwise identical content land on a *different* column count at the exact same browser
+   * width whenever one of them happens to be nested one level deeper than the other (e.g. a
+   * Screensaver section nested inside the already-collapsed House frame, vs. that house's own
+   * directly-open dashboard) - specific, narrow browser-width ranges (~1080-1095px measured)
+   * where one screen shows 5 columns and the structurally-identical other shows only 3. Pass
+   * the right multiple of `COLLAPSED_FRAME_CHROME_WIDTH` for how many *extra* collapsed
+   * frames (beyond the "normal" case the rest of the app's tile grids sit behind) wrap this
+   * specific grid, and both will pick the same column count at the same width again. */
+  extraChromeWidth?: number;
+}) => {
   const [width, setWidth] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -42,7 +63,10 @@ export const TileGrid = ({ children }: { children: ReactNode }) => {
     setWidth((prev) => (!widthChanged(prev, w) ? prev : w));
   };
 
-  const columns = BREAKPOINTS.find((b) => width >= b.minWidth)?.columns ?? 2;
+  // The breakpoint decision alone uses the compensated width - tile sizing below still
+  // divides the real, un-compensated `width`, so tiles never end up claiming space the grid
+  // doesn't actually have just because a caller passed extraChromeWidth.
+  const columns = BREAKPOINTS.find((b) => width + extraChromeWidth >= b.minWidth)?.columns ?? 2;
   // Floored, not the exact quotient - confirmed via a real device (Android, devicePixelRatio
   // 2.8125) that computing an EXACT fit here is fragile: the browser's own sub-pixel
   // rounding/snapping of each tile's rendered width (CSS px -> physical px at a non-integer
