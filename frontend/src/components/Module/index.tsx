@@ -12,6 +12,7 @@ import type { TitleBarContent } from './types';
 
 export { navigateBackFromCard } from './cardExit';
 export { TitleBarChip } from './TitleBarChip';
+export { COLLAPSED_FRAME_CHROME_WIDTH } from './cardSurface';
 
 /**
  * Everything the app calls a "module" - a small tappable grid tile, the card it opens into,

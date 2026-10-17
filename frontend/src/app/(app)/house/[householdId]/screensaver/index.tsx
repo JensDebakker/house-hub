@@ -1,5 +1,5 @@
 import { useLocalSearchParams, usePathname } from 'expo-router';
-import { Module } from '@/components/Module';
+import { COLLAPSED_FRAME_CHROME_WIDTH, Module } from '@/components/Module';
 import { TileGrid } from '@/components/TileGrid';
 import { useTranslation } from '@/i18n';
 
@@ -15,7 +15,12 @@ export default function ScreensaverIndexScreen() {
   const startHref = `/screensaver/${householdId}/start`;
 
   return (
-    <TileGrid>
+    // This screen's own Module (see screensaver/_layout.tsx) opens one collapsed House
+    // frame deeper than house/[householdId]/dashboard.tsx's tile grid does (House stays
+    // open there; it collapses around Screensaver here) - without this, the exact same
+    // tile content picks a *different* column count than the dashboard's own grid at
+    // certain browser widths. See TileGrid's own extraChromeWidth comment.
+    <TileGrid extraChromeWidth={COLLAPSED_FRAME_CHROME_WIDTH}>
       <Module
         tile
         title={t('screensaver.start')}
