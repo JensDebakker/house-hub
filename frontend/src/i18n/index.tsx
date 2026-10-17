@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { loadLanguage, saveLanguage } from '@/lib/storage';
-import { DEFAULT_LANGUAGE, detectDeviceLanguage, getLanguage, type LanguageCode } from './languages';
+import { DEFAULT_LANGUAGE, getLanguage, type LanguageCode } from './languages';
 import { translations, type Plural, type Translations } from './locales';
 
 export { LANGUAGES, type Language, type LanguageCode } from './languages';
@@ -60,10 +60,9 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>(() => {
-    currentLanguage = detectDeviceLanguage();
-    return currentLanguage;
-  });
+  // English until the user picks something in the Language module - deliberately not the
+  // browser/device language.
+  const [language, setLanguageState] = useState<LanguageCode>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
     loadLanguage().then((saved) => {

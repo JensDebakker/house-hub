@@ -83,7 +83,7 @@ export async function loadScreensaverAutoStartPrefs(): Promise<ScreensaverAutoSt
 }
 
 /** Per-device UI language choice from the Language module; null until the user picks one,
- * in which case the device/browser language is used instead. */
+ * in which case English is used. */
 export async function saveLanguage(language: LanguageCode): Promise<void> {
   await AsyncStorage.setItem(LANGUAGE_KEY, language);
 }

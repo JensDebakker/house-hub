@@ -23,21 +23,3 @@ export const isLanguageCode = (value: unknown): value is LanguageCode =>
 
 export const getLanguage = (code: LanguageCode): Language =>
   LANGUAGES.find((l) => l.code === code) ?? LANGUAGES[0];
-
-/** Best guess at the device/browser language for a first launch with nothing saved yet.
- * Intl is available on web and Hermes alike, so this needs no extra native module. */
-export function detectDeviceLanguage(): LanguageCode {
-  try {
-    const candidates =
-      typeof navigator !== 'undefined' && Array.isArray(navigator.languages)
-        ? navigator.languages
-        : [Intl.DateTimeFormat().resolvedOptions().locale];
-    for (const tag of candidates) {
-      const base = tag?.toLowerCase().split('-')[0];
-      if (isLanguageCode(base)) return base;
-    }
-  } catch {
-    // Fall through to the default.
-  }
-  return DEFAULT_LANGUAGE;
-}
